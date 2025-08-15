@@ -1,0 +1,45 @@
+# Temporary files
+.*
+
+# Build results
+submission*
+/profile
+/build
+/logs
+compile_flags.txt
+compile_commands.json
+
+# Profiling results
+*.profdata
+*.profraw
+perf.data
+perf.data.old
+cachegrind.out.*
+callgrind.out.*
+
+### Latex ###
+*.synctex.gz
+*.aux
+*.fls
+*.out
+*.toc
+*.log
+*.lof
+*.lot
+*.bbl
+*.bbl-*
+*.bcf
+*.bcf-*
+*.blg
+*.xmpi
+*.run.xml
+*.fdb_latexmk
+*.synctex*
+*.nav
+*.snm
+*.vrb
+*-blx.bib
+
+# Do include these
+!.gitignore
+!.clang-format
