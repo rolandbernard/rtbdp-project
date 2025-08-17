@@ -1,6 +1,6 @@
 \begin{figure}[b!]
   \centering
-  \begin{tikzpicture}[scale=0.85, transform shape]
+  \begin{tikzpicture}[scale=0.9, transform shape]
     \node[external] (github) {GitHub Events API};
     \node[build, below=1.5 of github] (producer) {Java Producer};
     \draw[flow] (github) -> (producer) node [midway, fill=white, above left=0.1] {HTTP};
