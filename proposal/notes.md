@@ -19,4 +19,7 @@ Proposal of ~300 words.
     * Data Serving: The processed, enriched data from Flink will be written to new Kafka topics. A Java-based backend server will consume these topics and serve the results to the frontend.
     * Frontend: A custom HTML and JavaScript single-page application will visualize the real-time analytics. ECharts will be used to create interactive and dynamic charts and graphs.
 * Functionalities
-    * 
+    * A live, filterable stream of events as they happen. Users could filter based on event type, user, or repository.
+    * Live event counters. Showing the real-time count of the different events across all repositories over sliding time windows, e.g., the last 5 minutes or the last hour.
+    * A ranking of most active repositories and users over a given time window. Based on the number of events.
+    * Identify trending repositories. That is, those that receive stars at the highest rate, or for which the rate of stars has significantly increased.
