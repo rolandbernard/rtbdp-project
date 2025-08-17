@@ -1,0 +1,30 @@
+\begin{figure*}[b]
+  \centering
+  \begin{tikzpicture}
+    \node[external] (github) {GitHub API};
+    \node[build, below=1.5 of github] (producer) {Java Producer};
+    \draw[flow] (github) -> (producer) node [midway, fill=white, above left=0.1] {HTTP};
+    \node[internal, below right=of producer] (kafka) {Kafka Broker};
+    \draw[flow] (producer) -> (kafka.west);
+    \node[internal, above=0.75 of kafka] (kafkaui) {Kafka UI};
+    \draw[dashed, thick] (kafka) -> (kafkaui);
+    \node[internal, below=of kafka] (jobmanager) {Job Manager};
+    \node[build, left=of jobmanager] (processor) {Flink Processor};
+    \draw[dashed, thick] (processor) -> (jobmanager);
+    \node[internal, right=of jobmanager] (taskmanager) {Task Manager};
+    \draw[dashed, thick] (jobmanager) -> (taskmanager);
+    \node[draw, dashed, fit=(processor)(jobmanager)(taskmanager), inner sep=7] (flink) {};
+    \node[below=0.1 of flink] (flinklabel) {Flink Cluster};
+    \draw[flow] ($(kafka.south)-(0.25,0)$) -> ($(kafka |- flink.north)-(0.25,0)$);
+    \draw[flow] ($(flink.north)+(0.25,0)$) -> ($(flink |- kafka.south)+(0.25,0)$);
+    \node[build, above right=of kafka] (frontend) {Java Frontend Server};
+    \draw[flow] (kafka.east) -> (frontend);
+    \node[external, above=1.5 of frontend] (browser) {Browser Showing Web UI};
+    \draw[flow] ($(frontend.north)-(0.2,0)$) -> ($(browser.south)-(0.2,0)$) node [midway, fill=white, above left=0.1] {HTTP};
+    \draw[biflow] ($(frontend.north)+(0.2,0)$) -> ($(browser.south)+(0.2,0)$) node [midway, fill=white, above right=0.1] {WebSocket};
+    \node[draw, dashed, fit=(flink)(flinklabel)(producer)(kafkaui)(frontend), inner sep=10] (docker) {};
+    \node[below=0.1 of docker] (dockerlabel) {Docker Compose Application};
+  \end{tikzpicture}
+  \caption{Proposed application architecture for the project.}
+  \label{fig:subroot}
+\end{figure*}
