@@ -1,0 +1,23 @@
+\usepackage{draftwatermark}
+\usepackage{fancyhdr}
+\usepackage{datetime}
+
+\setlength{\headheight}{13pt}
+
+\SetWatermarkText{DRAFT}
+\SetWatermarkScale{1.75}
+\SetWatermarkAngle{45}
+\SetWatermarkLightness{0.95}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+\fancyhead[L]{\textbf{DRAFT DOCUMENT}}
+\fancyhead[R]{\textbf{\today\; \currenttime}}
+
+\fancyfoot[L]{\textbf{\today\; \currenttime}}
+\fancyfoot[R]{\textbf{DRAFT DOCUMENT}}
+\fancyfoot[C]{\thepage}
+
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}

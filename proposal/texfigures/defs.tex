@@ -1,0 +1,14 @@
+\definecolor{unibzblue}{HTML}{0086ec}
+\definecolor{unibzblue2}{HTML}{f0f8ff}
+
+\pgfdeclarelayer{background}
+\pgfdeclarelayer{foreground}
+\pgfsetlayers{background,main,foreground}
+
+\tikzset{
+    flow/.style={-{Triangle[length=4.5, width=4.5]}, draw=red!70!black, very thick, shorten >= -2},
+    link/.style={->, draw},
+    ptr/.style={->, dashed},
+    leafl/.style={-, thick},
+    >=Latex, node distance=0.5, every node/.style={font=\scriptsize, inner sep=0}
+}

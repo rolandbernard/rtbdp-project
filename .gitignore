@@ -1,6 +1,9 @@
 # Temporary files
 .*
 
+# Data
+data
+
 # Build results
 submission*
 /profile
