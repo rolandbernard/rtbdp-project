@@ -1,10 +1,12 @@
 # Temporary files
 .*
+!.env.example
 
 # Data
 data
 
 # Build results
+target/
 submission*
 /profile
 /build
