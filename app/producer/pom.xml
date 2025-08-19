@@ -5,15 +5,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.rolandb</groupId>
-    <artifactId>ghdummy</artifactId>
+    <artifactId>producer</artifactId>
     <version>0.1.0</version>
 
-    <name>ghdummy</name>
+    <name>producer</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
-        <exec.mainClass>com.rolandb.DummyServer</exec.mainClass>
+        <exec.mainClass>com.rolandb.KafkaProducer</exec.mainClass>
+        <kafka.version>3.6.1</kafka.version>
+        <rxjava.version>3.1.8</rxjava.version>
         <argparse4j.version>0.9.0</argparse4j.version>
         <jackson.version>2.19.0</jackson.version>
         <guava.version>33.1.0-jre</guava.version>
@@ -23,6 +25,19 @@
     </properties>
 
     <dependencies>
+        <!-- Kafka Client -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${kafka.version}</version>
+        </dependency>
+        <!-- RxJava -->
+        <dependency>
+            <groupId>io.reactivex.rxjava3</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>${rxjava.version}</version>
+        </dependency>
+
         <!-- Argument Parsing -->
         <dependency>
             <groupId>net.sourceforge.argparse4j</groupId>
@@ -99,7 +114,7 @@
                                 <transformer
                                     implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
-                                        <Main-Class>com.rolandb.DummyServer</Main-Class>
+                                        <Main-Class>com.rolandb.KafkaProducer</Main-Class>
                                         <Build-Number>1.0</Build-Number>
                                     </manifestEntries>
                                 </transformer>

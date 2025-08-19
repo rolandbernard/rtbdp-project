@@ -35,6 +35,12 @@ public class DummyData {
     private final Instant start;
     private final List<Long> timestamps;
 
+    /**
+     * Crate a new instance of the dummy data. The dummy data will loop starting
+     * from the time this instance is created.
+     * 
+     * @throws IOException In case the dummy resources can not be accessed.
+     */
     public DummyData() throws IOException {
         start = Instant.now();
         timestamps = readPossibleTimestamps();
@@ -42,10 +48,25 @@ public class DummyData {
         LOGGER.info("Loaded dummy data timestamps");
     }
 
+    /**
+     * Get the events for the current timestamp.
+     * 
+     * @return The currently present events.
+     * @throws IOException In case the dummy resources can not be accessed.
+     */
     public List<JsonNode> getEvents() throws IOException {
         return readTimestamp(currentTimestamp());
     }
 
+    /**
+     * Get the current event in paginated form. Return only a single page, with
+     * the number of events determined by `perPage`.
+     * 
+     * @param page    The page number to fetch. (Starting at 1)
+     * @param perPage The number of elements on each page.
+     * @return A subset of current events based on `page` and `perPage`.
+     * @throws IOException In case the dummy resources can not be accessed.
+     */
     public List<JsonNode> getEvents(int page, int perPage) throws IOException {
         List<JsonNode> allEvents = getEvents();
         if (page < 0 || allEvents.size() < (page - 1) * perPage) {
@@ -55,6 +76,12 @@ public class DummyData {
         }
     }
 
+    /**
+     * The current timestamp to used for reading the dummy resources. This
+     * timestamp will loop around back to `0` whenever the dummy data is exhausted.
+     * 
+     * @return The current timestamp.
+     */
     private long currentTimestamp() {
         long ideal = ChronoUnit.MILLIS.between(start, Instant.now());
         ideal %= timestamps.get(timestamps.size() - 1) + 5_000;
@@ -65,6 +92,15 @@ public class DummyData {
         return timestamps.get(pos);
     }
 
+    /**
+     * Read the dummy resources for the given timestamp. Not that the timestamp
+     * must actually exists in the resources, otherwise the method will throw an
+     * exception.
+     * 
+     * @param timestamp The timestamp to load the dummy events for.
+     * @return The list of events for the given timestamp.
+     * @throws IOException In case the dummy resources could not be accessed.
+     */
     private List<JsonNode> readTimestamp(long timestamp) throws IOException {
         LOGGER.info("Loading data for fake timestamp {}", timestamp);
         InputStream stream = DummyData.class.getResourceAsStream(RESOURCE_NAME + "/" + timestamp + ".json");
@@ -81,6 +117,13 @@ public class DummyData {
         return events;
     }
 
+    /**
+     * Read the set of all possible timestamp that can be loaded. The server only
+     * includes a limited number of dummy events.
+     * 
+     * @return The list of possible timestamps.
+     * @throws IOException In case the dummy resources can not be accessed.
+     */
     private List<Long> readPossibleTimestamps() throws IOException {
         URL url = DummyData.class.getResource(RESOURCE_NAME);
         if (url == null) {
@@ -121,10 +164,5 @@ public class DummyData {
         } else {
             throw new IOException("Resource protocol not supported");
         }
-    }
-
-    public static void main(String[] args) throws IOException {
-        DummyData obj = new DummyData();
-        System.out.println(obj.getEvents(1, 2));
     }
 }
