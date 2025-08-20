@@ -9,6 +9,9 @@ import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -17,9 +20,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * HTTP requests to the REST API.
  */
 public class RestApiClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestApiClient.class);
+
     /**
-     * A special kind of `IOException` that indicates that a rate limit has been
-     * hit with the underlying API. In case this exception is thrown, no more
+     * A special kind of {@link IOException} that indicates that a rate limit has
+     * been hit with the underlying API. In case this exception is thrown, no more
      * requests should be made before the retry after instant.
      */
     public class RateLimitException extends IOException {
@@ -29,7 +34,7 @@ public class RestApiClient {
          * Create a new rate limit exception.
          *
          * @param retryAfter
-         *                   The instant after which the API can be queries again.
+         *            The instant after which the API can be queries again.
          */
         public RateLimitException(Instant retryAfter) {
             this.retryAfter = retryAfter;
@@ -54,10 +59,10 @@ public class RestApiClient {
      * Create a new REST API client instance.
      *
      * @param baseUrl
-     *                    The base URL to connect to. (https://api.github.com for
-     *                    the official GitHub API)
+     *            The base URL to connect to. (https://api.github.com for
+     *            the official GitHub API)
      * @param accessToken
-     *                    The access token to use.
+     *            The access token to use.
      */
     public RestApiClient(String baseUrl, String accessToken) {
         this.baseUrl = baseUrl;
@@ -71,20 +76,22 @@ public class RestApiClient {
      * of events per page.
      *
      * @param page
-     *                The page number to fetch (starting at 1).
+     *            The page number to fetch (starting at 1).
      * @param perPage
-     *                The number of events per page (maximum 100).
+     *            The number of events per page (maximum 100).
      * @return The list of receiver events
      * @throws IOException
-     *                              In case there is any other I/O issue.
+     *             In case there is any other I/O issue.
      * @throws RateLimitException
-     *                              In case the rate limit of the API is exceeded.
+     *             In case the rate limit of the API is exceeded.
      * @throws InterruptedException
-     *                              If the operation is interrupted.
+     *             If the operation is interrupted.
      */
     public List<GithubEvent> getEvents(int page, int perPage) throws IOException, InterruptedException {
+        String url = baseUrl + "/events?page=" + page + "&per_page=" + perPage;
+        LOGGER.info("Fetching events from url {}", url);
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + "/events"))
+                .uri(URI.create(url))
                 .header("Accept", "application/vnd.github+json")
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .header("Authorization", "token " + accessToken)
@@ -96,6 +103,7 @@ public class RestApiClient {
             return objectMapper.readValue(response.body(), new TypeReference<List<GithubEvent>>() {
             });
         } else {
+            LOGGER.warn("Failed to fetch events. status code {}", status);
             if (status == 403 || status == 429) {
                 // If this is an issue of hitting the rate limit, try to figure
                 // out when it will be safe again to call the API.

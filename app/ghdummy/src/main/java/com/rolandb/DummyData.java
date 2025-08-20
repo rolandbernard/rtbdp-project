@@ -60,11 +60,11 @@ public class DummyData {
 
     /**
      * Get the current event in paginated form. Return only a single page, with
-     * the number of events determined by `perPage`.
+     * the number of events determined by {@code perPage}.
      * 
      * @param page    The page number to fetch. (Starting at 1)
      * @param perPage The number of elements on each page.
-     * @return A subset of current events based on `page` and `perPage`.
+     * @return A subset of current events based on {@code page} and {@code perPage}.
      * @throws IOException In case the dummy resources can not be accessed.
      */
     public List<JsonNode> getEvents(int page, int perPage) throws IOException {
@@ -78,7 +78,7 @@ public class DummyData {
 
     /**
      * The current timestamp to used for reading the dummy resources. This
-     * timestamp will loop around back to `0` whenever the dummy data is exhausted.
+     * timestamp will loop around back to 0 whenever the dummy data is exhausted.
      * 
      * @return The current timestamp.
      */

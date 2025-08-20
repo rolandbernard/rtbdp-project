@@ -23,9 +23,9 @@ import net.sourceforge.argparse4j.inf.Namespace;
 
 /**
  * This is a dummy server that can be used as a replacement for the official
- * `api.github.com` server for testing the rest of the application. This avoids
- * the need for a GitHub API access token and also avoids running into rate
- * limits.
+ * {@code api.github.com\ server for testing the rest of the application. This
+ * avoids the need for a GitHub API access token and also avoids running into
+ * rate limits.
  * The data that is served has been collected from the real GitHub API on the
  * 17th of August 2025.
  */
@@ -116,7 +116,7 @@ public class DummyServer {
      */
     public static void main(String[] args) {
         // Parse command line
-        ArgumentParser parser = ArgumentParsers.newFor("Server").build()
+        ArgumentParser parser = ArgumentParsers.newFor("DummyServer").build()
                 .description("Dummy server for serving a fake GitHub Events API. For testing purposes.");
         parser.addArgument("--port").metavar("PORT").type(Integer.class)
                 .setDefault(8888).help("the HTTP port for the exposed HTTP server");
