@@ -7,7 +7,7 @@ import { promises as fs } from 'fs';
 const INPUT = 'data/ghevents';
 const OUTPUT = 'app/ghdummy/src/main/resources/com/rolandb/ghevents';
 
-const timestamps = (await fs.readdir(INPUT));
+const timestamps = await fs.readdir(INPUT);
 timestamps.sort((a, b) => parseInt(a) - parseInt(b))
 
 const newest_times = timestamps.slice(-1_000)
