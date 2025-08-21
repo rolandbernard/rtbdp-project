@@ -1,10 +1,19 @@
 package com.rolandb;
 
+import java.time.Duration;
+import java.util.Properties;
+import java.util.concurrent.ExecutionException;
+
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.VoidSerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -22,8 +31,8 @@ import net.sourceforge.argparse4j.inf.Namespace;
 public class Producer {
     private static final Logger LOGGER = LoggerFactory.getLogger(Producer.class);
 
-    public static void main(String[] args) {
-        // Parse command line
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        // Parse command line.
         ArgumentParser parser = ArgumentParsers.newFor("KafkaProducer").build()
                 .description("Kafka producer for public GitHub Events via REST API");
         parser.addArgument("--bootstrap-servers").metavar("SERVERS")
@@ -36,10 +45,12 @@ public class Producer {
         parser.addArgument("--dry-run").action(Arguments.storeTrue()).help("send to stdout instead of Kafka");
         parser.addArgument("--url").metavar("URL")
                 .setDefault("https://api.github.com").help("GitHub API URL");
+        parser.addArgument("--gh-token").metavar("GITHUB_TOKEN")
+                .setDefault("").help("GitHub API access token");
         parser.addArgument("--poll-ms").metavar("POLL_MS").type(Integer.class)
-                .setDefault(1).help("polling interval in milliseconds");
+                .setDefault(2250).help("polling interval in milliseconds");
         parser.addArgument("--poll-depth").metavar("POLL_DEPTH").type(Integer.class)
-                .setDefault(1).help("number of events to poll each time");
+                .setDefault(300).help("number of events to poll each time");
         parser.addArgument("--log-level").type(String.class).setDefault("debug")
                 .help("configures the log level (default: debug; values: all|trace|debug|info|warn|error|off");
         Namespace cmd;
@@ -49,33 +60,89 @@ public class Producer {
             parser.handleError(e);
             return;
         }
-        // Read options
+        // Read options.
         String bootstrapServers = cmd.getString("bootstrap_servers");
         String topic = cmd.getString("topic");
         int numPartitions = cmd.getInt("num_partitions");
         int replicationFactor = cmd.getInt("replication_factor");
         String url = cmd.getString("url");
+        String accessToken = cmd.getString("gh_token");
         boolean dryRun = cmd.getBoolean("dry_run");
         int pollMs = cmd.getInt("poll_ms");
         int pollDepth = cmd.getInt("poll_depth");
         String logLevel = cmd.getString("log_level");
-        // Configures logging
+        // Configures logging.
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
-
-        KafkaProducer<Void, String> producer = null;
+        KafkaProducer<Void, String> kafkaProducer;
         if (!dryRun) {
-            // Create & check topic
+            // Create & check topic.
             KafkaUtil.setupTopic(topic, bootstrapServers, numPartitions, replicationFactor);
-            // Create producer
-            producer = new KafkaProducer<>(ImmutableMap.of(
-                    "key.serializer", "org.apache.kafka.common.serialization.VoidSerializer",
-                    "value.serializer", "org.apache.kafka.common.serialization.StringSerializer",
-                    "bootstrap.servers", bootstrapServers,
-                    "compression.type", "gzip",
-                    "acks", "0", // happily drop messages if cluster not available (reasonable here)
-                    "linger.ms", "250" // allow some batching
-            ));
+            // Create producer.
+            Properties props = new Properties();
+            props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, VoidSerializer.class.getName());
+            props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+            props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip");
+            props.put(ProducerConfig.ACKS_CONFIG, "1"); // Wait for only one in-sync replicas to acknowledge the write.
+            props.put(ProducerConfig.RETRIES_CONFIG, 3); // Retry up to 3 times on transient failures.
+            props.put(ProducerConfig.LINGER_MS_CONFIG, 250); // Allow some batching.
+            kafkaProducer = new KafkaProducer<>(props);
+        } else {
+            kafkaProducer = null;
+        }
+        // Setup REST API Client.
+        RestApiClient restApiClient = new RestApiClient(url, accessToken);
+        EventPollService pollingService = new EventPollService(restApiClient, pollMs, pollDepth);
+        ObjectMapper objectMapper = new ObjectMapper();
+        // Subscribe to the event observable and send events to Kafka.
+        pollingService.getEventsStream().subscribe(
+                event -> {
+                    try {
+                        String eventJson = objectMapper.writeValueAsString(event.getRawEvent());
+                        if (kafkaProducer == null) {
+                            // For dry-run, print to stdout.
+                            System.out.println(eventJson);
+                            System.out.flush();
+                        } else {
+                            // Asynchronously send the record.
+                            ProducerRecord<Void, String> record = new ProducerRecord<>(topic, null, eventJson);
+                            kafkaProducer.send(record, (metadata, exception) -> {
+                                if (exception != null) {
+                                    LOGGER.error("Failed to send event with ID '{}' to Kafka", event.getId(),
+                                            exception);
+                                } else {
+                                    LOGGER.info("Successfully sent event with ID '{}' to Kafka topic '{}' at offset {}",
+                                            event.getId(), metadata.topic(), metadata.offset());
+                                }
+                            });
+                        }
+                    } catch (JsonProcessingException e) {
+                        LOGGER.error("Failed to serialize event with ID '{}' to JSON", event.getId(), e);
+                        pollingService.unmarkEvent(event);
+                    }
+                },
+                error -> LOGGER.error("Polling stream encountered an error", error));
+        // Start the polling the REST service.
+        pollingService.startPolling();
+        // Add a shutdown hook to ensure a clean exit.
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            LOGGER.info("Shutting down application");
+            pollingService.stopPolling();
+            if (kafkaProducer != null) {
+                kafkaProducer.flush();
+                kafkaProducer.close(Duration.ofSeconds(10));
+                LOGGER.info("Kafka producer closed");
+            }
+        }));
+        // Wait for program to be terminated.
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
         }
     }
 }

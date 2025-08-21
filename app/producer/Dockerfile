@@ -8,5 +8,4 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/producer.jar ./producer.jar
-EXPOSE 8888
-ENTRYPOINT [ "java", "-cp", "producer.jar", "com.rolandb.KafkaProducer" ]
+ENTRYPOINT [ "java", "-cp", "producer.jar", "com.rolandb.Producer" ]

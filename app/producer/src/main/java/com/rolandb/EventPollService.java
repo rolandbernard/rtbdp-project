@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,23 +74,26 @@ public class EventPollService {
         Observable<GithubEvent> coldObservable = Observable.interval(pollingIntervalMs, TimeUnit.MILLISECONDS)
                 .observeOn(ioScheduler)
                 .flatMapSingle(tick -> {
-                    Single<List<GithubEvent>> page1 = Single
-                            .fromCallable(() -> apiClient.getEvents(1, pollingDepth / 3));
-                    Single<List<GithubEvent>> page2 = Single
-                            .fromCallable(() -> apiClient.getEvents(2, pollingDepth / 3));
-                    Single<List<GithubEvent>> page3 = Single
-                            .fromCallable(() -> apiClient.getEvents(3, pollingDepth / 3));
-                    return Single.zip(page1, page2, page3, (list1, list2, list3) -> {
-                        LOGGER.info("Successfully fetched data from pages 1, 2, and 3");
-                        return Observable.fromIterable(list1)
-                                .mergeWith(Observable.fromIterable(list2))
-                                .mergeWith(Observable.fromIterable(list3))
-                                .toList()
-                                .blockingGet();
+                    int numPages = (pollingDepth + 99) / 100;
+                    int perPage = Integer.min(100, pollingDepth);
+                    List<Single<List<GithubEvent>>> pages = IntStream.rangeClosed(1, numPages)
+                            .mapToObj(page -> Single.fromCallable(() -> apiClient.getEvents(page, perPage)))
+                            .collect(Collectors.toList());
+                    Single<List<GithubEvent>> ret = Single.zip(pages, (lists) -> {
+                        LOGGER.info("Successfully fetched data from {} pages", numPages);
+                        Observable<GithubEvent> combinedObservable = Observable.empty();
+                        for (Object result : lists) {
+                            @SuppressWarnings("unchecked")
+                            List<GithubEvent> pageList = (List<GithubEvent>) result;
+                            Collections.reverse(pageList); // we reverse so the oldest ones are first
+                            combinedObservable = Observable.fromIterable(pageList).concatWith(combinedObservable);
+                        }
+                        return combinedObservable.toList().blockingGet();
                     });
+                    return ret;
                 })
-                // If an exception occurs, this we catch it and control the retry based on the
-                // exception info.
+                // If an exception occurs, here we catch it and control the retry based on the
+                // exception type and info.
                 .retryWhen(errors -> errors.flatMap(ex -> {
                     if (ex instanceof RateLimitException) {
                         RateLimitException rateLimitException = (RateLimitException) ex;

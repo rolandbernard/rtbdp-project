@@ -35,20 +35,22 @@ public class KafkaUtil {
      * in the method arguments, throwing an {@link IllegalStateException} otherwise.
      *
      * @param topic
-     *                          the topic that must exist
+     *            the topic that must exist
      * @param bootstrapServers
-     *                          the address:port of one or more bootstrap servers,
-     *                          required for using the admin client
+     *            the address:port of one or more bootstrap servers,
+     *            required for using the admin client
      * @param numPartitions
-     *                          the desired number of partitions
+     *            the desired number of partitions
      * @param replicationFactor
-     *                          the desired replication factor
+     *            the desired replication factor
      * @return true, if the topic was created, false if it already exists
+     * @throws ExecutionException
+     * @throws InterruptedException
      * @throws Exception
-     *                   on failure
+     *             on failure
      */
     public static boolean setupTopic(String topic, String bootstrapServers, int numPartitions, int replicationFactor)
-            throws Exception {
+            throws ExecutionException, InterruptedException {
         Properties config = new Properties();
         config.setProperty("bootstrap.servers", bootstrapServers);
         AdminClient client = AdminClient.create(config);
@@ -88,7 +90,7 @@ public class KafkaUtil {
      * {@link KafkaConsumer#subscribe(Pattern, ConsumerRebalanceListener)}.
      *
      * @param actions
-     *                the action to execute in order, if any
+     *            the action to execute in order, if any
      * @return the {@code ConsumerRebalanceListener} executing the actions at
      *         partition assignment
      */
@@ -128,13 +130,12 @@ public class KafkaUtil {
      * {@code subscribe(topics, Util.onAssign(() -> seekBeforeEnd(...))}
      *
      * @param consumer
-     *                       the consumer
+     *            the consumer
      * @param relativeOffset
-     *                       the number of messages to read again starting from the
-     *                       end of each partition (if 0, will
-     *                       read only new messages coming after this method is
-     *                       called, if 1 will re-read the last
-     *                       message, and so on)
+     *            the number of messages to read again starting from the
+     *            end of each partition (if 0, will read only new messages
+     *            coming after this method is called, if 1 will re-read the last
+     *            message, and so on)
      */
     public static void seekBeforeEnd(KafkaConsumer<?, ?> consumer, int relativeOffset) {
         Set<TopicPartition> partitions = consumer.assignment();
@@ -160,12 +161,11 @@ public class KafkaUtil {
      * {@code subscribe(topics, Util.onAssign(() -> seekAfterStart(...))}
      *
      * @param consumer
-     *                       the consumer
+     *            the consumer
      * @param relativeOffset
-     *                       the number of messages to skip from the beginning of
-     *                       each partition (if 0, will
-     *                       read all messages from beginning, if 1 will skip the
-     *                       first message, and so on)
+     *            the number of messages to skip from the beginning of
+     *            each partition (if 0, will read all messages from beginning,
+     *            if 1 will skip the first message, and so on)
      */
     public static void seekAfterStart(KafkaConsumer<?, ?> consumer, int relativeOffset) {
         Set<TopicPartition> partitions = consumer.assignment();
