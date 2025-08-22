@@ -16,7 +16,6 @@
         <exec.mainClass>com.rolandb.DummyServer</exec.mainClass>
         <argparse4j.version>0.9.0</argparse4j.version>
         <jackson.version>2.19.0</jackson.version>
-        <guava.version>33.1.0-jre</guava.version>
         <slf4j.version>2.0.12</slf4j.version>
         <logback.version>1.5.3</logback.version>
         <junit.version>5.9.2</junit.version>
@@ -34,12 +33,6 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
-        </dependency>
-        <!-- Utilities -->
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>${guava.version}</version>
         </dependency>
         <!-- Logging -->
         <dependency>

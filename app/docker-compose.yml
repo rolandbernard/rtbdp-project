@@ -1,5 +1,6 @@
 services:
 
+  # Kafka Containers (broker + UI)
   broker:
     image: confluentinc/cp-kafka:7.9.0
     container_name: '${COMPOSE_PROJECT_NAME:-gha}-broker'
@@ -43,14 +44,63 @@ services:
       LOGGING_LEVEL_ROOT: 'WARN' # optional, along with next option reduces verbosity
       LOGGING_LEVEL_COM_PROVECTUS: 'WARN'
 
-  frontend:
+  # PostgreSQL Containers (DB + pgadmin)
+  postgres:
+    image: postgres:16.2-alpine3.19
+    container_name: '${COMPOSE_PROJECT_NAME:-gha}-postgres'
+    ports:
+      - '${PORT_POSTGRES:-25432}:5432'
+    volumes:
+      - ./postgres:/docker-entrypoint-initdb.d:z
+      - postgres-data:/var/lib/postgresql/data:z
+    environment:
+      POSTGRES_DB: 'db'
+      POSTGRES_USER: '${USERID:-user}'
+      POSTGRES_PASSWORD: '${USERPWD:-user}'
+
+  pgadmin:
+    image: dpage/pgadmin4:9.3
+    container_name: '${COMPOSE_PROJECT_NAME:-lfc}-pgadmin'
+    depends_on:
+      - postgres
+    ports:
+      - '${PORT_PGADMIN:-20080}:80'
+    volumes:
+      - ./pgadmin4/servers.json:/pgadmin4/servers.json:z
+      - pgadmin-data:/var/lib/pgadmin:z
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${USEREMAIL:-user@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${USERPWD:-user}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_DISABLE_POSTFIX: 'true'
+      GUNICORN_ACCESS_LOGFILE: '/dev/null'
+
+  # Project-developed Containers (API Dummy + Producer + Processor + Frontend)
+  ghdummy:
     build: ghdummy
     image: '${COMPOSE_PROJECT_NAME:-gha}-ghdummy:latest'
-    container_name: '${COMPOSE_PROJECT_NAME:-gha}-frontend'
+    container_name: '${COMPOSE_PROJECT_NAME:-gha}-ghdummy'
     ports:
-      - '${PORT_GHDUMMY:-8889}:8888'
+      - '${PORT_GHDUMMY:-8889}:${PORT_GHDUMMY:-8889}'
     profiles:
       - ghdummy
+    command: ["--port", "${PORT_GHDUMMY:-8889}"]
+
+  producer:
+    build: producer
+    image: '${COMPOSE_PROJECT_NAME:-gha}-producer:latest'
+    container_name: '${COMPOSE_PROJECT_NAME:-gha}-producer'
+    depends_on:
+      - broker
+      - ghdummy
+    profiles:
+      - producer
+    command: [
+      '--bootstrap-server', 'broker:9092', '--url', '${GITHUB_URL:-http://ghdummy:${PORT_GHDUMMY:-8889}}',
+      '--gh-token', '${GITHUB_TOKEN}'
+    ]
 
 volumes:
   broker-data:
+  postgres-data:
+  pgadmin-data:
