@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -73,5 +74,36 @@ public class KafkaUtil {
         LOGGER.info("{} topic '{}' with {} partitions and replication factor {}",
                 created ? "Created" : "Found", topic, numPartitions, replicationFactor);
         return created;
+    }
+
+    /**
+     * Block until the specified topics are available in Kafka before returning
+     * from the method. The list of available topics will be polled one a second
+     * until all of the requested ones are available.
+     * 
+     * @param bootstrapServers
+     *            The address:port of one or more bootstrap servers, required for
+     *            using the admin client.
+     * @param topics
+     *            The list of topics that we want to wait for before continuing.
+     * @throws ExecutionException
+     * @throws InterruptedException
+     */
+    public static void waitForTopics(String bootstrapServers, String... topics)
+            throws InterruptedException, ExecutionException {
+        Set<String> expectedTopics = Set.of(topics);
+        Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        try (AdminClient client = AdminClient.create(props)) {
+            while (true) {
+                Set<String> existingTopics = client.listTopics().names().get();
+                if (existingTopics.containsAll(expectedTopics)) {
+                    LOGGER.info("Found topics {}", expectedTopics);
+                    return;
+                }
+                LOGGER.info("Waiting for topics {}", expectedTopics);
+                Thread.sleep(1000); // wait 1 seconds
+            }
+        }
     }
 }

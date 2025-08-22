@@ -33,18 +33,19 @@ public class Producer {
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         // Parse command line.
-        ArgumentParser parser = ArgumentParsers.newFor("KafkaProducer").build()
+        ArgumentParser parser = ArgumentParsers.newFor("Producer").build()
                 .description("Kafka producer for public GitHub Events via REST API");
-        parser.addArgument("--bootstrap-servers").metavar("SERVERS")
+        parser.addArgument("--bootstrap-servers").metavar("HOST:PORT")
                 .setDefault("localhost:29092").help("bootstrap servers");
-        parser.addArgument("--topic").metavar("TOPIC").setDefault("events").help("topic name");
+        parser.addArgument("--topic").metavar("TOPIC").setDefault("events")
+                .help("Kafka topic name to output events data");
         parser.addArgument("--num-partitions").metavar("PARTITIONS").type(Integer.class)
-                .setDefault(1).help("# partitions");
+                .setDefault(1).help("# partitions for Kafka topic");
         parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
-                .setDefault(1).help("replication factor");
-        parser.addArgument("--dry-run").action(Arguments.storeTrue()).help("send to stdout instead of Kafka");
+                .setDefault(1).help("replication factor for Kafka topic");
+        parser.addArgument("--dry-run").action(Arguments.storeTrue()).help("send events to stdout instead of Kafka");
         parser.addArgument("--url").metavar("URL")
-                .setDefault("https://api.github.com").help("GitHub API URL");
+                .setDefault("http://localhost:8889").help("GitHub API URL to poll from");
         parser.addArgument("--gh-token").metavar("GITHUB_TOKEN")
                 .setDefault("").help("GitHub API access token");
         parser.addArgument("--poll-ms").metavar("POLL_MS").type(Integer.class)

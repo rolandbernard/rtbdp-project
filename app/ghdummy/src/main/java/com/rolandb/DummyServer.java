@@ -119,7 +119,7 @@ public class DummyServer {
         ArgumentParser parser = ArgumentParsers.newFor("DummyServer").build()
                 .description("Dummy server for serving a fake GitHub Events API. For testing purposes.");
         parser.addArgument("--port").metavar("PORT").type(Integer.class)
-                .setDefault(8888).help("the HTTP port for the exposed HTTP server");
+                .setDefault(8889).help("the HTTP port for the exposed HTTP server");
         parser.addArgument("--log-level").type(String.class).setDefault("debug")
                 .help("configures the log level (default: debug; values: all|trace|debug|info|warn|error|off");
         Namespace cmd;
