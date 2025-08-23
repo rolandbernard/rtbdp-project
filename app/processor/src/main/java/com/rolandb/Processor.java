@@ -1,12 +1,28 @@
 package com.rolandb;
 
+import java.time.Duration;
+
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.RestOptions;
+import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.Schema;
+import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.types.Row;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -57,16 +73,52 @@ public class Processor {
         KafkaUtil.waitForTopics(bootstrapServers, inputTopic);
         // Obtain and configure Flink environments.
         Configuration conf = new Configuration();
-        conf.setInteger(RestOptions.PORT, cmd.getInt("ui_port"));
+        conf.setInteger(RestOptions.PORT, uiPort);
         conf.setInteger("table.exec.source.idle-timeout", 1000);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
-        StreamTableEnvironment tenv = StreamTableEnvironment.create(env, new EnvironmentSettings.Builder().withConfiguration(conf).build());
-
-        // Define source table 'trades' reading from Kafka
-
-
+        StreamTableEnvironment tenv = StreamTableEnvironment.create(env,
+                new EnvironmentSettings.Builder().withConfiguration(conf).build());
+        // Define Kafka source.
+        KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
+                .setBootstrapServers(bootstrapServers)
+                .setTopics(inputTopic)
+                .setGroupId("processor")
+                .setStartingOffsets(rewind ? OffsetsInitializer.earliest()
+                        : OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST))
+                .setValueOnlyDeserializer(new SimpleStringSchema())
+                .build();
+        // Parse into a stream of events.
+        DataStream<GithubEvent> eventStream = env
+                .fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source")
+                .map(jsonString -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    GithubEvent event = mapper.readValue(jsonString, GithubEvent.class);
+                    return event;
+                }, TypeInformation.of(GithubEvent.class))
+                .returns(Types.POJO(GithubEvent.class)) // <--- This is the key fix
+                // We assume events can be up to 10 seconds late, but otherwise in-order.
+                .assignTimestampsAndWatermarks(
+                        WatermarkStrategy.<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
+                                .withTimestampAssigner((event, timestamp) -> event.getCreatedAt().toEpochMilli()));
+        Table eventsTable = tenv.fromDataStream(eventStream,
+                Schema.newBuilder()
+                        .column("eventType", DataTypes.STRING())
+                        .column("createdAt", DataTypes.TIMESTAMP_LTZ(3))
+                        .column("username", DataTypes.STRING())
+                        .column("reponame", DataTypes.STRING())
+                        .watermark("createdAt", "SOURCE_WATERMARK()")
+                        .build());
+        DataStream<Row> output = tenv.toChangelogStream(eventsTable);
+        if (dryRun) {
+            output.print().setParallelism(1);
+        }
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
         env.execute();
     }
 }
+
+// private GithubEventType eventType;
+// private Instant createdAt;
+// private String username;
+// private String reponame;

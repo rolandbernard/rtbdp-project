@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Class encapsulating the dummy data for a specific point in time. The
@@ -39,7 +40,8 @@ public class DummyData {
      * Crate a new instance of the dummy data. The dummy data will loop starting
      * from the time this instance is created.
      * 
-     * @throws IOException In case the dummy resources can not be accessed.
+     * @throws IOException
+     *             In case the dummy resources can not be accessed.
      */
     public DummyData() throws IOException {
         start = Instant.now();
@@ -52,20 +54,24 @@ public class DummyData {
      * Get the events for the current timestamp.
      * 
      * @return The currently present events.
-     * @throws IOException In case the dummy resources can not be accessed.
+     * @throws IOException
+     *             In case the dummy resources can not be accessed.
      */
     public List<JsonNode> getEvents() throws IOException {
-        return readTimestamp(currentTimestamp());
+        return modifyTimestamps(readTimestamp(currentTimestamp()), currentRepeat());
     }
 
     /**
      * Get the current event in paginated form. Return only a single page, with
      * the number of events determined by {@code perPage}.
      * 
-     * @param page    The page number to fetch. (Starting at 1)
-     * @param perPage The number of elements on each page.
+     * @param page
+     *            The page number to fetch. (Starting at 1)
+     * @param perPage
+     *            The number of elements on each page.
      * @return A subset of current events based on {@code page} and {@code perPage}.
-     * @throws IOException In case the dummy resources can not be accessed.
+     * @throws IOException
+     *             In case the dummy resources can not be accessed.
      */
     public List<JsonNode> getEvents(int page, int perPage) throws IOException {
         List<JsonNode> allEvents = getEvents();
@@ -74,6 +80,26 @@ public class DummyData {
         } else {
             return allEvents.subList((page - 1) * perPage, Integer.min(allEvents.size(), page * perPage));
         }
+    }
+
+    /**
+     * Modify all timestamps such that they are moved forward by the given number
+     * of repetitions.
+     * 
+     * @param original
+     *            The original list of events to modify.
+     * @param repeat
+     *            The number of repetitions to add.
+     * @return The same list as given in, but with the objects modified.
+     */
+    private List<JsonNode> modifyTimestamps(List<JsonNode> original, int repeat) {
+        long range = timestamps.get(timestamps.size() - 1) + 5_000;
+        for (JsonNode event : original) {
+            Instant orig = Instant.parse(event.get("created_at").asText());
+            Instant shifted = orig.plusMillis(range * repeat);
+            ((ObjectNode) event).put("created_at", shifted.toString());
+        }
+        return original;
     }
 
     /**
@@ -93,13 +119,25 @@ public class DummyData {
     }
 
     /**
+     * The current number of repetitions of the event stream.
+     * 
+     * @return The current repeat count.
+     */
+    private int currentRepeat() {
+        long ideal = ChronoUnit.MILLIS.between(start, Instant.now());
+        return (int) (ideal / (timestamps.get(timestamps.size() - 1) + 5_000));
+    }
+
+    /**
      * Read the dummy resources for the given timestamp. Not that the timestamp
      * must actually exists in the resources, otherwise the method will throw an
      * exception.
      * 
-     * @param timestamp The timestamp to load the dummy events for.
+     * @param timestamp
+     *            The timestamp to load the dummy events for.
      * @return The list of events for the given timestamp.
-     * @throws IOException In case the dummy resources could not be accessed.
+     * @throws IOException
+     *             In case the dummy resources could not be accessed.
      */
     private List<JsonNode> readTimestamp(long timestamp) throws IOException {
         LOGGER.info("Loading data for fake timestamp {}", timestamp);
@@ -122,7 +160,8 @@ public class DummyData {
      * includes a limited number of dummy events.
      * 
      * @return The list of possible timestamps.
-     * @throws IOException In case the dummy resources can not be accessed.
+     * @throws IOException
+     *             In case the dummy resources can not be accessed.
      */
     private List<Long> readPossibleTimestamps() throws IOException {
         URL url = DummyData.class.getResource(RESOURCE_NAME);
