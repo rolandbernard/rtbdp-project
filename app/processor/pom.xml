@@ -16,6 +16,9 @@
         <exec.mainClass>com.rolandb.Processor</exec.mainClass>
         <kafka.version>3.6.1</kafka.version>
         <flink.version>1.18.1</flink.version>
+        <flink-connector-kafka.version>3.1.0-1.18</flink-connector-kafka.version>
+        <flink-connector-jdbc.version>3.1.2-1.18</flink-connector-jdbc.version>
+        <postgresql.version>42.7.3</postgresql.version>
         <argparse4j.version>0.9.0</argparse4j.version>
         <jackson.version>2.19.0</jackson.version>
         <slf4j.version>2.0.12</slf4j.version>
@@ -40,6 +43,13 @@
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-runtime-web</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Apache Flink RocksDB State Backend -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-statebackend-rocksdb</artifactId>
             <version>${flink.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -82,7 +92,19 @@
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-connector-kafka</artifactId>
-            <version>3.1.0-1.18</version>
+            <version>${flink-connector-kafka.version}</version>
+        </dependency>
+
+        <!-- Apache Flink connector for JDBC / PostgreSQL -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-jdbc</artifactId>
+            <version>${flink-connector-jdbc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
         </dependency>
 
         <!-- Apache Flink Data Format for JSON -->

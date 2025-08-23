@@ -1,5 +1,4 @@
-CREATE TABLE event_counts_latest
-(
+CREATE TABLE counts_live (
     ts_start TIMESTAMP(3) WITH TIME ZONE,
     ts_end TIMESTAMP (3) WITH TIME ZONE,
     kind VARCHAR,
@@ -8,8 +7,7 @@ CREATE TABLE event_counts_latest
     PRIMARY KEY (window_size, kind)
 );
 
-CREATE TABLE event_counts_history
-(
+CREATE TABLE counts_history (
     ts_start TIMESTAMP(3) WITH TIME ZONE,
     ts_end TIMESTAMP (3) WITH TIME ZONE,
     kind VARCHAR,

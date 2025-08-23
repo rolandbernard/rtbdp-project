@@ -5,17 +5,20 @@ import java.time.Duration;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
+import org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Schema;
+import org.apache.flink.table.api.StatementSet;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableDescriptor;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
@@ -76,30 +79,37 @@ public class Processor {
         conf.setInteger(RestOptions.PORT, uiPort);
         conf.setInteger("table.exec.source.idle-timeout", 1000);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
+        // Set RocksDB as state backend to allow large and more durable state.
+        EmbeddedRocksDBStateBackend rocksDBStateBackend = new EmbeddedRocksDBStateBackend();
+        env.setStateBackend(rocksDBStateBackend);
+        // Enable checkpointing. At-least-once semantics are fine because we basically
+        // always use upserts with a primary key.
+        env.enableCheckpointing(60, CheckpointingMode.AT_LEAST_ONCE);
         StreamTableEnvironment tenv = StreamTableEnvironment.create(env,
-                new EnvironmentSettings.Builder().withConfiguration(conf).build());
+                EnvironmentSettings.newInstance().withConfiguration(conf).build());
         // Define Kafka source.
         KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
                 .setBootstrapServers(bootstrapServers)
                 .setTopics(inputTopic)
                 .setGroupId("processor")
+                .setProperty("commit.offsets.on.checkpoint", "true")
                 .setStartingOffsets(rewind ? OffsetsInitializer.earliest()
                         : OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST))
                 .setValueOnlyDeserializer(new SimpleStringSchema())
                 .build();
         // Parse into a stream of events.
+        ObjectMapper objectMapper = new ObjectMapper();
         DataStream<GithubEvent> eventStream = env
                 .fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source")
                 .map(jsonString -> {
-                    ObjectMapper mapper = new ObjectMapper();
-                    GithubEvent event = mapper.readValue(jsonString, GithubEvent.class);
-                    return event;
+                    return objectMapper.readValue(jsonString, GithubEvent.class);
                 }, TypeInformation.of(GithubEvent.class))
-                .returns(Types.POJO(GithubEvent.class)) // <--- This is the key fix
                 // We assume events can be up to 10 seconds late, but otherwise in-order.
                 .assignTimestampsAndWatermarks(
                         WatermarkStrategy.<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
-                                .withTimestampAssigner((event, timestamp) -> event.getCreatedAt().toEpochMilli()));
+                                .withTimestampAssigner((event, timestamp) -> event.getCreatedAt().toEpochMilli()))
+                .name("Event Stream");
+        // Convert to a table.
         Table eventsTable = tenv.fromDataStream(eventStream,
                 Schema.newBuilder()
                         .column("eventType", DataTypes.STRING())
@@ -108,7 +118,7 @@ public class Processor {
                         .column("reponame", DataTypes.STRING())
                         .watermark("createdAt", "SOURCE_WATERMARK()")
                         .build());
-        DataStream<Row> output = tenv.toChangelogStream(eventsTable);
+        DataStream<Row> output = tenv.toDataStream(eventsTable);
         if (dryRun) {
             output.print().setParallelism(1);
         }
@@ -117,8 +127,3 @@ public class Processor {
         env.execute();
     }
 }
-
-// private GithubEventType eventType;
-// private Instant createdAt;
-// private String username;
-// private String reponame;
