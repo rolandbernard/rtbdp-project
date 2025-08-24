@@ -4,9 +4,9 @@ import java.time.Duration;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.RestOptions;
+import org.apache.flink.connector.jdbc.JdbcConnectionOptions.JdbcConnectionOptionsBuilder;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackend;
@@ -16,11 +16,8 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Schema;
-import org.apache.flink.table.api.StatementSet;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableDescriptor;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.types.Row;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +29,8 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+
+import static org.apache.flink.table.api.Expressions.*;
 
 public class Processor {
     private static final Logger LOGGER = LoggerFactory.getLogger(Processor.class);
@@ -52,6 +51,10 @@ public class Processor {
                 .setDefault("user").help("password for accessing output database");
         parser.addArgument("--ui-port").metavar("PORT").type(Integer.class).setDefault(8081)
                 .help("enables Flink UI at specified port when running standalone (mini-cluster mode)");
+        parser.addArgument("--num-partitions").metavar("PARTITIONS").type(Integer.class)
+                .setDefault(1).help("# partitions for Kafka topic");
+        parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
+                .setDefault(1).help("replication factor for Kafka topic");
         parser.addArgument("--rewind").action(Arguments.storeTrue())
                 .help("whether to (re)process input events from the beginning");
         parser.addArgument("--dry-run").action(Arguments.storeTrue())
@@ -70,6 +73,8 @@ public class Processor {
         String dbUsername = cmd.getString("db_username");
         String dbPassword = cmd.getString("db_password");
         int uiPort = cmd.getInt("ui_port");
+        int numPartitions = cmd.getInt("num_partitions");
+        int replicationFactor = cmd.getInt("replication_factor");
         boolean rewind = cmd.getBoolean("rewind");
         boolean dryRun = cmd.getBoolean("dry_run");
         // Await input Kafka topic.
@@ -84,7 +89,7 @@ public class Processor {
         env.setStateBackend(rocksDBStateBackend);
         // Enable checkpointing. At-least-once semantics are fine because we basically
         // always use upserts with a primary key.
-        env.enableCheckpointing(60, CheckpointingMode.AT_LEAST_ONCE);
+        env.enableCheckpointing(60_000, CheckpointingMode.AT_LEAST_ONCE);
         StreamTableEnvironment tenv = StreamTableEnvironment.create(env,
                 EnvironmentSettings.newInstance().withConfiguration(conf).build());
         // Define Kafka source.
@@ -101,27 +106,46 @@ public class Processor {
         ObjectMapper objectMapper = new ObjectMapper();
         DataStream<GithubEvent> eventStream = env
                 .fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source")
+                .rebalance()
                 .map(jsonString -> {
                     return objectMapper.readValue(jsonString, GithubEvent.class);
-                }, TypeInformation.of(GithubEvent.class))
+                })
                 // We assume events can be up to 10 seconds late, but otherwise in-order.
                 .assignTimestampsAndWatermarks(
-                        WatermarkStrategy.<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
-                                .withTimestampAssigner((event, timestamp) -> event.getCreatedAt().toEpochMilli()))
+                        WatermarkStrategy
+                                .<GithubEvent>forBoundedOutOfOrderness(
+                                        Duration.ofSeconds(10))
+                                .withTimestampAssigner((event, timestamp) -> event
+                                        .getCreatedAt().toEpochMilli()))
                 .name("Event Stream");
         // Convert to a table.
-        Table eventsTable = tenv.fromDataStream(eventStream,
+        Table eventTable = tenv.fromDataStream(eventStream,
                 Schema.newBuilder()
                         .column("eventType", DataTypes.STRING())
                         .column("createdAt", DataTypes.TIMESTAMP_LTZ(3))
                         .column("username", DataTypes.STRING())
                         .column("reponame", DataTypes.STRING())
-                        .watermark("createdAt", "SOURCE_WATERMARK()")
-                        .build());
-        DataStream<Row> output = tenv.toDataStream(eventsTable);
-        if (dryRun) {
-            output.print().setParallelism(1);
-        }
+                        .watermark("createdAt", call("SOURCE_WATERMARK"))
+                        .build())
+                .renameColumns($("eventType").as("kind"))
+                .renameColumns($("createdAt").as("created_at"));
+        // Setup parameters for table builder.
+        AbstractTableBuilder builder = (new AbstractTableBuilder())
+                .setEnv(env)
+                .setTableEnv(tenv)
+                .setEventTable(eventTable)
+                .setJdbcOptions(new JdbcConnectionOptionsBuilder()
+                        .withUrl(dbUrl)
+                        .withDriverName("org.postgresql.Driver")
+                        .withUsername(dbUsername)
+                        .withPassword(dbPassword)
+                        .build())
+                .setBootstrapServers(bootstrapServers)
+                .setDryRun(dryRun)
+                .setNumPartitions(numPartitions)
+                .setReplicationFactor(replicationFactor);
+        // Actually setup table computations.
+        builder.build("events2", AbstractTableBuilder.class);
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
         env.execute();

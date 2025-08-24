@@ -4,8 +4,7 @@ package com.rolandb;
  * This is a type of event that can be received from the GitHub Events API. Note
  * that these are not the exact types of events as used in the API, but those
  * used for further processing in this application. For example, a number of
- * less
- * important events are combined in the {@code OTHER} category.
+ * less important events are combined in the {@code OTHER} category.
  */
 public enum GithubEventType {
     PUSH("push"),
@@ -30,6 +29,7 @@ public enum GithubEventType {
         name = s;
     }
 
+    @Override
     public String toString() {
         return this.name;
     }

@@ -1,6 +1,15 @@
+CREATE TABLE events2 (
+    ts_write TIMESTAMP,
+    created_at TIMESTAMP,
+    kind VARCHAR,
+    username VARCHAR,
+    reponame VARCHAR
+);
+
 CREATE TABLE counts_live (
-    ts_start TIMESTAMP(3) WITH TIME ZONE,
-    ts_end TIMESTAMP (3) WITH TIME ZONE,
+    ts_start TIMESTAMP,
+    ts_end TIMESTAMP,
+    ts_write TIMESTAMP,
     kind VARCHAR,
     window_size VARCHAR,
     num_events INT,
@@ -8,11 +17,11 @@ CREATE TABLE counts_live (
 );
 
 CREATE TABLE counts_history (
-    ts_start TIMESTAMP(3) WITH TIME ZONE,
-    ts_end TIMESTAMP (3) WITH TIME ZONE,
+    ts_start TIMESTAMP,
+    ts_end TIMESTAMP,
+    ts_write TIMESTAMP,
     kind VARCHAR,
     window_size VARCHAR,
     num_events INT,
     PRIMARY KEY (ts_start, ts_end, window_size, kind)
 );
-

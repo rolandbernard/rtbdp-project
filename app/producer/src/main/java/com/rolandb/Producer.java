@@ -85,8 +85,8 @@ public class Producer {
             props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, VoidSerializer.class.getName());
             props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip");
-            props.put(ProducerConfig.ACKS_CONFIG, "1"); // Wait for only one in-sync replicas to acknowledge the write.
-            props.put(ProducerConfig.RETRIES_CONFIG, 3); // Retry up to 3 times on transient failures.
+            props.put(ProducerConfig.ACKS_CONFIG, "1"); // Wait for only one in-sync replica to acknowledge the write.
+            props.put(ProducerConfig.RETRIES_CONFIG, 5); // Retry up to 5 times on transient failures.
             props.put(ProducerConfig.LINGER_MS_CONFIG, 250); // Allow some batching.
             kafkaProducer = new KafkaProducer<>(props);
         } else {
@@ -110,6 +110,7 @@ public class Producer {
                             ProducerRecord<Void, String> record = new ProducerRecord<>(topic, null, eventJson);
                             kafkaProducer.send(record, (metadata, exception) -> {
                                 if (exception != null) {
+                                    pollingService.unmarkEvent(event);
                                     LOGGER.error("Failed to send event with ID '{}' to Kafka", event.getId(),
                                             exception);
                                 } else {
@@ -119,8 +120,8 @@ public class Producer {
                             });
                         }
                     } catch (JsonProcessingException e) {
-                        LOGGER.error("Failed to serialize event with ID '{}' to JSON", event.getId(), e);
                         pollingService.unmarkEvent(event);
+                        LOGGER.error("Failed to serialize event with ID '{}' to JSON", event.getId(), e);
                     }
                 },
                 error -> LOGGER.error("Polling stream encountered an error", error));
