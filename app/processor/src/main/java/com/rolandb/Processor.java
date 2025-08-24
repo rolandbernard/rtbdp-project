@@ -4,33 +4,35 @@ import java.time.Duration;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.RestOptions;
+import org.apache.flink.configuration.StateBackendOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.table.api.config.ExecutionConfigOptions;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions.JdbcConnectionOptionsBuilder;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
-import org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.Schema;
-import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rolandb.tables.CountsHistoryTable;
+import com.rolandb.tables.CountsLiveTable;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-
-import static org.apache.flink.table.api.Expressions.*;
 
 public class Processor {
     private static final Logger LOGGER = LoggerFactory.getLogger(Processor.class);
@@ -81,12 +83,15 @@ public class Processor {
         KafkaUtil.waitForTopics(bootstrapServers, inputTopic);
         // Obtain and configure Flink environments.
         Configuration conf = new Configuration();
-        conf.setInteger(RestOptions.PORT, uiPort);
-        conf.setInteger("table.exec.source.idle-timeout", 1000);
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
+        conf.set(RestOptions.PORT, uiPort);
+        conf.set(ExecutionConfigOptions.TABLE_EXEC_SOURCE_IDLE_TIMEOUT, Duration.ofSeconds(5));
+        // Increase memory size a bit.
+        conf.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.ofMebiBytes(2048));
+        conf.set(TaskManagerOptions.NETWORK_MEMORY_MAX, MemorySize.ofMebiBytes(512));
         // Set RocksDB as state backend to allow large and more durable state.
-        EmbeddedRocksDBStateBackend rocksDBStateBackend = new EmbeddedRocksDBStateBackend();
-        env.setStateBackend(rocksDBStateBackend);
+        conf.set(StateBackendOptions.STATE_BACKEND, "rocksdb");
+        conf.set(CheckpointingOptions.INCREMENTAL_CHECKPOINTS, true);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         // Enable checkpointing. At-least-once semantics are fine because we basically
         // always use upserts with a primary key.
         env.enableCheckpointing(60_000, CheckpointingMode.AT_LEAST_ONCE);
@@ -104,36 +109,15 @@ public class Processor {
                 .build();
         // Parse into a stream of events.
         ObjectMapper objectMapper = new ObjectMapper();
-        DataStream<GithubEvent> eventStream = env
+        DataStream<JsonNode> rawEventsStream = env
                 .fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source")
                 .rebalance()
-                .map(jsonString -> {
-                    return objectMapper.readValue(jsonString, GithubEvent.class);
-                })
-                // We assume events can be up to 10 seconds late, but otherwise in-order.
-                .assignTimestampsAndWatermarks(
-                        WatermarkStrategy
-                                .<GithubEvent>forBoundedOutOfOrderness(
-                                        Duration.ofSeconds(10))
-                                .withTimestampAssigner((event, timestamp) -> event
-                                        .getCreatedAt().toEpochMilli()))
-                .name("Event Stream");
-        // Convert to a table.
-        Table eventTable = tenv.fromDataStream(eventStream,
-                Schema.newBuilder()
-                        .column("eventType", DataTypes.STRING())
-                        .column("createdAt", DataTypes.TIMESTAMP_LTZ(3))
-                        .column("username", DataTypes.STRING())
-                        .column("reponame", DataTypes.STRING())
-                        .watermark("createdAt", call("SOURCE_WATERMARK"))
-                        .build())
-                .renameColumns($("eventType").as("kind"))
-                .renameColumns($("createdAt").as("created_at"));
+                .map(jsonString -> objectMapper.readTree(jsonString));
         // Setup parameters for table builder.
         AbstractTableBuilder builder = (new AbstractTableBuilder())
                 .setEnv(env)
                 .setTableEnv(tenv)
-                .setEventTable(eventTable)
+                .addStream("rawEvents", rawEventsStream)
                 .setJdbcOptions(new JdbcConnectionOptionsBuilder()
                         .withUrl(dbUrl)
                         .withDriverName("org.postgresql.Driver")
@@ -145,7 +129,8 @@ public class Processor {
                 .setNumPartitions(numPartitions)
                 .setReplicationFactor(replicationFactor);
         // Actually setup table computations.
-        builder.build("events2", AbstractTableBuilder.class);
+        builder.build("counts_live", CountsLiveTable.class);
+        builder.build("counts_history", CountsHistoryTable.class);
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
         env.execute();

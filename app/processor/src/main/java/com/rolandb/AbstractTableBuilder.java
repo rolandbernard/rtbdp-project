@@ -2,10 +2,14 @@ package com.rolandb;
 
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
@@ -14,12 +18,18 @@ import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
+import org.apache.flink.table.api.DataTypes;
+import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
 import org.apache.kafka.clients.producer.ProducerConfig;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+import static org.apache.flink.table.api.Expressions.*;
 
 /**
  * This class contains the basic logic for writing a computed table to both a
@@ -33,7 +43,8 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 public class AbstractTableBuilder {
     protected StreamExecutionEnvironment env;
     protected StreamTableEnvironment tenv;
-    protected Table eventTable;
+    protected Map<String, DataStream<?>> streams = new HashMap<>();
+    protected Map<String, Table> tables = new HashMap<>();
     private JdbcConnectionOptions jdbcOptions;
     private String bootstrapServers = "localhost:29092";
     private boolean dryRun = false;
@@ -51,8 +62,13 @@ public class AbstractTableBuilder {
         return this;
     }
 
-    public AbstractTableBuilder setEventTable(Table eventTable) {
-        this.eventTable = eventTable;
+    public AbstractTableBuilder addStream(String name, DataStream<?> stream) {
+        this.streams.put(name, stream);
+        return this;
+    }
+
+    public AbstractTableBuilder addTable(String name, Table table) {
+        this.tables.put(name, table);
         return this;
     }
 
@@ -86,8 +102,58 @@ public class AbstractTableBuilder {
         return this;
     }
 
+    @SuppressWarnings("unchecked")
+    protected <T> DataStream<T> getStream(String name) {
+        return (DataStream<T>) streams.get(name);
+    }
+
+    protected Table getTable(String name) {
+        return tables.get(name);
+    }
+
+    protected DataStream<JsonNode> getRawEventStream() {
+        return getStream("rawEvents");
+    }
+
+    protected DataStream<GithubEvent> getEventStream() {
+        DataStream<GithubEvent> stream = getStream("events");
+        if (stream == null) {
+            stream = getRawEventStream()
+                    .map(jsonNode -> new GithubEvent(jsonNode))
+                    // We assume events can be up to 10 seconds late, but otherwise in-order.
+                    .assignTimestampsAndWatermarks(
+                            WatermarkStrategy
+                                    .<GithubEvent>forBoundedOutOfOrderness(
+                                            Duration.ofSeconds(10))
+                                    .withTimestampAssigner((event, timestamp) -> event
+                                            .getCreatedAt().toEpochMilli()))
+                    .name("Event Stream");
+            streams.put("events", stream);
+        }
+        return stream;
+    }
+
+    protected Table getEventTable() {
+        Table table = getTable("events");
+        if (table == null) {
+            table = tenv.fromDataStream(getEventStream(),
+                    Schema.newBuilder()
+                            .column("eventType", DataTypes.STRING())
+                            .column("createdAt", DataTypes.TIMESTAMP_LTZ(3))
+                            .column("username", DataTypes.STRING())
+                            .column("reponame", DataTypes.STRING())
+                            .watermark("createdAt", call("SOURCE_WATERMARK"))
+                            .build())
+                    .as("kind", "created_at", "username", "reponame");
+                    // .renameColumns($("eventType").as("kind"))
+                    // .renameColumns($("createdAt").as("created_at"));
+            tables.put("events", table);
+        }
+        return table;
+    }
+
     protected Table computeTable() {
-        return eventTable;
+        return getEventTable();
     }
 
     protected String[] getPrimaryKeyNames() {
@@ -134,7 +200,7 @@ public class AbstractTableBuilder {
     }
 
     protected SinkFunction<TimedRow> buildJdbcSink(List<String> columnNames, List<String> keyNames) {
-        return JdbcSink.sink(
+        return JdbcSink.<TimedRow>sink(
                 // The UPSERT SQL statement for PostgreSQL.
                 buildJdbcSinkStatement(columnNames, keyNames),
                 // A lambda function to map the Row objects to the prepared statement.
@@ -175,7 +241,7 @@ public class AbstractTableBuilder {
                 .build();
     }
 
-    public AbstractTableBuilder build() throws ExecutionException, InterruptedException {
+    protected AbstractTableBuilder build() throws ExecutionException, InterruptedException {
         Table table = computeTable();
         ResolvedSchema schema = table.getResolvedSchema();
         List<String> columnNames = schema.getColumnNames();
@@ -201,22 +267,24 @@ public class AbstractTableBuilder {
 
     public AbstractTableBuilder build(String tableName, Class<? extends AbstractTableBuilder> clazz)
             throws ExecutionException, InterruptedException {
+        AbstractTableBuilder instance;
         try {
-            AbstractTableBuilder instance = clazz.getDeclaredConstructor().newInstance();
-            instance.env = this.env;
-            instance.tenv = this.tenv;
-            instance.eventTable = this.eventTable;
-            instance.jdbcOptions = this.jdbcOptions;
-            instance.bootstrapServers = this.bootstrapServers;
-            instance.dryRun = this.dryRun;
-            instance.numPartitions = this.numPartitions;
-            instance.replicationFactor = this.replicationFactor;
-            instance.tableName = tableName;
-            instance.build();
-            return this;
+            instance = clazz.getDeclaredConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
                 | NoSuchMethodException | SecurityException e) {
             throw new IllegalStateException("There should always be a default constructor", e);
         }
+        instance.env = this.env;
+        instance.tenv = this.tenv;
+        instance.streams = this.streams;
+        instance.tables = this.tables;
+        instance.jdbcOptions = this.jdbcOptions;
+        instance.bootstrapServers = this.bootstrapServers;
+        instance.dryRun = this.dryRun;
+        instance.numPartitions = this.numPartitions;
+        instance.replicationFactor = this.replicationFactor;
+        instance.tableName = tableName;
+        instance.build();
+        return this;
     }
 }

@@ -1,11 +1,3 @@
-CREATE TABLE events2 (
-    ts_write TIMESTAMP,
-    created_at TIMESTAMP,
-    kind VARCHAR,
-    username VARCHAR,
-    reponame VARCHAR
-);
-
 CREATE TABLE counts_live (
     ts_start TIMESTAMP,
     ts_end TIMESTAMP,
