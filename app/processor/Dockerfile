@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Flink Stage
-FROM flink:1.18.1-java17
+FROM flink:2.1.0-java17
 WORKDIR /app
 COPY --from=build /app/target/processor.jar ./processor.jar
 

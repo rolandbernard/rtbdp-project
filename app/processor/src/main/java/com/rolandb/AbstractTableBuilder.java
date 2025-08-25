@@ -13,11 +13,11 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
-import org.apache.flink.connector.jdbc.JdbcSink;
+import org.apache.flink.connector.jdbc.core.datastream.Jdbc;
+import org.apache.flink.connector.jdbc.core.datastream.sink.JdbcSink;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
@@ -145,8 +145,6 @@ public class AbstractTableBuilder {
                             .watermark("createdAt", call("SOURCE_WATERMARK"))
                             .build())
                     .as("kind", "created_at", "username", "reponame");
-                    // .renameColumns($("eventType").as("kind"))
-                    // .renameColumns($("createdAt").as("created_at"));
             tables.put("events", table);
         }
         return table;
@@ -199,31 +197,32 @@ public class AbstractTableBuilder {
         return builder.toString();
     }
 
-    protected SinkFunction<TimedRow> buildJdbcSink(List<String> columnNames, List<String> keyNames) {
-        return JdbcSink.<TimedRow>sink(
-                // The UPSERT SQL statement for PostgreSQL.
-                buildJdbcSinkStatement(columnNames, keyNames),
-                // A lambda function to map the Row objects to the prepared statement.
-                (statement, row) -> {
-                    int idx = 1;
-                    for (String column : columnNames) {
-                        Object value = row.getFieldAs(column);
-                        if (value instanceof Instant) {
-                            statement.setObject(idx++, Timestamp.from((Instant) value));
-                        } else {
-                            statement.setObject(idx++, value);
-                        }
-                    }
-                    statement.setTimestamp(idx, Timestamp.from(row.getTime()));
-                },
+    protected JdbcSink<TimedRow> buildJdbcSink(List<String> columnNames, List<String> keyNames) {
+        return Jdbc.<TimedRow>sinkBuilder()
+                .withQueryStatement(
+                        // The UPSERT SQL statement for PostgreSQL.
+                        buildJdbcSinkStatement(columnNames, keyNames),
+                        // A lambda function to map the Row objects to the prepared statement.
+                        (statement, row) -> {
+                            int idx = 1;
+                            for (String column : columnNames) {
+                                Object value = row.getFieldAs(column);
+                                if (value instanceof Instant) {
+                                    statement.setObject(idx++, Timestamp.from((Instant) value));
+                                } else {
+                                    statement.setObject(idx++, value);
+                                }
+                            }
+                            statement.setTimestamp(idx, Timestamp.from(row.getTime()));
+                        })
                 // JDBC execution options.
-                JdbcExecutionOptions.builder()
+                .withExecutionOptions(JdbcExecutionOptions.builder()
                         .withBatchSize(10_000)
                         .withBatchIntervalMs(250)
                         .withMaxRetries(5)
-                        .build(),
+                        .build())
                 // Use connection setting from setter.
-                jdbcOptions);
+                .buildAtLeastOnce(jdbcOptions);
     }
 
     protected KafkaSink<TimedRow> buildKafkaSink(List<String> columnNames, List<String> keyNames) {
@@ -259,7 +258,7 @@ public class AbstractTableBuilder {
             dataStream.print().setParallelism(1);
         } else {
             KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor);
-            dataStream.addSink(buildJdbcSink(columnNames, List.of(keyNames))).name("PostgreSQL Sink");
+            dataStream.sinkTo(buildJdbcSink(columnNames, List.of(keyNames))).name("PostgreSQL Sink");
             dataStream.sinkTo(buildKafkaSink(columnNames, List.of(keyNames))).name("Kafka Sink");
         }
         return this;
