@@ -1,17 +1,15 @@
 package com.rolandb;
 
-import java.util.List;
-
 import javax.annotation.Nullable;
 
 import org.apache.flink.api.common.serialization.SerializationSchema.InitializationContext;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
+import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchemaBuilder;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -24,14 +22,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  */
 public class KafkaTimedRowSerializer implements KafkaRecordSerializationSchema<TimedRow> {
     private final String tableName;
-    private final List<String> columnNames;
-    private final List<String> keyNames;
     private final ObjectMapper objectMapper;
 
-    public KafkaTimedRowSerializer(String tableName, List<String> columnNames, List<String> keyNames) {
+    public KafkaTimedRowSerializer(String tableName) {
         this.tableName = tableName;
-        this.columnNames = columnNames;
-        this.keyNames = keyNames;
         objectMapper = new ObjectMapper();
     }
 
@@ -47,16 +41,9 @@ public class KafkaTimedRowSerializer implements KafkaRecordSerializationSchema<T
         try {
             // Set as key the combination of key columns. This ensures in-order
             // delivery per-key, ensuring timestamps are monotonic.
-            ArrayNode keyNode = objectMapper.createArrayNode();
-            for (String column : keyNames) {
-                keyNode.add(objectMapper.valueToTree(row.getFieldAs(column)));
-            }
-            byte[] key = objectMapper.writeValueAsBytes(keyNode);
+            byte[] key = objectMapper.writeValueAsBytes(row.getKey());
             // We serialize each row as key-value pairs.
-            ObjectNode valueNode = objectMapper.createObjectNode();
-            for (String column : columnNames) {
-                valueNode.set(column, objectMapper.valueToTree(row.getFieldAs(column)));
-            }
+            ObjectNode valueNode = (ObjectNode) objectMapper.valueToTree(row.getRow());
             valueNode.set("tz_write", objectMapper.valueToTree(row.getTime()));
             byte[] value = objectMapper.writeValueAsBytes(valueNode);
             return new ProducerRecord<>(tableName, key, value);

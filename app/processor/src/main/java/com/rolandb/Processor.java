@@ -1,7 +1,5 @@
 package com.rolandb;
 
-import java.time.Duration;
-
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.configuration.CheckpointingOptions;
@@ -10,7 +8,6 @@ import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
-import org.apache.flink.table.api.config.ExecutionConfigOptions;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions.JdbcConnectionOptionsBuilder;
 import org.apache.flink.connector.kafka.source.KafkaSource;
@@ -18,8 +15,6 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.core.execution.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +79,6 @@ public class Processor {
         // Obtain and configure Flink environments.
         Configuration conf = new Configuration();
         conf.set(RestOptions.PORT, uiPort);
-        conf.set(ExecutionConfigOptions.TABLE_EXEC_SOURCE_IDLE_TIMEOUT, Duration.ofSeconds(5));
         // Increase memory size a bit.
         conf.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.ofMebiBytes(2048));
         conf.set(TaskManagerOptions.NETWORK_MEMORY_MAX, MemorySize.ofMebiBytes(512));
@@ -95,8 +89,6 @@ public class Processor {
         // Enable checkpointing. At-least-once semantics are fine because we basically
         // always use upserts with a primary key.
         env.enableCheckpointing(60_000, CheckpointingMode.AT_LEAST_ONCE);
-        StreamTableEnvironment tenv = StreamTableEnvironment.create(env,
-                EnvironmentSettings.newInstance().withConfiguration(conf).build());
         // Define Kafka source.
         @SuppressWarnings("deprecation") // Ignoring the warning because there seems to be no alternative.
         KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
@@ -117,7 +109,6 @@ public class Processor {
         // Setup parameters for table builder.
         AbstractTableBuilder builder = (new AbstractTableBuilder())
                 .setEnv(env)
-                .setTableEnv(tenv)
                 .addStream("rawEvents", rawEventsStream)
                 .setJdbcOptions(new JdbcConnectionOptionsBuilder()
                         .withUrl(dbUrl)

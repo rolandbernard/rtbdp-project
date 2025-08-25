@@ -3,6 +3,7 @@ package com.rolandb;
 import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -12,17 +13,14 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class GithubEvent {
     // These are all public so that this is a POJO.
+    @JsonProperty("kind")
     public String eventType;
+    @JsonProperty("created_at")
     public Instant createdAt;
+    @JsonProperty("username")
     public String username;
+    @JsonProperty("reponame")
     public String reponame;
-
-    /**
-     * Default constructor to make this a POJO.
-     */
-    public GithubEvent() {
-        // Just leaf everything at `null`.
-    }
 
     /**
      * Constructor to create a new event from the raw event data. This constructor

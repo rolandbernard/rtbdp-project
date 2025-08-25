@@ -1,26 +1,62 @@
 package com.rolandb.tables;
 
-import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.Tumble;
+import java.time.Duration;
+import java.time.Instant;
 
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTableBuilder;
-
-import static org.apache.flink.table.api.Expressions.*;
+import com.rolandb.CountAggregation;
 
 public class CountsHistoryTable extends AbstractTableBuilder {
-    protected Table computeTable() {
-        return getEventTable()
-                .window(Tumble.over(lit(5).minutes()).on($("created_at")).as("w"))
-                .groupBy($("w"), $("kind"))
-                .select(
-                        $("w").start().as("ts_start"),
-                        $("w").end().as("ts_end"),
-                        $("kind"),
-                        lit("5m").as("window_size"),
-                        $("kind").count().as("num_events"));
+    public static class EventCounts {
+        @TableEventKey
+        @JsonProperty("ts_start")
+        public Instant winStart;
+        @TableEventKey
+        @JsonProperty("ts_end")
+        public Instant winEnd;
+        @TableEventKey
+        @JsonProperty("kind")
+        public String eventType;
+        @TableEventKey
+        @JsonProperty("window_size")
+        public String windowSize;
+        @JsonProperty("num_events")
+        public int numEvents;
+
+        public EventCounts(Instant winStart, Instant winEnd, String eventType, String windowSize, int numEvents) {
+            this.winStart = winStart;
+            this.winEnd = winEnd;
+            this.eventType = eventType;
+            this.windowSize = windowSize;
+            this.numEvents = numEvents;
+        }
     }
 
-    protected String[] getPrimaryKeyNames() {
-        return new String[] { "ts_start", "ts_end", "window_size", "kind" };
+    @Override
+    protected DataStream<EventCounts> computeTable() {
+        return getEventStream()
+                .keyBy(event -> event.getType().toString())
+                .window(TumblingEventTimeWindows.of(Duration.ofMinutes(5)))
+                // Here we can afford to allow more lateness and retroactively
+                // upsert with a new value.
+                .allowedLateness(Duration.ofMinutes(10))
+                .<Integer, Integer, EventCounts>aggregate(new CountAggregation(),
+                        (key, window, elements, out) -> {
+                            out.collect(new EventCounts(
+                                    Instant.ofEpochMilli(window.getStart()),
+                                    Instant.ofEpochMilli(window.getEnd()),
+                                    key, "5m", elements.iterator().next()));
+
+                        })
+                .returns(EventCounts.class);
+    }
+
+    @Override
+    protected Class<?> getOutputType() {
+        return EventCounts.class;
     }
 }

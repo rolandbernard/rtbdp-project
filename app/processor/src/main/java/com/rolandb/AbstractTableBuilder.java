@@ -1,11 +1,15 @@
 package com.rolandb;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -18,18 +22,10 @@ import org.apache.flink.connector.jdbc.core.datastream.sink.JdbcSink;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.DataTypes;
-import org.apache.flink.table.api.Schema;
-import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.table.catalog.ResolvedSchema;
-import org.apache.flink.types.Row;
-import org.apache.flink.types.RowKind;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-
-import static org.apache.flink.table.api.Expressions.*;
 
 /**
  * This class contains the basic logic for writing a computed table to both a
@@ -41,10 +37,17 @@ import static org.apache.flink.table.api.Expressions.*;
  * out the events table as-is.
  */
 public class AbstractTableBuilder {
+    /**
+     * This class is used to indicate in a table output type, which values are
+     * part of the key.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.FIELD)
+    public @interface TableEventKey {
+    }
+
     protected StreamExecutionEnvironment env;
-    protected StreamTableEnvironment tenv;
     protected Map<String, DataStream<?>> streams = new HashMap<>();
-    protected Map<String, Table> tables = new HashMap<>();
     private JdbcConnectionOptions jdbcOptions;
     private String bootstrapServers = "localhost:29092";
     private boolean dryRun = false;
@@ -57,18 +60,8 @@ public class AbstractTableBuilder {
         return this;
     }
 
-    public AbstractTableBuilder setTableEnv(StreamTableEnvironment tenv) {
-        this.tenv = tenv;
-        return this;
-    }
-
     public AbstractTableBuilder addStream(String name, DataStream<?> stream) {
         this.streams.put(name, stream);
-        return this;
-    }
-
-    public AbstractTableBuilder addTable(String name, Table table) {
-        this.tables.put(name, table);
         return this;
     }
 
@@ -107,10 +100,6 @@ public class AbstractTableBuilder {
         return (DataStream<T>) streams.get(name);
     }
 
-    protected Table getTable(String name) {
-        return tables.get(name);
-    }
-
     protected DataStream<JsonNode> getRawEventStream() {
         return getStream("rawEvents");
     }
@@ -133,62 +122,54 @@ public class AbstractTableBuilder {
         return stream;
     }
 
-    protected Table getEventTable() {
-        Table table = getTable("events");
-        if (table == null) {
-            table = tenv.fromDataStream(getEventStream(),
-                    Schema.newBuilder()
-                            .column("eventType", DataTypes.STRING())
-                            .column("createdAt", DataTypes.TIMESTAMP_LTZ(3))
-                            .column("username", DataTypes.STRING())
-                            .column("reponame", DataTypes.STRING())
-                            .watermark("createdAt", call("SOURCE_WATERMARK"))
-                            .build())
-                    .as("kind", "created_at", "username", "reponame");
-            tables.put("events", table);
-        }
-        return table;
+    protected DataStream<?> computeTable() {
+        return getEventStream();
     }
 
-    protected Table computeTable() {
-        return getEventTable();
+    protected Class<?> getOutputType() {
+        return GithubEvent.class;
     }
 
-    protected String[] getPrimaryKeyNames() {
-        return new String[0];
-    }
-
-    protected String buildJdbcSinkStatement(List<String> columnNames, List<String> keyNames) {
+    protected String buildJdbcSinkStatement(Class<?> output) {
         StringBuilder builder = new StringBuilder();
         builder.append("INSERT INTO ");
         builder.append(tableName);
         builder.append(" (");
-        for (String column : columnNames) {
-            builder.append(column);
+        Field[] fields = output.getFields();
+        for (Field field : fields) {
+            JsonProperty prop = field.getAnnotation(JsonProperty.class);
+            builder.append(prop == null ? field.getName() : prop.value());
             builder.append(", ");
         }
         builder.append("ts_write) VALUES (");
-        for (int i = 0; i < columnNames.size(); i++) {
+        for (int i = 0; i < fields.length; i++) {
             builder.append("?, ");
         }
         builder.append("?)");
         // If there is a conflict, we only want to update the non-key values.
-        if (!keyNames.isEmpty()) {
-            builder.append(" ON CONFLICT (");
-            boolean first = true;
-            for (String key : keyNames) {
+        StringBuilder keyNames = new StringBuilder();
+        boolean first = true;
+        for (Field field : fields) {
+            if (field.getAnnotation(TableEventKey.class) != null) {
                 if (!first) {
-                    builder.append(", ");
+                    keyNames.append(", ");
                 }
                 first = false;
-                builder.append(key);
+                JsonProperty prop = field.getAnnotation(JsonProperty.class);
+                keyNames.append(prop == null ? field.getName() : prop.value());
             }
+        }
+        if (!first) {
+            builder.append(" ON CONFLICT (");
+            builder.append(keyNames);
             builder.append(") DO UPDATE SET ");
-            for (String column : columnNames) {
-                if (!keyNames.contains(column)) {
-                    builder.append(column);
+            for (Field field : fields) {
+                if (field.getAnnotation(TableEventKey.class) == null) {
+                    JsonProperty prop = field.getAnnotation(JsonProperty.class);
+                    String name = prop == null ? field.getName() : prop.value();
+                    builder.append(name);
                     builder.append(" = EXCLUDED.");
-                    builder.append(column);
+                    builder.append(name);
                     builder.append(", ");
                 }
             }
@@ -197,18 +178,17 @@ public class AbstractTableBuilder {
         return builder.toString();
     }
 
-    protected JdbcSink<TimedRow> buildJdbcSink(List<String> columnNames, List<String> keyNames) {
+    protected JdbcSink<TimedRow> buildJdbcSink() {
         return Jdbc.<TimedRow>sinkBuilder()
                 .withQueryStatement(
                         // The UPSERT SQL statement for PostgreSQL.
-                        buildJdbcSinkStatement(columnNames, keyNames),
+                        buildJdbcSinkStatement(getOutputType()),
                         // A lambda function to map the Row objects to the prepared statement.
                         (statement, row) -> {
                             int idx = 1;
-                            for (String column : columnNames) {
-                                Object value = row.getFieldAs(column);
+                            for (Object value : row.getValues()) {
                                 if (value instanceof Instant) {
-                                    statement.setObject(idx++, Timestamp.from((Instant) value));
+                                    statement.setTimestamp(idx++, Timestamp.from((Instant) value));
                                 } else {
                                     statement.setObject(idx++, value);
                                 }
@@ -225,13 +205,13 @@ public class AbstractTableBuilder {
                 .buildAtLeastOnce(jdbcOptions);
     }
 
-    protected KafkaSink<TimedRow> buildKafkaSink(List<String> columnNames, List<String> keyNames) {
+    protected KafkaSink<TimedRow> buildKafkaSink() {
         return KafkaSink.<TimedRow>builder()
                 .setBootstrapServers(bootstrapServers)
                 // We use a custom serialization schema, because otherwise it will set the
                 // event-time as the created time, with is not really what we want, especially
                 // when using the dummy data.
-                .setRecordSerializer(new KafkaTimedRowSerializer(tableName, columnNames, keyNames))
+                .setRecordSerializer(new KafkaTimedRowSerializer(tableName))
                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip")
                 .setProperty(ProducerConfig.ACKS_CONFIG, "1") // Wait for only one in-sync replica to acknowledge.
@@ -241,25 +221,19 @@ public class AbstractTableBuilder {
     }
 
     protected AbstractTableBuilder build() throws ExecutionException, InterruptedException {
-        Table table = computeTable();
-        ResolvedSchema schema = table.getResolvedSchema();
-        List<String> columnNames = schema.getColumnNames();
-        String[] keyNames = getPrimaryKeyNames();
-        DataStream<Row> filteredStream = tenv.toChangelogStream(table)
-                .filter(row -> row.getKind() == RowKind.INSERT || row.getKind() == RowKind.UPDATE_AFTER)
-                .name("Upsert Filter");
-        if (keyNames.length != 0) {
-            // We partition here by key so that all rows for the same key are
-            // handled by the same subtask, ensuring timestamps are monotonic.
-            filteredStream = filteredStream.<Row>keyBy(row -> Row.project(row, keyNames));
+        DataStream<?> stream = computeTable();
+        // We partition here by key so that all rows for the same key are
+        // handled by the same subtask, ensuring timestamps are monotonic.
+        if (TimedRow.hasKeyIn(getOutputType())) {
+            stream = stream.<Object>keyBy(row -> TimedRow.readKeyFrom(row));
         }
-        DataStream<TimedRow> dataStream = filteredStream.map(row -> new TimedRow(row)).name("Adding Process Time");
+        DataStream<TimedRow> dataStream = stream.map(row -> new TimedRow(row)).name("Adding Process Time");
         if (dryRun) {
             dataStream.print().setParallelism(1);
         } else {
             KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor);
-            dataStream.sinkTo(buildJdbcSink(columnNames, List.of(keyNames))).name("PostgreSQL Sink");
-            dataStream.sinkTo(buildKafkaSink(columnNames, List.of(keyNames))).name("Kafka Sink");
+            dataStream.sinkTo(buildJdbcSink()).name("PostgreSQL Sink");
+            dataStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
         }
         return this;
     }
@@ -274,9 +248,7 @@ public class AbstractTableBuilder {
             throw new IllegalStateException("There should always be a default constructor", e);
         }
         instance.env = this.env;
-        instance.tenv = this.tenv;
         instance.streams = this.streams;
-        instance.tables = this.tables;
         instance.jdbcOptions = this.jdbcOptions;
         instance.bootstrapServers = this.bootstrapServers;
         instance.dryRun = this.dryRun;
