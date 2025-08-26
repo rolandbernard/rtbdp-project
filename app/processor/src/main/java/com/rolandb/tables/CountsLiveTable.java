@@ -2,7 +2,8 @@ package com.rolandb.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTableBuilder;
-import com.rolandb.SlidingCountWithZeros;
+import com.rolandb.MultiSlidingBuckets;
+import com.rolandb.MultiSlidingBuckets.WindowSpec;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -38,16 +39,14 @@ public class CountsLiveTable extends AbstractTableBuilder {
     protected DataStream<EventCounts> computeTable() {
         return getEventStream()
                 .keyBy(event -> event.getType().toString())
-                .process(new SlidingCountWithZeros<>(
-                        // 20 = 5m, 240 = 1h, 1440 = 6h, 5760 = 24h
-                        List.of(20, 240, 1440, 5760), Duration.ofSeconds(15),
-                        (windowStart, windowEnd, key, window_size, count) -> {
-                            return new EventCounts(
-                                    windowStart, windowEnd, key,
-                                    window_size == 20 ? "5m"
-                                            : window_size == 240 ? "1h"
-                                                    : window_size == 1440 ? "6h" : "24h",
-                                    count);
+                .process(new MultiSlidingBuckets<>(Duration.ofSeconds(15),
+                        List.of(
+                                new WindowSpec("5m", Duration.ofMinutes(5)),
+                                new WindowSpec("1h", Duration.ofHours(1)),
+                                new WindowSpec("6h", Duration.ofHours(6)),
+                                new WindowSpec("24h", Duration.ofHours(24))),
+                        (windowStart, windowEnd, key, winSpec, count) -> {
+                            return new EventCounts(windowStart, windowEnd, key, winSpec.name, count.intValue());
                         }))
                 .returns(EventCounts.class);
     }

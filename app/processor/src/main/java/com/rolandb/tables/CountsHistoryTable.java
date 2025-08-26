@@ -39,7 +39,7 @@ public class CountsHistoryTable extends AbstractTableBuilder {
                 .window(TumblingEventTimeWindows.of(Duration.ofMinutes(5)))
                 // Here we can afford to allow more lateness and retroactively
                 // upsert with a new value.
-                .allowedLateness(Duration.ofMinutes(10))
+                .allowedLateness(Duration.ofMinutes(15))
                 .<Integer, Integer, EventCounts>aggregate(new CountAggregation<>(),
                         (key, window, elements, out) -> {
                             out.collect(new EventCounts(
