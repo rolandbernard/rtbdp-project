@@ -13,7 +13,6 @@ CREATE TABLE counts_history (
     ts_end TIMESTAMP,
     ts_write TIMESTAMP,
     kind VARCHAR,
-    window_size VARCHAR,
     num_events INT,
-    PRIMARY KEY (ts_start, ts_end, window_size, kind)
+    PRIMARY KEY (ts_start, ts_end, kind)
 );

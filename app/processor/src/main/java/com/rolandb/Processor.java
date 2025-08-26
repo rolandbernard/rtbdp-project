@@ -1,7 +1,12 @@
 package com.rolandb;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.api.common.serialization.DeserializationSchema;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MemorySize;
@@ -91,21 +96,43 @@ public class Processor {
         env.enableCheckpointing(60_000, CheckpointingMode.AT_LEAST_ONCE);
         // Define Kafka source.
         @SuppressWarnings("deprecation") // Ignoring the warning because there seems to be no alternative.
-        KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
+        KafkaSource<JsonNode> kafkaSource = KafkaSource.<JsonNode>builder()
                 .setBootstrapServers(bootstrapServers)
                 .setTopics(inputTopic)
                 .setGroupId("processor")
                 .setProperty("commit.offsets.on.checkpoint", "true")
                 .setStartingOffsets(rewind ? OffsetsInitializer.earliest()
                         : OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST))
-                .setValueOnlyDeserializer(new SimpleStringSchema())
+                .setValueOnlyDeserializer(new DeserializationSchema<JsonNode>() {
+                    ObjectMapper objectMapper = new ObjectMapper();
+
+                    @Override
+                    public TypeInformation<JsonNode> getProducedType() {
+                        return TypeInformation.of(JsonNode.class);
+                    }
+
+                    @Override
+                    public JsonNode deserialize(byte[] message) throws IOException {
+                        return objectMapper.readTree(message);
+                    }
+
+                    @Override
+                    public boolean isEndOfStream(JsonNode nextElement) {
+                        return false;
+                    }
+                })
                 .build();
         // Parse into a stream of events.
-        ObjectMapper objectMapper = new ObjectMapper();
         DataStream<JsonNode> rawEventsStream = env
-                .fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka Source")
-                .rebalance()
-                .map(jsonString -> objectMapper.readTree(jsonString));
+                .fromSource(kafkaSource,
+                        // We assume events can be up to 10 seconds late, but otherwise in-order.
+                        WatermarkStrategy
+                                .<JsonNode>forBoundedOutOfOrderness(Duration.ofSeconds(10))
+                                .withTimestampAssigner((event, timestamp) -> Instant
+                                        .parse(event.get("created_at").asText())
+                                        .toEpochMilli()),
+                        "Kafka Source")
+                .rebalance();
         // Setup parameters for table builder.
         AbstractTableBuilder builder = (new AbstractTableBuilder())
                 .setEnv(env)

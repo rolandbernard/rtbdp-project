@@ -6,14 +6,14 @@ import org.apache.flink.api.common.functions.AggregateFunction;
  * A simple aggregation function that simply counts the number of received
  * elements and returned that as an Integer.
  */
-public class CountAggregation implements AggregateFunction<GithubEvent, Integer, Integer> {
+public class CountAggregation<T> implements AggregateFunction<T, Integer, Integer> {
     @Override
     public Integer createAccumulator() {
         return 0;
     }
 
     @Override
-    public Integer add(GithubEvent value, Integer accumulator) {
+    public Integer add(T value, Integer accumulator) {
         return accumulator + 1;
     }
 

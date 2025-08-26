@@ -112,10 +112,8 @@ public class AbstractTableBuilder {
                     // We assume events can be up to 10 seconds late, but otherwise in-order.
                     .assignTimestampsAndWatermarks(
                             WatermarkStrategy
-                                    .<GithubEvent>forBoundedOutOfOrderness(
-                                            Duration.ofSeconds(10))
-                                    .withTimestampAssigner((event, timestamp) -> event
-                                            .getCreatedAt().toEpochMilli()))
+                                    .<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
+                                    .withTimestampAssigner((event, timestamp) -> event.getCreatedAt().toEpochMilli()))
                     .name("Event Stream");
             streams.put("events", stream);
         }

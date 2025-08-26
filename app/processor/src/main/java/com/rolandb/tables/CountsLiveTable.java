@@ -2,13 +2,13 @@ package com.rolandb.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTableBuilder;
-import com.rolandb.CountAggregation;
+import com.rolandb.SlidingCountWithZeros;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows;
 
 public class CountsLiveTable extends AbstractTableBuilder {
     public static class EventCounts {
@@ -38,14 +38,17 @@ public class CountsLiveTable extends AbstractTableBuilder {
     protected DataStream<EventCounts> computeTable() {
         return getEventStream()
                 .keyBy(event -> event.getType().toString())
-                .window(SlidingEventTimeWindows.of(Duration.ofMinutes(5), Duration.ofSeconds(15)))
-                .<Integer, Integer, EventCounts>aggregate(new CountAggregation(),
-                        (key, window, elements, out) -> {
-                            out.collect(new EventCounts(
-                                    Instant.ofEpochMilli(window.getStart()),
-                                    Instant.ofEpochMilli(window.getEnd()),
-                                    key, "5m", elements.iterator().next()));
-                        })
+                .process(new SlidingCountWithZeros<>(
+                        // 20 = 5m, 240 = 1h, 1440 = 6h, 5760 = 24h
+                        List.of(20, 240, 1440, 5760), Duration.ofSeconds(15),
+                        (windowStart, windowEnd, key, window_size, count) -> {
+                            return new EventCounts(
+                                    windowStart, windowEnd, key,
+                                    window_size == 20 ? "5m"
+                                            : window_size == 240 ? "1h"
+                                                    : window_size == 1440 ? "6h" : "24h",
+                                    count);
+                        }))
                 .returns(EventCounts.class);
     }
 
