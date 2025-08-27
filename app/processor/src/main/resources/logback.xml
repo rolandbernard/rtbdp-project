@@ -7,5 +7,7 @@
     <root level="WARN">
         <appender-ref ref="STDOUT"/>
     </root>
+    <!-- To avoid getting flooded with warnings. See https://issues.apache.org/jira/browse/FLINK-35321 -->
+    <logger name="org.apache.flink.metrics.MetricGroup" level="ERROR"/>
     <logger name="com.rolandb" level="DEBUG"/>
 </configuration>
