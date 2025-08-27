@@ -1,3 +1,6 @@
+-- This file contains the schema for the PostgreSQL database. The database will
+-- be filled from the Flink processor.
+
 CREATE TABLE counts_live (
     ts_start TIMESTAMP,
     ts_end TIMESTAMP,
@@ -5,7 +8,7 @@ CREATE TABLE counts_live (
     kind VARCHAR,
     window_size VARCHAR,
     num_events INT,
-    PRIMARY KEY (window_size, kind)
+    PRIMARY KEY (kind, window_size)
 );
 
 CREATE TABLE counts_history (
@@ -14,5 +17,5 @@ CREATE TABLE counts_history (
     ts_write TIMESTAMP,
     kind VARCHAR,
     num_events INT,
-    PRIMARY KEY (ts_start, ts_end, kind)
+    PRIMARY KEY (kind, ts_start, ts_end)
 );

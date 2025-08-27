@@ -22,34 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class RestApiClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestApiClient.class);
 
-    /**
-     * A special kind of {@link IOException} that indicates that a rate limit has
-     * been hit with the underlying API. In case this exception is thrown, no more
-     * requests should be made before the retry after instant.
-     */
-    public class RateLimitException extends IOException {
-        private final Instant retryAfter;
-
-        /**
-         * Create a new rate limit exception.
-         *
-         * @param retryAfter
-         *            The instant after which the API can be queries again.
-         */
-        public RateLimitException(Instant retryAfter) {
-            this.retryAfter = retryAfter;
-        }
-
-        /**
-         * Get the instant after which the API should be tried again.
-         *
-         * @return The retry after instant.
-         */
-        public Instant getRetryAfter() {
-            return retryAfter;
-        }
-    }
-
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final String baseUrl;

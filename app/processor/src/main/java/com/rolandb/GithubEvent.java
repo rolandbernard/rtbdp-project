@@ -116,33 +116,4 @@ public class GithubEvent {
     public GithubEventType getType() {
         return GithubEventType.fromString(eventType);
     }
-
-    /**
-     * Get the created at timestamp for this event.
-     *
-     * @return The created at timestamp.
-     */
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    /**
-     * Get username of the GitHub user that has caused this event to be emitted.
-     * Note that this is not necessarily the only user that is affected by this
-     * event.
-     *
-     * @return The username for the event.
-     */
-    public String getUsername() {
-        return username;
-    }
-
-    /**
-     * Get the name of the repository in which this event was performed.
-     *
-     * @return The repository name.
-     */
-    public String getReponame() {
-        return reponame;
-    }
 }

@@ -113,7 +113,7 @@ public class AbstractTableBuilder {
                     .assignTimestampsAndWatermarks(
                             WatermarkStrategy
                                     .<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
-                                    .withTimestampAssigner((event, timestamp) -> event.getCreatedAt().toEpochMilli()))
+                                    .withTimestampAssigner((event, timestamp) -> event.createdAt.toEpochMilli()))
                     .name("Event Stream");
             streams.put("events", stream);
         }

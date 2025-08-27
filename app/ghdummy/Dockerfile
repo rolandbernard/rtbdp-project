@@ -10,5 +10,5 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/ghdummy.jar ./ghdummy.jar
-EXPOSE 8888
+EXPOSE 8889
 ENTRYPOINT [ "java", "-cp", "ghdummy.jar", "com.rolandb.DummyServer" ]
