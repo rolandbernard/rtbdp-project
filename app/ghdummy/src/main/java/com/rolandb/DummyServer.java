@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
+import java.time.Duration;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -39,7 +40,8 @@ public class DummyServer {
     /**
      * Handle a given request by returning a list of events.
      * 
-     * @param exchange The HTTP request to handle.
+     * @param exchange
+     *            The HTTP request to handle.
      */
     private void handleDataRequest(HttpExchange exchange) {
         try {
@@ -87,8 +89,10 @@ public class DummyServer {
     /**
      * Create a new dummy server.
      * 
-     * @param port The port the server should listen on.
-     * @throws IOException In case the dummy events data can not be loaded.
+     * @param port
+     *            The port the server should listen on.
+     * @throws IOException
+     *             In case the dummy events data can not be loaded.
      */
     public DummyServer(int port) throws IOException {
         this.port = port;
@@ -99,20 +103,30 @@ public class DummyServer {
      * Start listening on the port specified in the constructor and answer to
      * client requests.
      * 
-     * @throws IOException In case the server can not be started.
+     * @throws IOException
+     *             In case the server can not be started.
      */
     public void startListen() throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/events", this::handleDataRequest);
         server.start();
-        LOGGER.info("Server started on port {}. Access it at http://localhost:{}/", port, port);
+        LOGGER.info("Server on port {} started. Access it at http://localhost:{}/", port, port);
+    }
+
+    /**
+     * Stop the server from running.
+     */
+    public void stopListen() {
+        server.stop((int) Duration.ofSeconds(10).toSeconds());
+        server = null;
+        LOGGER.info("Server on port {} stopped", port);
     }
 
     /**
      * Run the dummy GitHub Events API server.
      *
      * @param args
-     *             Arguments to configure the server.
+     *            Arguments to configure the server.
      */
     public static void main(String[] args) {
         // Parse command line
@@ -138,6 +152,11 @@ public class DummyServer {
         // Create and start HTTP server
         try {
             DummyServer server = new DummyServer(port);
+            // Add a shutdown hook to ensure a clean exit.
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                LOGGER.info("Shutting down HTTP server");
+                server.stopListen();
+            }));
             server.startListen();
         } catch (IOException e) {
             LOGGER.error("Failed to start server", e);
