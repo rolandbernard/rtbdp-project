@@ -153,6 +153,9 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
 
     @Override
     public void onTimer(long bucketEnd, OnTimerContext ctx, Collector<R> out) throws Exception {
+        Long lastClose = lastTimer.value();
+        // Should be guaranteed by `addNextBucketTimer`.
+        Preconditions.checkState(lastClose == null || lastClose < bucketEnd, "Timer must run strictly in order");
         lastTimer.update(bucketEnd);
         Long addedCount = bucketCounts.get(bucketEnd);
         if (addedCount == null) {
