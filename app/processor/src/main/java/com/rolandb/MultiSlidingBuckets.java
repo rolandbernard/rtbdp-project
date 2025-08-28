@@ -49,15 +49,15 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
     private final ResultFunction<K, R> function;
 
     // Buckets by Timestamp
-    private static final MapStateDescriptor<Long, Long> bucketsDesc = new MapStateDescriptor<>(
+    private static final MapStateDescriptor<Long, Long> BUCKETS_DESC = new MapStateDescriptor<>(
             "bucketCounts", TypeInformation.of(Long.class), TypeInformation.of(Long.class));
     private transient MapState<Long, Long> bucketCounts;
     // Rolling Sum per Window
-    private static final ValueStateDescriptor<long[]> totalsDesc = new ValueStateDescriptor<>(
+    private static final ValueStateDescriptor<long[]> TOTALS_DESC = new ValueStateDescriptor<>(
             "windowTotals", PrimitiveArrayTypeInfo.LONG_PRIMITIVE_ARRAY_TYPE_INFO);
     private transient ValueState<long[]> windowTotals;
     // When the last window was closed.
-    private static final ValueStateDescriptor<Long> lastTimerDesc = new ValueStateDescriptor<>(
+    private static final ValueStateDescriptor<Long> TIMER_DESC = new ValueStateDescriptor<>(
             "lastClosing", TypeInformation.of(Long.class));
     private transient ValueState<Long> lastTimer;
 
@@ -76,9 +76,9 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
 
     @Override
     public void open(OpenContext parameters) throws Exception {
-        bucketCounts = getRuntimeContext().getMapState(bucketsDesc);
-        windowTotals = getRuntimeContext().getState(totalsDesc);
-        lastTimer = getRuntimeContext().getState(lastTimerDesc);
+        bucketCounts = getRuntimeContext().getMapState(BUCKETS_DESC);
+        windowTotals = getRuntimeContext().getState(TOTALS_DESC);
+        lastTimer = getRuntimeContext().getState(TIMER_DESC);
         // Quick sanity check. Necessary but not sufficient.
         long[] lastTotals = windowTotals.value();
         Preconditions.checkState(lastTotals == null || lastTotals.length == windows.size(),

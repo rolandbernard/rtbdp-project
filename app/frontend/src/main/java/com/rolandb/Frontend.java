@@ -2,7 +2,9 @@ package com.rolandb;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 
+import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,45 +20,73 @@ import net.sourceforge.argparse4j.inf.Namespace;
 /**
  * This is the frontend server for the application. It largely has two
  * different ways to interact with it by the client:
- * 1. It statically serves the resources in `com.rolandb.public` under `/`. Note
- *    that this contains a single page Preact+HTM+MUI+RxJS+Charts.js app.
+ * 1. It statically serves the resources in `com.rolandb.static` under `/`. Note
+ * that this contains a single page Preact+HTM+MUI+RxJS+Charts.js app.
  * 2. It provides a WebSocket interface for the client to get data. The client
- *    will be able to subscribe to different tables and types of events, and
- *    then receive updates
+ * will be able to subscribe to different tables and types of events, and
+ * then receive updates
  */
 public class Frontend {
     private static final Logger LOGGER = LoggerFactory.getLogger(Frontend.class);
 
-    private final int port;
-    private HttpServer server;
+    private final int httpPort;
+    private final int wsPort;
+    private HttpServer httpServer;
+    private WebSocketServer webSocketServer;
 
     /**
      * Create a new server.
      * 
-     * @param port The port the server should listen on.
-     * @throws IOException In case the events data can not be loaded.
+     * @param httpPort
+     *            The port the server should listen on.
+     * @throws IOException
+     *             In case the events data can not be loaded.
      */
-    public Frontend(int port) throws IOException {
-        this.port = port;
+    public Frontend(int httpPort, int wsPort) throws IOException {
+        this.httpPort = httpPort;
+        this.wsPort = wsPort;
     }
 
     /**
      * Start listening on the port specified in the constructor and answer to
-     * client requests.
+     * client requests. Starts both the HTTP and the WebSocket servers.
      * 
-     * @throws IOException In case the server can not be started.
+     * @throws IOException
+     *             In case the server can not be started.
      */
     public void startListen() throws IOException {
-        server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.start();
-        LOGGER.info("Server started on port {}. Access it at http://localhost:{}/", port, port);
+        httpServer = HttpServer.create(new InetSocketAddress(httpPort), 0);
+        httpServer.createContext("/", new StaticFileHandler()); 
+        httpServer.start();
+        LOGGER.info("Server started on port {}. Access it at http://localhost:{}/", httpPort, httpPort);
+        webSocketServer = new SocketApiServer(new InetSocketAddress(wsPort));
+        webSocketServer.start();
+        LOGGER.info("Server started on port {}. Access it at ws://localhost:{}/", wsPort, wsPort);
+    }
+
+    /**
+     * Stop the server from running. Stops both the HTTP and the WebSocket
+     * servers.
+     */
+    public void stopListen() {
+        httpServer.stop((int) Duration.ofSeconds(10).toSeconds());
+        httpServer = null;
+        LOGGER.info("Server on port {} stopped", httpPort);
+        try {
+            webSocketServer.stop();
+        } catch (InterruptedException e) {
+            // We are now shutting down anyways.
+            LOGGER.warn("Failed to properly shutdown WebSocket server", e);
+        }
+        webSocketServer = null;
+        LOGGER.info("Server on port {} stopped", wsPort);
     }
 
     /**
      * Run the GitHub Events API server.
      *
      * @param args
-     *             Arguments to configure the server.
+     *            Arguments to configure the server.
      */
     public static void main(String[] args) {
         // Parse command line
@@ -76,14 +106,20 @@ public class Frontend {
             return;
         }
         // Read options
-        int port = cmd.getInt("port");
+        int httpPort = cmd.getInt("port");
+        int wsPort = cmd.getInt("ws_port");
         String logLevel = cmd.getString("log_level");
         // Configures logging
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
         // Create and start HTTP server
         try {
-            Frontend server = new Frontend(port);
+            Frontend server = new Frontend(httpPort, wsPort);
+            // Add a shutdown hook to ensure a clean exit.
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                LOGGER.info("Shutting down HTTP server");
+                server.stopListen();
+            }));
             server.startListen();
         } catch (IOException e) {
             LOGGER.error("Failed to start server", e);

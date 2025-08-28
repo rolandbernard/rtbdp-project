@@ -42,8 +42,9 @@ public class DummyServer {
      * 
      * @param exchange
      *            The HTTP request to handle.
+     * @throws IOException 
      */
-    private void handleDataRequest(HttpExchange exchange) {
+    private void handleDataRequest(HttpExchange exchange) throws IOException {
         try {
             LOGGER.info("Handling data request from {}", exchange.getRemoteAddress());
             // Parse the query parameters.
@@ -83,6 +84,12 @@ public class DummyServer {
             }
         } catch (RuntimeException | IOException ex) {
             LOGGER.error("Failed to handle request", ex);
+            // Write a HTTP 500 server error response.
+            String response = "500 Internal Server Error";
+            exchange.sendResponseHeaders(500, response.length());
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response.getBytes());
+            }
         }
     }
 
