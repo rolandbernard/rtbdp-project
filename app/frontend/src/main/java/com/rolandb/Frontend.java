@@ -31,6 +31,9 @@ public class Frontend {
 
     private final int httpPort;
     private final int wsPort;
+    private final String bootstrapServer;
+    private final String groupId;
+    private final String jdbcUrl;
     private HttpServer httpServer;
     private WebSocketServer webSocketServer;
 
@@ -42,9 +45,13 @@ public class Frontend {
      * @throws IOException
      *             In case the events data can not be loaded.
      */
-    public Frontend(int httpPort, int wsPort) throws IOException {
+    public Frontend(int httpPort, int wsPort, String bootstrapServer, String groupId, String jdbcUrl)
+            throws IOException {
         this.httpPort = httpPort;
         this.wsPort = wsPort;
+        this.bootstrapServer = bootstrapServer;
+        this.groupId = groupId;
+        this.jdbcUrl = jdbcUrl;
     }
 
     /**
@@ -56,10 +63,10 @@ public class Frontend {
      */
     public void startListen() throws IOException {
         httpServer = HttpServer.create(new InetSocketAddress(httpPort), 0);
-        httpServer.createContext("/", new StaticFileHandler()); 
+        httpServer.createContext("/", new StaticFileHandler());
         httpServer.start();
         LOGGER.info("Server started on port {}. Access it at http://localhost:{}/", httpPort, httpPort);
-        webSocketServer = new SocketApiServer(new InetSocketAddress(wsPort));
+        webSocketServer = new SocketApiServer(new InetSocketAddress(wsPort), bootstrapServer, groupId, jdbcUrl);
         webSocketServer.start();
         LOGGER.info("Server started on port {}. Access it at ws://localhost:{}/", wsPort, wsPort);
     }
@@ -96,6 +103,16 @@ public class Frontend {
                 .setDefault(8888).help("the HTTP port for the exposed HTTP server");
         parser.addArgument("--ws-port").metavar("PORT").type(Integer.class)
                 .setDefault(8887).help("the HTTP port for the exposed WebSocket server");
+        parser.addArgument("--bootstrap-servers").metavar("SERVERS")
+                .setDefault("localhost:29092").help("bootstrap servers");
+        parser.addArgument("--group-id").metavar("ID")
+                .setDefault("frontend").help("group id when consuming edits");
+        parser.addArgument("--db-url").metavar("JDBCURL")
+                .setDefault("jdbc:postgresql://localhost:25432/db").help("JDBC URL of database");
+        parser.addArgument("--db-username").metavar("USERNAME")
+                .setDefault("user").help("username for accessing database");
+        parser.addArgument("--db-password").metavar("PASSWORD")
+                .setDefault("user").help("password for accessing database");
         parser.addArgument("--log-level").type(String.class).setDefault("debug")
                 .help("configures the log level (default: debug; values: all|trace|debug|info|warn|error|off");
         Namespace cmd;
@@ -108,13 +125,20 @@ public class Frontend {
         // Read options
         int httpPort = cmd.getInt("port");
         int wsPort = cmd.getInt("ws_port");
+        String bootstrapServer = cmd.getString("bootstrap_server");
+        String groupId = cmd.getString("group_id");
+        String dbUrl = cmd.getString("db_url");
+        String dbUsername = cmd.getString("db_username");
+        String dbPassword = cmd.getString("db_password");
         String logLevel = cmd.getString("log_level");
         // Configures logging
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
         // Create and start HTTP server
         try {
-            Frontend server = new Frontend(httpPort, wsPort);
+            Frontend server = new Frontend(
+                    httpPort, wsPort, bootstrapServer, groupId,
+                    dbUrl + "?user=" + dbUsername + "&password=" + dbPassword);
             // Add a shutdown hook to ensure a clean exit.
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 LOGGER.info("Shutting down HTTP server");

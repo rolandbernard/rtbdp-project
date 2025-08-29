@@ -14,9 +14,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
         <exec.mainClass>com.rolandb.Frontend</exec.mainClass>
+        <java-websocket.version>1.6.0</java-websocket.version>
+        <postgresql.version>42.7.7</postgresql.version>
         <kafka.version>4.0.0</kafka.version>
         <rxjava.version>3.1.11</rxjava.version>
-        <java-websocket.version>1.6.0</java-websocket.version>
         <argparse4j.version>0.9.0</argparse4j.version>
         <jackson.version>2.20.0</jackson.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -31,6 +32,25 @@
             <artifactId>Java-WebSocket</artifactId>
             <version>${java-websocket.version}</version>
         </dependency>
+        <!-- PostgreSQL Client -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+        </dependency>
+        <!-- Kafka Client -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${kafka.version}</version>
+        </dependency>
+        <!-- RxJava -->
+        <dependency>
+            <groupId>io.reactivex.rxjava3</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>${rxjava.version}</version>
+        </dependency>
+
         <!-- Argument Parsing -->
         <dependency>
             <groupId>net.sourceforge.argparse4j</groupId>
