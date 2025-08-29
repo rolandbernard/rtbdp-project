@@ -14,13 +14,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class GithubEvent {
     // These are all public so that this is a POJO.
     @JsonProperty("kind")
-    public String eventType;
+    public final String eventType;
     @JsonProperty("created_at")
-    public Instant createdAt;
+    public final Instant createdAt;
     @JsonProperty("username")
-    public String username;
+    public final String username;
     @JsonProperty("reponame")
-    public String reponame;
+    public final String reponame;
 
     /**
      * Constructor to create a new event from the raw event data. This constructor

@@ -14,17 +14,17 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 public class CountsLiveTable extends AbstractTableBuilder {
     public static class EventCounts {
         @JsonProperty("ts_start")
-        public Instant winStart;
+        public final Instant winStart;
         @JsonProperty("ts_end")
-        public Instant winEnd;
+        public final Instant winEnd;
         @TableEventKey
         @JsonProperty("kind")
-        public String eventType;
+        public final String eventType;
         @TableEventKey
         @JsonProperty("window_size")
-        public String windowSize;
+        public final String windowSize;
         @JsonProperty("num_events")
-        public int numEvents;
+        public final int numEvents;
 
         public EventCounts(Instant winStart, Instant winEnd, String eventType, String windowSize, int numEvents) {
             this.winStart = winStart;
@@ -38,7 +38,7 @@ public class CountsLiveTable extends AbstractTableBuilder {
     @Override
     protected DataStream<EventCounts> computeTable() {
         return getEventStream()
-                .keyBy(event -> event.getType().toString())
+                .keyBy(event -> event.eventType)
                 .process(new MultiSlidingBuckets<>(Duration.ofSeconds(15),
                         List.of(
                                 new WindowSpec("5m", Duration.ofMinutes(5)),

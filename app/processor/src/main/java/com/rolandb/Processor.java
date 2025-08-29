@@ -43,6 +43,8 @@ public class Processor {
                 .description("Flink processor reading events from Kafka and different back to Kafka and to PostgreSQL");
         parser.addArgument("--bootstrap-servers").metavar("HOST:PORT")
                 .setDefault("localhost:29092").help("bootstrap servers");
+        parser.addArgument("--group-id").metavar("ID")
+                .setDefault("processor").help("group id when consuming edits");
         parser.addArgument("--topic").metavar("TOPIC")
                 .setDefault("events").help("Kafka topic name for input events data");
         parser.addArgument("--db-url").metavar("JDBCURL")
@@ -70,6 +72,7 @@ public class Processor {
         }
         // Read options.
         String bootstrapServers = cmd.getString("bootstrap_servers");
+        String groupId = cmd.getString("group_id");
         String inputTopic = cmd.getString("topic");
         String dbUrl = cmd.getString("db_url");
         String dbUsername = cmd.getString("db_username");
@@ -99,7 +102,7 @@ public class Processor {
         KafkaSource<JsonNode> kafkaSource = KafkaSource.<JsonNode>builder()
                 .setBootstrapServers(bootstrapServers)
                 .setTopics(inputTopic)
-                .setGroupId("processor")
+                .setGroupId(groupId)
                 .setProperty("commit.offsets.on.checkpoint", "true")
                 .setStartingOffsets(rewind ? OffsetsInitializer.earliest()
                         : OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST))

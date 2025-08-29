@@ -14,15 +14,15 @@ public class CountsHistoryTable extends AbstractTableBuilder {
     public static class EventCounts {
         @TableEventKey
         @JsonProperty("ts_start")
-        public Instant winStart;
+        public final Instant winStart;
         @TableEventKey
         @JsonProperty("ts_end")
-        public Instant winEnd;
+        public final Instant winEnd;
         @TableEventKey
         @JsonProperty("kind")
-        public String eventType;
+        public final String eventType;
         @JsonProperty("num_events")
-        public int numEvents;
+        public final int numEvents;
 
         public EventCounts(Instant winStart, Instant winEnd, String eventType, int numEvents) {
             this.winStart = winStart;
@@ -35,7 +35,7 @@ public class CountsHistoryTable extends AbstractTableBuilder {
     @Override
     protected DataStream<EventCounts> computeTable() {
         return getEventStream()
-                .keyBy(event -> event.getType().toString())
+                .keyBy(event -> event.eventType)
                 .window(TumblingEventTimeWindows.of(Duration.ofMinutes(5)))
                 // Here we can afford to allow more lateness and retroactively
                 // upsert with a new value.
