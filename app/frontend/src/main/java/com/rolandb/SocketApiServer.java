@@ -18,10 +18,13 @@ import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import com.rolandb.Table.TableField;
 
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -37,17 +40,18 @@ public class SocketApiServer extends WebSocketServer {
      * to some number of tables, or to remove some previous subscriptions.
      */
     public static class ClientMessage {
-        @JsonProperty("replay")
         public final List<Subscription> replay;
-        @JsonProperty("subscribe")
         public final List<Subscription> subscribe;
-        @JsonProperty("unsubscribe")
         public final List<Long> unsubscribe;
 
-        public ClientMessage(List<Subscription> replay, List<Subscription> subscribe, List<Long> unsubscribe) {
-            this.replay = replay;
-            this.subscribe = subscribe;
-            this.unsubscribe = unsubscribe;
+        @JsonCreator
+        public ClientMessage(
+                @JsonProperty("replay") List<Subscription> replay,
+                @JsonProperty("subscribe") List<Subscription> subscribe,
+                @JsonProperty("unsubscribe") List<Long> unsubscribe) {
+            this.replay = replay == null ? List.of() : replay;
+            this.subscribe = subscribe == null ? List.of() : subscribe;
+            this.unsubscribe = unsubscribe == null ? List.of() : unsubscribe;
         }
     }
 
@@ -98,12 +102,13 @@ public class SocketApiServer extends WebSocketServer {
         }
 
         public synchronized void unsubscribe(long subscriptionId) {
-            Subscription toRemove = subscriptionsById.get(subscriptionId);
+            Subscription toRemove = subscriptionsById.remove(subscriptionId);
             if (toRemove != null) {
                 Set<Subscription> sameTable = subscriptions.get(toRemove.tableName);
                 sameTable.remove(toRemove);
                 if (sameTable.isEmpty()) {
                     disposables.remove(toRemove.tableName).dispose();
+                    subscriptions.remove(toRemove.tableName);
                 }
             }
         }
@@ -143,9 +148,35 @@ public class SocketApiServer extends WebSocketServer {
         objectMapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
     }
 
+    /**
+     * Add the table to the set of available ones. Also start the live observable
+     * for the table.
+     * 
+     * @param table
+     *            The table to add.
+     */
+    private void addTable(Table table) {
+        table.startLiveObservable(kafkaProperties);
+        tables.put(table.name, table);
+    }
+
     @Override
     public void start() {
-
+        addTable(new Table("events", List.of()));
+        addTable(new Table("counts_live", List.of(
+                new TableField("ts_start", false, String.class),
+                new TableField("ts_end", false, String.class),
+                new TableField("ts_write", false, String.class),
+                new TableField("kind", true, String.class),
+                new TableField("window_size", true, String.class),
+                new TableField("num_events", false, Long.class))));
+        addTable(new Table("counts_history", List.of(
+                new TableField("ts_start", true, String.class),
+                new TableField("ts_end", true, String.class),
+                new TableField("ts_write", false, String.class),
+                new TableField("kind", true, String.class),
+                new TableField("num_events", false, Long.class))));
+        setReuseAddr(true);
         super.start();
     }
 
@@ -156,6 +187,7 @@ public class SocketApiServer extends WebSocketServer {
         for (Table table : tables.values()) {
             table.stopLiveObservable();
         }
+        tables.clear();
         try {
             connections.close();
         } catch (Exception e) {
@@ -227,6 +259,9 @@ public class SocketApiServer extends WebSocketServer {
                 if (table != null && replay.applicableTo(table)) {
                     table.getReplayObservable(replay, connections)
                             .subscribeOn(rxScheduler)
+                            .doOnError(error -> {
+                                LOGGER.error("Error in table replay", error);
+                            })
                             .subscribe(row -> {
                                 sendRow(socket, table.name, row);
                             });

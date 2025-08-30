@@ -76,7 +76,7 @@ public class Frontend {
      * servers.
      */
     public void stopListen() {
-        httpServer.stop((int) Duration.ofSeconds(10).toSeconds());
+        httpServer.stop((int) Duration.ofSeconds(1).toSeconds());
         httpServer = null;
         LOGGER.info("Server on port {} stopped", httpPort);
         try {
@@ -125,7 +125,7 @@ public class Frontend {
         // Read options
         int httpPort = cmd.getInt("port");
         int wsPort = cmd.getInt("ws_port");
-        String bootstrapServer = cmd.getString("bootstrap_server");
+        String bootstrapServer = cmd.getString("bootstrap_servers");
         String groupId = cmd.getString("group_id");
         String dbUrl = cmd.getString("db_url");
         String dbUsername = cmd.getString("db_username");
@@ -141,7 +141,7 @@ public class Frontend {
                     dbUrl + "?user=" + dbUsername + "&password=" + dbPassword);
             // Add a shutdown hook to ensure a clean exit.
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                LOGGER.info("Shutting down HTTP server");
+                LOGGER.info("Shutting down servers");
                 server.stopListen();
             }));
             server.startListen();

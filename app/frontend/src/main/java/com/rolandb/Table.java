@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.errors.InterruptException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,17 +47,15 @@ public class Table {
 
     public final String name;
     public final List<TableField> fields;
-    private final boolean onlyLive;
     private Thread kafkaPollThread;
     private Observable<Map<String, ?>> liveObservable;
 
-    public Table(String name, List<TableField> fields, boolean onlyLive) {
+    public Table(String name, List<TableField> fields) {
         this.name = name;
         this.fields = fields;
-        this.onlyLive = onlyLive;
     }
 
-    public Table startLiveObservable(Properties kafkaProperties) {
+    public void startLiveObservable(Properties kafkaProperties) {
         if (liveObservable == null) {
             PublishSubject<Map<String, ?>> subject = PublishSubject.create();
             kafkaPollThread = new Thread(() -> {
@@ -64,7 +64,7 @@ public class Table {
                 KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaProperties);
                 try {
                     consumer.subscribe(Collections.singletonList(name));
-                    while (!Thread.currentThread().isInterrupted()) {
+                    while (!Thread.interrupted()) {
                         consumer.poll(java.time.Duration.ofMillis(100))
                                 .forEach(record -> {
                                     try {
@@ -77,7 +77,11 @@ public class Table {
                                     }
                                 });
                     }
+                } catch (InterruptException e) {
+                    // Just close normally after resetting the interrupt.
+                    Thread.interrupted();
                 } finally {
+                    consumer.unsubscribe();
                     consumer.close();
                     subject.onComplete();
                 }
@@ -85,9 +89,6 @@ public class Table {
             kafkaPollThread.start();
             liveObservable = subject.share();
         }
-        // For convenience, so one can call the constructor and immediately
-        // start the live observable.
-        return this;
     }
 
     public void stopLiveObservable() throws InterruptedException {
@@ -145,7 +146,7 @@ public class Table {
      * @return A cold observable that reads the selected table rows table.
      */
     public Observable<Map<String, ?>> getReplayObservable(Subscription subscription, DbConnectionPool pool) {
-        if (onlyLive) {
+        if (fields.isEmpty()) {
             return Observable.empty();
         } else {
             return Observable.using(
@@ -163,7 +164,19 @@ public class Table {
                             while (rs.next() && !emitter.isDisposed()) {
                                 Map<String, Object> row = new HashMap<>();
                                 for (TableField field : fields) {
-                                    row.put(field.name, rs.getObject(field.name, field.type));
+                                    Object value = rs.getObject(field.name);
+                                    if (value.getClass() == field.type) {
+                                        row.put(field.name, value);
+                                    } else if (value instanceof Integer && field.type == Long.class) {
+                                        row.put(field.name, Long.valueOf((int) value));
+                                    } else if (value instanceof Float && field.type == Double.class) {
+                                        row.put(field.name, Double.valueOf((float) value));
+                                    } else if (value instanceof Timestamp && field.type == String.class) {
+                                        row.put(field.name, ((Timestamp) value).toInstant().toString());
+                                    } else {
+                                        throw new IllegalArgumentException("Unsupported conversion from "
+                                                + value.getClass() + " to " + field.type);
+                                    }
                                 }
                                 emitter.onNext(row);
                             }

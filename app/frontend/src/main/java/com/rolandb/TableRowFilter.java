@@ -74,17 +74,21 @@ public class TableRowFilter {
      * @return The SQL expression.
      */
     public String asSqlQueryCondition() {
-        StringBuilder builder = new StringBuilder();
-        boolean first = true;
-        builder.append("(");
-        for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
-            if (!first) {
-                builder.append(" AND ");
+        if (filters.isEmpty()) {
+            return "TRUE";
+        } else {
+            StringBuilder builder = new StringBuilder();
+            boolean first = true;
+            builder.append("(");
+            for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
+                if (!first) {
+                    builder.append(" AND ");
+                }
+                first = false;
+                builder.append(filter.getValue().asSqlQueryCondition(filter.getKey()));
             }
-            first = false;
-            builder.append(filter.getValue().asSqlQueryCondition(filter.getKey()));
+            builder.append(")");
+            return builder.toString();
         }
-        builder.append(")");
-        return builder.toString();
     }
 }

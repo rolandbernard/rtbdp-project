@@ -22,7 +22,7 @@ public class Subscription {
             @JsonProperty("id") long id, @JsonProperty("table") String tableName,
             @JsonProperty("filters") List<TableRowFilter> filters) {
         this.id = id;
-        this.tableName = tableName;
+        this.tableName = tableName == null ? "" : tableName;
         this.filters = filters;
     }
 
@@ -35,12 +35,16 @@ public class Subscription {
      *         {@code false} otherwise.
      */
     public boolean applicableTo(Table table) {
-        for (TableRowFilter filter : filters) {
-            if (filter.applicableTo(table)) {
-                return true;
+        if (filters == null) {
+            return true;
+        } else {
+            for (TableRowFilter filter : filters) {
+                if (filter.applicableTo(table)) {
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
     }
 
     /**
@@ -51,12 +55,16 @@ public class Subscription {
      * @return {@code true} in case we match, {@code false} otherwise.
      */
     public boolean accept(Map<String, ?> row) {
-        for (TableRowFilter filter : filters) {
-            if (filter.accept(row)) {
-                return true;
+        if (filters == null) {
+            return true;
+        } else {
+            for (TableRowFilter filter : filters) {
+                if (filter.accept(row)) {
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
     }
 
     /**
@@ -67,17 +75,23 @@ public class Subscription {
      * @return The SQL expression.
      */
     public String asSqlQueryCondition() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("(");
-        boolean first = true;
-        for (TableRowFilter filter : filters) {
-            if (!first) {
-                builder.append(" OR ");
+        if (filters == null) {
+            return "TRUE";
+        } else if (filters.isEmpty()) {
+            return "FALSE";
+        } else {
+            StringBuilder builder = new StringBuilder();
+            builder.append("(");
+            boolean first = true;
+            for (TableRowFilter filter : filters) {
+                if (!first) {
+                    builder.append(" OR ");
+                }
+                first = false;
+                builder.append(filter.asSqlQueryCondition());
             }
-            first = false;
-            builder.append(filter.asSqlQueryCondition());
+            builder.append(")");
+            return builder.toString();
         }
-        builder.append(")");
-        return builder.toString();
     }
 }
