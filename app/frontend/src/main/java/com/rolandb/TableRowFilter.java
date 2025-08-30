@@ -2,11 +2,11 @@ package com.rolandb;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.rolandb.Table.TableField;
 
 /**
  * A filter that filters rows of a table.
@@ -28,12 +28,12 @@ public class TableRowFilter {
      *         otherwise.
      */
     public boolean applicableTo(Table table) {
-        Set<String> keys = table.fields.stream()
+        Map<String, TableField> keys = table.fields.stream()
                 .filter(e -> e.isKey)
-                .map(e -> e.name)
-                .collect(Collectors.toSet());
-        for (String filterKey : filters.keySet()) {
-            if (!keys.contains(filterKey)) {
+                .collect(Collectors.toMap(e -> e.name, e -> e));
+        for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
+            TableField field = keys.get(filter.getKey());
+            if (field == null || !filter.getValue().applicableTo(field)) {
                 return false;
             }
         }
@@ -57,14 +57,34 @@ public class TableRowFilter {
                 if (!((TableValueFilter<Long>) filter.getValue()).accept((Long) value)) {
                     return false;
                 }
-            } else if (value instanceof String) {
-                if (!((TableValueFilter<String>) filter.getValue()).accept((String) value)) {
+            } else {
+                if (!((TableValueFilter<String>) filter.getValue()).accept(value.toString())) {
                     return false;
                 }
-            } else {
-                throw new IllegalArgumentException("Unsupported filter value type");
             }
         }
         return true;
+    }
+
+    /**
+     * Returns an SQL expression that can be used as the condition in a
+     * select statement that in the `WHERE` clause to filter only for events
+     * relevant to this filter.
+     * 
+     * @return The SQL expression.
+     */
+    public String asSqlQueryCondition() {
+        StringBuilder builder = new StringBuilder();
+        boolean first = true;
+        builder.append("(");
+        for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
+            if (!first) {
+                builder.append(" AND ");
+            }
+            first = false;
+            builder.append(filter.getValue().asSqlQueryCondition(filter.getKey()));
+        }
+        builder.append(")");
+        return builder.toString();
     }
 }

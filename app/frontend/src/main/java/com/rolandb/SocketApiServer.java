@@ -2,14 +2,16 @@ package com.rolandb;
 
 import java.net.InetSocketAddress;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
-import java.sql.Connection;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -18,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.reactivex.rxjava3.core.Scheduler;
@@ -53,12 +56,12 @@ public class SocketApiServer extends WebSocketServer {
      * a list of the current subscriptions, and disposables for closing the
      * observables for a given table.
      */
-    private static class ClientState {
+    private class ClientState {
         /**
          * Subscriptions by table. Required for filtering requests and handling
          * unsubscribing from tables.
          */
-        private final Map<Table, Set<Subscription>> subscriptions = new HashMap<>();
+        private final Map<String, Set<Subscription>> subscriptions = new HashMap<>();
         /**
          * Subscriptions by id. Required for handling unsubscribing.
          */
@@ -69,29 +72,59 @@ public class SocketApiServer extends WebSocketServer {
          * create more than one subscription, every row will be processed out
          * only once.
          */
-        private final Map<Table, Disposable> disposables = new HashMap<>();
+        private final Map<String, Disposable> disposables = new HashMap<>();
 
-        public void subscribe(Subscription newSubscription, Consumer<Map<String, ?>> consumer) {
-            // todo
+        public synchronized void subscribe(
+                Subscription newSubscription, Table table, Consumer<Map<String, ?>> consumer) {
+            if (!subscriptionsById.containsKey(newSubscription.id)) {
+                subscriptionsById.put(newSubscription.id, newSubscription);
+                Set<Subscription> sameTable;
+                if (subscriptions.containsKey(newSubscription.tableName)) {
+                    sameTable = subscriptions.get(newSubscription.tableName);
+                } else {
+                    sameTable = new HashSet<>();
+                    subscriptions.put(newSubscription.tableName, sameTable);
+                    Disposable disposable = table.getLiveObservable()
+                            .subscribeOn(rxScheduler)
+                            .subscribe(row -> {
+                                if (sameTable.stream().anyMatch(s -> s.accept(row))) {
+                                    consumer.accept(row);
+                                }
+                            });
+                    disposables.put(newSubscription.tableName, disposable);
+                }
+                sameTable.add(newSubscription);
+            }
         }
 
-        public void unsubscribe(Subscription newSubscription) {
-            // todo
+        public synchronized void unsubscribe(long subscriptionId) {
+            Subscription toRemove = subscriptionsById.get(subscriptionId);
+            if (toRemove != null) {
+                Set<Subscription> sameTable = subscriptions.get(toRemove.tableName);
+                sameTable.remove(toRemove);
+                if (sameTable.isEmpty()) {
+                    disposables.remove(toRemove.tableName).dispose();
+                }
+            }
         }
 
-        public void unsubscribeAll() {
-            // todo
+        public synchronized void unsubscribeAll() {
+            for (Disposable d : disposables.values()) {
+                d.dispose();
+            }
+            subscriptions.clear();
+            subscriptionsById.clear();
+            disposables.clear();
         }
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketApiServer.class);
 
-    private final String bootstrapServer;
-    private final String groupId;
-    private final String jdbcUrl;
+    private final Properties kafkaProperties;
+    private final DbConnectionPool connections;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, Table> tables = new HashMap<>();
-    private final Scheduler ioScheduler = Schedulers.from(Executors.newFixedThreadPool(8));
+    private final Scheduler rxScheduler = Schedulers.from(Executors.newFixedThreadPool(8));
 
     /**
      * Initialize a new socket server to listen on the given address.
@@ -101,9 +134,33 @@ public class SocketApiServer extends WebSocketServer {
      */
     public SocketApiServer(InetSocketAddress address, String bootstrapServer, String groupId, String jdbcUrl) {
         super(address);
-        this.bootstrapServer = bootstrapServer;
-        this.groupId = groupId;
-        this.jdbcUrl = jdbcUrl;
+        kafkaProperties = new Properties();
+        kafkaProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+        kafkaProperties.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        kafkaProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        kafkaProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        connections = new DbConnectionPool(jdbcUrl);
+        objectMapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
+    }
+
+    @Override
+    public void start() {
+
+        super.start();
+    }
+
+    @Override
+    public void stop() throws InterruptedException {
+        super.stop();
+        rxScheduler.shutdown();
+        for (Table table : tables.values()) {
+            table.stopLiveObservable();
+        }
+        try {
+            connections.close();
+        } catch (Exception e) {
+            LOGGER.error("Failed to close JDBC connections", e);
+        }
     }
 
     @Override
@@ -139,7 +196,11 @@ public class SocketApiServer extends WebSocketServer {
      *            The new row values.
      */
     private void sendRow(WebSocket socket, String table, Map<String, ?> row) {
-
+        try {
+            socket.send(objectMapper.writeValueAsString(Map.of("table", table, "row", row)));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize row update", e);
+        }
     }
 
     @Override
@@ -147,14 +208,29 @@ public class SocketApiServer extends WebSocketServer {
         try {
             LOGGER.debug("Message from client {}: {}", socket.getRemoteSocketAddress(), messageString);
             ClientMessage message = objectMapper.readValue(messageString, ClientMessage.class);
+            ClientState state = socket.getAttachment();
             for (Subscription subscription : message.subscribe) {
-
+                Table table = tables.get(subscription.tableName);
+                if (table != null && subscription.applicableTo(table)) {
+                    state.subscribe(subscription, table, row -> {
+                        sendRow(socket, table.name, row);
+                    });
+                }
             }
             for (Long unsubscribe : message.unsubscribe) {
-
+                if (unsubscribe != null) {
+                    state.unsubscribe(unsubscribe);
+                }
             }
             for (Subscription replay : message.replay) {
-
+                Table table = tables.get(replay.tableName);
+                if (table != null && replay.applicableTo(table)) {
+                    table.getReplayObservable(replay, connections)
+                            .subscribeOn(rxScheduler)
+                            .subscribe(row -> {
+                                sendRow(socket, table.name, row);
+                            });
+                }
             }
         } catch (JsonProcessingException e) {
             LOGGER.error("Failed to handle request", e);

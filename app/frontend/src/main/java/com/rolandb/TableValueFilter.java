@@ -15,6 +15,8 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import com.rolandb.Table.TableField;
+
 /**
  * Interface used for filters that filter based on a single columns value.
  */
@@ -48,6 +50,50 @@ public interface TableValueFilter<T extends Comparable<T>> {
             }
             return true;
         }
+
+        @Override
+        public String asSqlQueryCondition(String name) {
+            StringBuilder builder = new StringBuilder();
+            builder.append("(");
+            if (start != null) {
+                builder.append(name);
+                builder.append(" >= ");
+                if (start instanceof Long) {
+                    builder.append(end.toString());
+                } else {
+                    builder.append(escapeString(start.toString()));
+                }
+            }
+            if (end != null) {
+                if (start != null) {
+                    builder.append(" AND ");
+                }
+                builder.append(name);
+                if (inclusive) {
+                    builder.append(" <= ");
+                } else {
+                    builder.append(" < ");
+                }
+                if (end instanceof Long) {
+                    builder.append(end.toString());
+                } else {
+                    builder.append(escapeString(end.toString()));
+                }
+            }
+            builder.append(")");
+            return builder.toString();
+        }
+
+        @Override
+        public boolean applicableTo(TableField field) {
+            if (start != null && !field.type.isInstance(start)) {
+                return false;
+            }
+            if (end != null && !field.type.isInstance(end)) {
+                return false;
+            }
+            return field.isKey;
+        }
     }
 
     /**
@@ -65,6 +111,38 @@ public interface TableValueFilter<T extends Comparable<T>> {
         @Override
         public boolean accept(T obj) {
             return options.contains(obj);
+        }
+
+        @Override
+        public String asSqlQueryCondition(String name) {
+            StringBuilder builder = new StringBuilder();
+            builder.append("(");
+            builder.append(name);
+            builder.append(" IN (");
+            boolean first = true;
+            for (Object o : options) {
+                if (!first) {
+                    builder.append(", ");
+                }
+                first = false;
+                if (o instanceof Long) {
+                    builder.append(o.toString());
+                } else {
+                    builder.append(escapeString(o.toString()));
+                }
+            }
+            builder.append("))");
+            return builder.toString();
+        }
+
+        @Override
+        public boolean applicableTo(TableField field) {
+            for (Object o : options) {
+                if (!field.type.isInstance(o)) {
+                    return false;
+                }
+            }
+            return field.isKey;
         }
     }
 
@@ -97,5 +175,40 @@ public interface TableValueFilter<T extends Comparable<T>> {
      *            The row to test against.
      * @return {@code true} in case we match, {@code false} otherwise.
      */
-    abstract boolean accept(T obj);
+    public abstract boolean accept(T obj);
+
+    /**
+     * Returns an SQL expression that can be used as the condition in a
+     * select statement that in the `WHERE` clause to filter only for events
+     * relevant to this filter.
+     * 
+     * @param name
+     *            The name of the field to check.
+     * @return The SQL expression.
+     */
+    public abstract String asSqlQueryCondition(String name);
+
+    /**
+     * Test whether this filter can be used with the given field.
+     * 
+     * @param field
+     *            The filed to check against.
+     * @return {@code true} if the filter can be used with the field, {@code false}
+     *         otherwise.
+     */
+    public abstract boolean applicableTo(TableField field);
+
+    /**
+     * Escape a string for use in an SQL query.
+     * 
+     * @param string
+     *            The string to escape.
+     * @return The escaped string.
+     */
+    public static String escapeString(String string) {
+        return "'" + string
+                .replaceAll("\\", "\\\\")
+                .replaceAll("'", "''")
+                .replaceAll("\0", "\\x00") + "'";
+    }
 }

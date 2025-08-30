@@ -1,11 +1,26 @@
 package com.rolandb;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.subjects.PublishSubject;
 
 /**
  * In this application, a table consists of both a relational table in
@@ -17,24 +32,70 @@ public class Table {
     public static class TableField {
         public final String name;
         public final boolean isKey;
-        public final boolean isNumeric;
+        public final Class<?> type;
 
-        public TableField(String name, boolean isKey, boolean isNumeric) {
+        public TableField(String name, boolean isKey, Class<?> type) {
             this.name = name;
             this.isKey = isKey;
-            this.isNumeric = isNumeric;
+            this.type = type;
         }
     };
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
 
     public final String name;
     public final List<TableField> fields;
     private final boolean onlyLive;
+    private Thread kafkaPollThread;
     private Observable<Map<String, ?>> liveObservable;
 
     public Table(String name, List<TableField> fields, boolean onlyLive) {
         this.name = name;
         this.fields = fields;
         this.onlyLive = onlyLive;
+    }
+
+    public Table startLiveObservable(Properties kafkaProperties) {
+        if (liveObservable == null) {
+            PublishSubject<Map<String, ?>> subject = PublishSubject.create();
+            kafkaPollThread = new Thread(() -> {
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
+                KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaProperties);
+                try {
+                    consumer.subscribe(Collections.singletonList(name));
+                    while (!Thread.currentThread().isInterrupted()) {
+                        consumer.poll(java.time.Duration.ofMillis(100))
+                                .forEach(record -> {
+                                    try {
+                                        Map<String, ?> row = objectMapper.readValue(record.value(),
+                                                new TypeReference<Map<String, ?>>() {
+                                                });
+                                        subject.onNext(row);
+                                    } catch (JsonProcessingException e) {
+                                        LOGGER.error("Failed to parse Kafka message", e);
+                                    }
+                                });
+                    }
+                } finally {
+                    consumer.close();
+                    subject.onComplete();
+                }
+            });
+            kafkaPollThread.start();
+            liveObservable = subject.share();
+        }
+        // For convenience, so one can call the constructor and immediately
+        // start the live observable.
+        return this;
+    }
+
+    public void stopLiveObservable() throws InterruptedException {
+        if (liveObservable != null) {
+            liveObservable = null;
+            kafkaPollThread.interrupt();
+            kafkaPollThread.join();
+        }
     }
 
     /**
@@ -47,6 +108,29 @@ public class Table {
      */
     public Observable<Map<String, ?>> getLiveObservable() {
         return liveObservable;
+    }
+
+    /**
+     * Get the SQL query expression that would load the complete table, with all
+     * of its fields. The query consists of the `SELECT` and `FROM` parts, but
+     * does not include any other clause, so a `WHERE` could be added to it.
+     * 
+     * @return The SQL query expression.
+     */
+    public String asSqlQuery() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("SELECT ");
+        boolean first = true;
+        for (TableField field : fields) {
+            if (!first) {
+                builder.append(", ");
+            }
+            first = false;
+            builder.append(field.name);
+        }
+        builder.append(" FROM ");
+        builder.append(name);
+        return builder.toString();
     }
 
     /**
@@ -72,16 +156,16 @@ public class Table {
                     },
                     con -> Observable.create(emitter -> {
                         try (Statement st = con.createStatement(
-                             ResultSet.TYPE_FORWARD_ONLY,
-                             ResultSet.CONCUR_READ_ONLY)) {
-
-                            st.setFetchSize(100); // Set a small fetch size
-                            ResultSet rs = st.executeQuery(SQL_QUERY);
-
+                                ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+                            st.setFetchSize(1_000);
+                            ResultSet rs = st
+                                    .executeQuery(asSqlQuery() + " WHERE " + subscription.asSqlQueryCondition());
                             while (rs.next() && !emitter.isDisposed()) {
-                                long id = rs.getLong("id");
-                                String name = rs.getString("name");
-                                emitter.onNext(new YourObject(id, name));
+                                Map<String, Object> row = new HashMap<>();
+                                for (TableField field : fields) {
+                                    row.put(field.name, rs.getObject(field.name, field.type));
+                                }
+                                emitter.onNext(row);
                             }
                             rs.close(); // Close the result set
                             emitter.onComplete();

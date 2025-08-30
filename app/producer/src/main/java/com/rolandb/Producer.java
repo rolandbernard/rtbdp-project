@@ -7,7 +7,6 @@ import java.util.concurrent.ExecutionException;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.VoidSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,14 +74,14 @@ public class Producer {
         // Configures logging.
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
-        KafkaProducer<Void, String> kafkaProducer;
+        KafkaProducer<String, String> kafkaProducer;
         if (!dryRun) {
             // Create & check topic.
             KafkaUtil.setupTopic(topic, bootstrapServers, numPartitions, replicationFactor);
             // Create producer.
             Properties props = new Properties();
             props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-            props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, VoidSerializer.class.getName());
+            props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
             props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip");
             props.put(ProducerConfig.ACKS_CONFIG, "1"); // Wait for only one in-sync replica to acknowledge the write.
@@ -107,7 +106,8 @@ public class Producer {
                             System.out.flush();
                         } else {
                             // Asynchronously send the record.
-                            ProducerRecord<Void, String> record = new ProducerRecord<>(topic, null, eventJson);
+                            ProducerRecord<String, String> record = new ProducerRecord<>(topic, event.getId(),
+                                    eventJson);
                             kafkaProducer.send(record, (metadata, exception) -> {
                                 if (exception != null) {
                                     pollingService.unmarkEvent(event);

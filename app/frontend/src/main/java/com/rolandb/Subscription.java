@@ -58,4 +58,26 @@ public class Subscription {
         }
         return false;
     }
+
+    /**
+     * Returns an SQL expression that can be used as the condition in a
+     * select statement that in the `WHERE` clause to filter only for events
+     * relevant to this subscription.
+     * 
+     * @return The SQL expression.
+     */
+    public String asSqlQueryCondition() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("(");
+        boolean first = true;
+        for (TableRowFilter filter : filters) {
+            if (!first) {
+                builder.append(" OR ");
+            }
+            first = false;
+            builder.append(filter.asSqlQueryCondition());
+        }
+        builder.append(")");
+        return builder.toString();
+    }
 }

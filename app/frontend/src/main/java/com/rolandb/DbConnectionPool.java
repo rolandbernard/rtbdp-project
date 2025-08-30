@@ -11,7 +11,7 @@ import java.util.List;
  * opened if one is requested but there are no free ones. Otherwise, one of the
  * existing open connections will be used.
  */
-public class DbConnectionPool {
+public class DbConnectionPool implements AutoCloseable {
     private final String jdbcUrl;
     private final List<Connection> connections = new ArrayList<>();
 
@@ -43,5 +43,13 @@ public class DbConnectionPool {
      */
     public synchronized void returnConnection(Connection connection) {
         connections.add(connection);
+    }
+
+    @Override
+    public synchronized void close() throws SQLException {
+        for (Connection connection : connections) {
+            connection.close();
+        }
+        connections.clear();
     }
 }

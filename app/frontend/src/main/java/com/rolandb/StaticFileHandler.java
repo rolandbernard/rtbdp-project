@@ -101,8 +101,10 @@ public class StaticFileHandler implements HttpHandler {
                 }
                 // Add some cache control headers.
                 exchange.getResponseHeaders().set("Cache-Control", "public, max-age=86400");
-                String lastModified = DATE_FORMAT.format(Date.from(Instant.ofEpochMilli(lastModifiedMillis)));
-                exchange.getResponseHeaders().set("Last-Modified", lastModified);
+                if (lastModifiedMillis != 0) {
+                    String lastModified = DATE_FORMAT.format(Date.from(Instant.ofEpochMilli(lastModifiedMillis)));
+                    exchange.getResponseHeaders().set("Last-Modified", lastModified);
+                }
                 exchange.getResponseHeaders().set("ETag", eTag);
                 // Determine MIME type based on file extension or fallback to octet-stream.
                 String fileExtension = getFileExtension(uriPath);
