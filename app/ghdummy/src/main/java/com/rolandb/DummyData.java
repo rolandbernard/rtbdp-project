@@ -33,6 +33,8 @@ public class DummyData {
     private static final Logger LOGGER = LoggerFactory.getLogger(DummyData.class);
     private static final String RESOURCE_NAME = "ghevents";
 
+    private final float speedUp;
+    private final String dataDir;
     private final Instant start;
     private final List<Long> timestamps;
 
@@ -43,7 +45,9 @@ public class DummyData {
      * @throws IOException
      *             In case the dummy resources can not be accessed.
      */
-    public DummyData() throws IOException {
+    public DummyData(float speedUp, String dataDir) throws IOException {
+        this.speedUp = speedUp;
+        this.dataDir = dataDir;
         start = Instant.now();
         timestamps = readPossibleTimestamps();
         timestamps.sort(Long::compareTo);
@@ -109,7 +113,7 @@ public class DummyData {
      * @return The current timestamp.
      */
     private long currentTimestamp() {
-        long ideal = ChronoUnit.MILLIS.between(start, Instant.now());
+        long ideal = (long) (ChronoUnit.MILLIS.between(start, Instant.now()) * speedUp);
         ideal %= timestamps.get(timestamps.size() - 1) + 5_000;
         int pos = Collections.binarySearch(timestamps, ideal);
         if (pos < 0) {
@@ -124,7 +128,7 @@ public class DummyData {
      * @return The current repeat count.
      */
     private int currentRepeat() {
-        long ideal = ChronoUnit.MILLIS.between(start, Instant.now());
+        long ideal = (long) (ChronoUnit.MILLIS.between(start, Instant.now()) * speedUp);
         return (int) (ideal / (timestamps.get(timestamps.size() - 1) + 5_000));
     }
 
@@ -141,18 +145,26 @@ public class DummyData {
      */
     private List<JsonNode> readTimestamp(long timestamp) throws IOException {
         LOGGER.info("Loading data for fake timestamp {}", timestamp);
-        InputStream stream = DummyData.class.getResourceAsStream(RESOURCE_NAME + "/" + timestamp + ".json");
-        if (stream == null) {
+        URL url;
+        if (dataDir == null) {
+            url = DummyData.class.getResource(RESOURCE_NAME + "/" + timestamp + ".json");
+        } else {
+            url = Path.of(dataDir, timestamp + ".json").toAbsolutePath().toUri().toURL();
+        }
+        if (url == null) {
             throw new IOException("Resource not found");
+        } else {
+            try (InputStream stream = url.openStream()) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode root = mapper.readTree(stream);
+                assert root.isArray();
+                List<JsonNode> events = new ArrayList<>();
+                for (JsonNode event : root) {
+                    events.add(event);
+                }
+                return events;
+            }
         }
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(stream);
-        assert root.isArray();
-        List<JsonNode> events = new ArrayList<>();
-        for (JsonNode event : root) {
-            events.add(event);
-        }
-        return events;
     }
 
     /**
@@ -164,7 +176,12 @@ public class DummyData {
      *             In case the dummy resources can not be accessed.
      */
     private List<Long> readPossibleTimestamps() throws IOException {
-        URL url = DummyData.class.getResource(RESOURCE_NAME);
+        URL url;
+        if (dataDir == null) {
+            url = DummyData.class.getResource(RESOURCE_NAME);
+        } else {
+            url = Path.of(dataDir).toAbsolutePath().toUri().toURL();
+        }
         if (url == null) {
             throw new IOException("Resource not found");
         } else if (url.getProtocol().equals("file")) {

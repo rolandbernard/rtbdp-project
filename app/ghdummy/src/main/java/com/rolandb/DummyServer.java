@@ -42,7 +42,7 @@ public class DummyServer {
      * 
      * @param exchange
      *            The HTTP request to handle.
-     * @throws IOException 
+     * @throws IOException
      */
     private void handleDataRequest(HttpExchange exchange) throws IOException {
         try {
@@ -101,9 +101,9 @@ public class DummyServer {
      * @throws IOException
      *             In case the dummy events data can not be loaded.
      */
-    public DummyServer(int port) throws IOException {
+    public DummyServer(int port, DummyData data) throws IOException {
         this.port = port;
-        data = new DummyData();
+        this.data = data;
     }
 
     /**
@@ -141,6 +141,10 @@ public class DummyServer {
                 .description("Dummy server for serving a fake GitHub Events API. For testing purposes.");
         parser.addArgument("--port").metavar("PORT").type(Integer.class)
                 .setDefault(8889).help("the HTTP port for the exposed HTTP server");
+        parser.addArgument("--speed-up").metavar("MULTIPLE").type(Float.class)
+                .setDefault(1.0f).help("speed up serving of events by the following multiple");
+        parser.addArgument("--data-dir").metavar("FOLDER")
+                .help("use this data directory as an alternative to the built-in one");
         parser.addArgument("--log-level").type(String.class).setDefault("debug")
                 .help("configures the log level (default: debug; values: all|trace|debug|info|warn|error|off");
         Namespace cmd;
@@ -152,13 +156,16 @@ public class DummyServer {
         }
         // Read options
         int port = cmd.getInt("port");
+        float speedUp = cmd.getFloat("speed_up");
+        String datDir = cmd.getString("data_dir");
         String logLevel = cmd.getString("log_level");
         // Configures logging
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
         // Create and start HTTP server
         try {
-            DummyServer server = new DummyServer(port);
+            DummyData data = new DummyData(speedUp, datDir);
+            DummyServer server = new DummyServer(port, data);
             // Add a shutdown hook to ensure a clean exit.
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 LOGGER.info("Shutting down HTTP server");

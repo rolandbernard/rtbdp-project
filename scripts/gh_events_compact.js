@@ -16,10 +16,14 @@ const start_ts = parseInt(newest_times[0])
 await fs.rm(OUTPUT, { recursive: true, force: true });
 await fs.mkdir(OUTPUT, { recursive: true });
 for (const ts of newest_times) {
-    const all_events = (await Promise.all([1, 2, 3].map(
-        async (idx) => JSON.parse(await fs.readFile(`${INPUT}/${ts}/${idx}.json`))
-    ))).flat();
-    const new_ts = (parseInt(ts) - start_ts).toString();
-    await fs.writeFile(`${OUTPUT}/${new_ts}.json`, JSON.stringify(all_events));
+    try {
+        const all_events = (await Promise.all([1, 2, 3].map(
+            async (idx) => JSON.parse(await fs.readFile(`${INPUT}/${ts}/${idx}.json`))
+        ))).flat();
+        const new_ts = (parseInt(ts) - start_ts).toString();
+        await fs.writeFile(`${OUTPUT}/${new_ts}.json`, JSON.stringify(all_events));
+    } catch (e) {
+        console.error(`failed to load at timestamp ${ts}`);
+    }
 }
 
