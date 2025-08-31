@@ -138,7 +138,7 @@ public class Producer {
             }
         }));
         // Wait for program to be terminated.
-        while (!Thread.currentThread().isInterrupted()) {
+        while (!Thread.interrupted()) {
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {

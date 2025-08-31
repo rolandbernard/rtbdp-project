@@ -124,7 +124,7 @@ public class DummyServer {
      * Stop the server from running.
      */
     public void stopListen() {
-        server.stop((int) Duration.ofSeconds(10).toSeconds());
+        server.stop((int) Duration.ofSeconds(1).toSeconds());
         server = null;
         LOGGER.info("Server on port {} stopped", port);
     }
