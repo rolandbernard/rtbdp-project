@@ -17,10 +17,10 @@ public class GithubEvent {
     public final String eventType;
     @JsonProperty("created_at")
     public final Instant createdAt;
-    @JsonProperty("username")
-    public final String username;
-    @JsonProperty("reponame")
-    public final String reponame;
+    @JsonProperty("user_id")
+    public final long userId;
+    @JsonProperty("repo_id")
+    public final long repoId;
 
     /**
      * Constructor to create a new event from the raw event data. This constructor
@@ -104,8 +104,8 @@ public class GithubEvent {
         }
         eventType = type.toString();
         createdAt = Instant.parse(rawEvent.get("created_at").asText());
-        username = rawEvent.get("actor").get("login").asText();
-        reponame = rawEvent.get("repo").get("name").asText();
+        userId = rawEvent.get("actor").get("id").asLong();
+        repoId = rawEvent.get("repo").get("id").asLong();
     }
 
     /**
