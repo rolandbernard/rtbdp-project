@@ -1,10 +1,10 @@
 package com.rolandb;
 
 /**
- * This implements an AVL tree with support for querying elements at a given
- * index in the sorted list, and to quickly find their index.
+ * This implements an order statistic tree with support for querying elements at
+ * a given index in the sorted list, and to quickly find their index.
  */
-public class SortedStatisticsTree<T extends Comparable<T>> {
+public class OrderStatisticTree<T extends Comparable<T>> {
     /**
      * Internal node type. We store size for searching by index, and height for
      * AVL style balancing.
@@ -12,11 +12,10 @@ public class SortedStatisticsTree<T extends Comparable<T>> {
     private static class Node<T> {
         T key;
         Node<T> left, right;
-        int height, size;
+        int size;
 
         public Node(T key) {
             this.key = key;
-            this.height = 1;
             this.size = 1;
         }
     }
@@ -105,26 +104,13 @@ public class SortedStatisticsTree<T extends Comparable<T>> {
         return n == null ? 0 : n.size;
     }
 
-    private int height(Node<T> n) {
-        return n == null ? 0 : n.height;
-    }
-
-    private void update(Node<T> n) {
-        n.height = 1 + Math.max(height(n.left), height(n.right));
-        n.size = 1 + size(n.left) + size(n.right);
-    }
-
-    private int balanceFactor(Node<T> n) {
-        return height(n.left) - height(n.right);
-    }
-
     private Node<T> rotateRight(Node<T> x) {
         Node<T> y = x.left;
         Node<T> z = y.right;
         y.right = x;
         x.left = z;
-        update(x);
-        update(y);
+        x.size = 1 + size(z) + size(x.right);
+        y.size = 1 + size(y.left) + x.size;
         return y;
     }
 
@@ -133,27 +119,31 @@ public class SortedStatisticsTree<T extends Comparable<T>> {
         Node<T> z = y.left;
         y.left = x;
         x.right = z;
-        update(x);
-        update(y);
+        x.size = 1 + size(x.left) + size(z);
+        y.size = 1 + x.size + size(y.right);
         return y;
     }
 
-    private Node<T> balance(Node<T> n) {
+    private Node<T> updateAndBalance(Node<T> n) {
         if (n == null) {
             return null;
         } else {
-            update(n);
-            int bf = balanceFactor(n);
-            if (bf > 1) {
-                if (balanceFactor(n.left) < 0) {
-                    n.left = rotateLeft(n.left);
+            int leftSize = size(n.left);
+            int rightSize = size(n.right);
+            n.size = 1 + leftSize + rightSize;
+            if (leftSize <= n.size / 4 || rightSize <= n.size / 4) {
+                // The node needs rebalancing
+                if (leftSize > rightSize) {
+                    if (size(n.left.left) < size(n.left.right)) {
+                        n.left = rotateLeft(n.left);
+                    }
+                    return rotateRight(n);
+                } else {
+                    if (size(n.right.left) > size(n.right.right)) {
+                        n.right = rotateRight(n.right);
+                    }
+                    return rotateLeft(n);
                 }
-                return rotateRight(n);
-            } else if (bf < -1) {
-                if (balanceFactor(n.right) > 0) {
-                    n.right = rotateRight(n.right);
-                }
-                return rotateLeft(n);
             } else {
                 return n;
             }
@@ -170,10 +160,11 @@ public class SortedStatisticsTree<T extends Comparable<T>> {
             } else if (cmp > 0) {
                 node.right = add(node.right, key);
             } else {
-                // Ignore the duplicate.
+                // Ignore the duplicate. No change to the node, so no need to
+                // do any rebalancing.
                 return node;
             }
-            return balance(node);
+            return updateAndBalance(node);
         }
     }
 
@@ -191,15 +182,15 @@ public class SortedStatisticsTree<T extends Comparable<T>> {
                 // This is the node to remove.
                 if (node.left == null || node.right == null) {
                     // We have only one (or no) child. We can just replace ourself.
+                    // It will already be updated and balanced.
                     return node.left != null ? node.left : node.right;
                 } else {
                     // We need to find the minimum key on the right, and insert it into
                     // this node.
                     node.right = removeMin(node.right, node);
-                    return node;
                 }
             }
-            return balance(node);
+            return updateAndBalance(node);
         }
     }
 
@@ -212,7 +203,7 @@ public class SortedStatisticsTree<T extends Comparable<T>> {
         } else {
             // We must remove from the left, and then rebalance.
             node.left = removeMin(node.left, into);
-            return balance(node);
+            return updateAndBalance(node);
         }
     }
 }
