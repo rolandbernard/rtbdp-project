@@ -1,4 +1,3 @@
-
 import { webSocket } from 'rxjs/webSocket';
 import { retry, map, tap } from 'rxjs/operators';
 import { useSyncExternalStore } from 'react';
@@ -14,7 +13,7 @@ type Filters = Record<string, Filter>[];
 
 function acceptsRow(row: any, filters: Record<string, Filter>) {
     for (const key in filters) {
-        
+
         if (Array.isArray(filters[key])) {
             if (!filters[key].includes(row[key])) {
                 return false;
@@ -44,9 +43,8 @@ function acceptsMessage(message: any, table: string, filters?: Filters) {
 export function useQuery(table: string, key: string, filters?: Filters) {
     const subscriptionId = nextSubscriptionId++;
     const events = socketConnection.multiplex(
-        () => ({ }),
+        () => ({}),
         () => ({ unsubscribe: [subscriptionId] }),
         message => acceptsMessage(message, table, filters));
     return useSyncExternalStore();
 }
-
