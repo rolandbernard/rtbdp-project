@@ -11,6 +11,18 @@ CREATE TABLE counts_live (
     PRIMARY KEY (kind, window_size)
 );
 
+CREATE TABLE counts_ranking (
+    ts_start TIMESTAMP,
+    ts_end TIMESTAMP,
+    ts_write TIMESTAMP,
+    kind VARCHAR,
+    window_size VARCHAR,
+    row_number INT,
+    rank INT,
+    num_events INT,
+    PRIMARY KEY (window_size, row_number)
+);
+
 CREATE TABLE counts_history (
     ts_start TIMESTAMP,
     ts_end TIMESTAMP,

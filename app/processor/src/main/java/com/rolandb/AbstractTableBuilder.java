@@ -10,8 +10,10 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.base.DeliveryGuarantee;
@@ -21,11 +23,14 @@ import org.apache.flink.connector.jdbc.core.datastream.Jdbc;
 import org.apache.flink.connector.jdbc.core.datastream.sink.JdbcSink;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.rolandb.MultiSlidingBuckets.WindowSpec;
+import com.rolandb.tables.CountsLiveTable;
 
 /**
  * This class contains the basic logic for writing a computed table to both a
@@ -47,7 +52,7 @@ public class AbstractTableBuilder {
     }
 
     protected StreamExecutionEnvironment env;
-    protected Map<String, DataStream<?>> streams = new HashMap<>();
+    protected Map<String, Object> streams = new HashMap<>();
     private JdbcConnectionOptions jdbcOptions;
     private String bootstrapServers = "localhost:29092";
     private boolean dryRun = false;
@@ -60,7 +65,7 @@ public class AbstractTableBuilder {
         return this;
     }
 
-    public AbstractTableBuilder addStream(String name, DataStream<?> stream) {
+    public AbstractTableBuilder addStream(String name, Object stream) {
         this.streams.put(name, stream);
         return this;
     }
@@ -96,8 +101,30 @@ public class AbstractTableBuilder {
     }
 
     @SuppressWarnings("unchecked")
-    protected <T> DataStream<T> getStream(String name) {
-        return (DataStream<T>) streams.get(name);
+    protected <T> T getStream(String name) {
+        return (T) streams.get(name);
+    }
+
+    /**
+     * Create or reuse a named stream defined by the given supplier. This is
+     * intended for easier reuse between the different tables. Ideally, only define
+     * each method using this only once.
+     * 
+     * @param <T>
+     *            The type of stream to return.
+     * @param name
+     *            The name of the stream.
+     * @param create
+     *            The computation defining the stream.
+     * @return The cached stream or a newly created one.
+     */
+    protected <T> T getStream(String name, Supplier<T> create) {
+        T stream = getStream(name);
+        if (stream == null) {
+            stream = create.get();
+            streams.put(name, stream);
+        }
+        return stream;
     }
 
     protected DataStream<JsonNode> getRawEventStream() {
@@ -105,9 +132,8 @@ public class AbstractTableBuilder {
     }
 
     protected DataStream<GithubEvent> getEventStream() {
-        DataStream<GithubEvent> stream = getStream("events");
-        if (stream == null) {
-            stream = getRawEventStream()
+        return getStream("events", () -> {
+            return getRawEventStream()
                     .map(jsonNode -> new GithubEvent(jsonNode))
                     // We assume events can be up to 10 seconds late, but otherwise in-order.
                     .assignTimestampsAndWatermarks(
@@ -115,9 +141,30 @@ public class AbstractTableBuilder {
                                     .<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
                                     .withTimestampAssigner((event, timestamp) -> event.createdAt.toEpochMilli()))
                     .name("Event Stream");
-            streams.put("events", stream);
-        }
-        return stream;
+        });
+    }
+
+    protected KeyedStream<GithubEvent, String> getEventsByTypeStream() {
+        return getStream("eventsByType", () -> {
+            return getEventStream().keyBy(event -> event.eventType);
+        });
+    }
+
+    protected DataStream<CountsLiveTable.EventCounts> getCountsLiveStream() {
+        return getStream("countsLive", () -> {
+            return getEventsByTypeStream()
+                    .process(new MultiSlidingBuckets<>(Duration.ofSeconds(15),
+                            List.of(
+                                    new WindowSpec("5m", Duration.ofMinutes(5)),
+                                    new WindowSpec("1h", Duration.ofHours(1)),
+                                    new WindowSpec("6h", Duration.ofHours(6)),
+                                    new WindowSpec("24h", Duration.ofHours(24))),
+                            (windowStart, windowEnd, key, winSpec, count) -> {
+                                return new CountsLiveTable.EventCounts(windowStart, windowEnd, key, winSpec.name,
+                                        count.intValue());
+                            }))
+                    .returns(CountsLiveTable.EventCounts.class);
+        });
     }
 
     protected DataStream<?> computeTable() {

@@ -1,0 +1,220 @@
+package com.rolandb;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
+
+import org.apache.flink.api.common.functions.OpenContext;
+import org.apache.flink.api.common.state.MapState;
+import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.streaming.api.functions.ProcessFunction;
+import org.apache.flink.util.Collector;
+
+/**
+ * This is a processing function that will keep a ranking of all values based on
+ * a key and value extracted from the incoming stream. All the changed rankings
+ * will be emitted once a given predicate is true.
+ */
+public class DynamicRanking<E, R, I extends Comparable<I>, V extends Comparable<V>>
+        extends ProcessFunction<E, R> {
+    private static class Tuple<I extends Comparable<I>, V extends Comparable<V>>
+            implements Serializable, Comparable<Tuple<I, V>> {
+        public final I key;
+        public final V value;
+
+        public Tuple(I key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public int compareTo(Tuple<I, V> other) {
+            // `null` means not in the table, meaning it is the lowest possible
+            // value.
+            int valueComp = value == null ? (other.value == null ? 0 : -1)
+                    : (other.value == null ? 1 : value.compareTo(other.value));
+            if (valueComp != 0) {
+                return -valueComp;
+            } else {
+                return key == null ? (other.key == null ? 0 : -1) : (other.key == null ? 1 : key.compareTo(other.key));
+            }
+        }
+    }
+
+    public static interface KeyFunction<I, E> extends Serializable {
+        public abstract I apply(E event);
+    }
+
+    public static interface FlushTest<E> extends Serializable {
+        public abstract boolean apply(E last, E next);
+    }
+
+    public static interface ResultFunction<E, R, I, V> extends Serializable {
+        public abstract R apply(E last, I i, V v, int row_number, int rank);
+    }
+
+    private final V cutoff;
+    private final KeyFunction<I, E> keyFunction;
+    private final KeyFunction<V, E> valueFunction;
+    private final FlushTest<E> flushTest;
+    private final ResultFunction<E, R, I, V> resultFunction;
+    // These are needed for the persistent state.
+    private final Class<I> keyClass;
+    private final Class<V> valueClass;
+    private final Class<E> eventClass;
+
+    // The last value for each key.
+    private transient MapState<I, V> persistentValues;
+    // The set of keys that have changed with their previous positions.
+    private transient MapState<I, V> pendingChanges;
+    // The last event we processed. Needed for testing whether to flush.
+    private transient ValueState<E> lastEvent;
+
+    // The current dynamic ranking of all the keys. Can be restored from
+    // `persistentValues` in case of recovery from snapshot.
+    private transient OrderStatisticTree<Tuple<I, V>> ranking;
+
+    /**
+     * Create a new dynamic ranking operator.
+     * 
+     * @param cutoff
+     *            The minimal value to keep. Note that all elements with a smaller
+     *            value will be dropped of the ranking, after emitting it once with
+     *            a rank of Integer.MAX_VALUE.
+     * @param keyFunction
+     *            The function for extracting the key.
+     * @param valueFunction
+     *            The function for extracting the value.
+     * @param flushTest
+     *            The test, between two events, about whether to flush the ranking.
+     * @param resultFunction
+     *            The function that generates the output events.
+     * @param keyClass
+     *            The class of the keys.
+     * @param valueClass
+     *            The class of the values.
+     * @param eventClass
+     *            The class of the events.
+     */
+    public DynamicRanking(V cutoff, KeyFunction<I, E> keyFunction, KeyFunction<V, E> valueFunction,
+            FlushTest<E> flushTest, ResultFunction<E, R, I, V> resultFunction, Class<I> keyClass, Class<V> valueClass,
+            Class<E> eventClass) {
+        this.cutoff = cutoff;
+        this.keyFunction = keyFunction;
+        this.valueFunction = valueFunction;
+        this.flushTest = flushTest;
+        this.resultFunction = resultFunction;
+        this.keyClass = keyClass;
+        this.valueClass = valueClass;
+        this.eventClass = eventClass;
+    }
+
+    @Override
+    public void open(OpenContext parameters) throws Exception {
+        MapStateDescriptor<I, V> persistentDesc = new MapStateDescriptor<>(
+                "persistentValues", keyClass, valueClass);
+        MapStateDescriptor<I, V> pendingDesc = new MapStateDescriptor<>(
+                "pendingChanges", keyClass, valueClass);
+        ValueStateDescriptor<E> lastEventDesc = new ValueStateDescriptor<>(
+                "lastEvent", eventClass);
+        persistentValues = getRuntimeContext().getMapState(persistentDesc);
+        pendingChanges = getRuntimeContext().getMapState(pendingDesc);
+        lastEvent = getRuntimeContext().getState(lastEventDesc);
+        // Restore the ranking tree if restoring from a snapshot.
+        ranking = new OrderStatisticTree<>();
+        for (Entry<I, V> entry : persistentValues.entries()) {
+            ranking.add(new Tuple<I, V>(entry.getKey(), entry.getValue()));
+        }
+    }
+
+    @Override
+    public void processElement(E event, Context context, Collector<R> out) throws Exception {
+        E last = lastEvent.value();
+        if (last != null && flushTest.apply(last, event)) {
+            // Flush all pending changes.
+            List<Tuple<I, V>> toAdd = new ArrayList<>();
+            List<Tuple<I, V>> toRemove = new ArrayList<>();
+            for (Entry<I, V> entry : pendingChanges.entries()) {
+                I key = entry.getKey();
+                V newValue = entry.getValue();
+                V oldValue = persistentValues.get(key);
+                if (oldValue == null || newValue.compareTo(oldValue) != 0) {
+                    toAdd.add(new Tuple<>(key, newValue));
+                    if (oldValue != null) {
+                        toRemove.add(new Tuple<>(key, oldValue));
+                    }
+                }
+            }
+            if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
+                Iterator<Tuple<I, V>> test = ranking.indexIterator(0);
+                while (test.hasNext()) {
+                    Tuple<I, V> el = test.next();
+                    System.out.print(el.key.toString() + "@" + el.value + ", ");
+                }
+                System.out.println();
+                // Sort from smallest to largest. Note that the `Tuple` comparator
+                // sorts largest values first, for ranking indices to be equal to
+                // the output row numbers.
+                toAdd.sort((a, b) -> b.compareTo(a));
+                toRemove.sort((a, b) -> b.compareTo(a));
+                // We walk through these one by one. This way we can emit the minimal
+                // number of changes necessary. Lower values do not affect the higher
+                // ones in terms of ranking.
+                int lastRow = 0, lastOffset = 0;
+                while (!toAdd.isEmpty() || !toRemove.isEmpty()) {
+                    // Get the largest values we want to change first.
+                    int row, offset;
+                    if (toRemove.isEmpty() || (!toAdd.isEmpty()
+                            && toAdd.get(toAdd.size() - 1).compareTo(toRemove.get(toRemove.size() - 1)) > 0)) {
+                        Tuple<I, V> entry = toAdd.remove(toAdd.size() - 1);
+                        if (entry.value.compareTo(cutoff) <= 0) {
+                            // This value is to be removed. We emit a final one with `Integer.MAX_VALUE`
+                            // as row number. We use wor as the actual row number.
+                            row = -(ranking.indexOf(entry) + 1);
+                            out.collect(resultFunction.apply(last, entry.key, entry.value, Integer.MAX_VALUE, row));
+                            persistentValues.remove(entry.key);
+                            offset = lastOffset;
+                        } else {
+                            ranking.add(entry);
+                            row = ranking.indexOf(entry);
+                            int rank = -(ranking.indexOf(new Tuple<>(null, entry.value)) + 1);
+                            out.collect(resultFunction.apply(last, entry.key, entry.value, row, rank));
+                            persistentValues.put(entry.key, entry.value);
+                            offset = lastOffset + 1;
+                        }
+                    } else {
+                        Tuple<I, V> entry = toRemove.remove(toRemove.size() - 1);
+                        row = ranking.indexOf(entry);
+                        ranking.remove(entry);
+                        offset = lastOffset - 1;
+                    }
+                    if (offset != 0 && lastRow != row) {
+                        Iterator<Tuple<I, V>> it = ranking.indexIterator(lastRow);
+                        for (int i = lastRow; i < row; i++) {
+                            assert it.hasNext();
+                            Tuple<I, V> moved = it.next();
+                            int rown = ranking.indexOf(moved);
+                            int rank = -(ranking.indexOf(new Tuple<>(null, moved.value)) + 1);
+                            out.collect(resultFunction.apply(last, moved.key, moved.value, rown, rank));
+                        }
+                    }
+                    lastRow = row + (offset > lastOffset ? 1 : 0);
+                    lastOffset = offset;
+                }
+            }
+            pendingChanges.clear();
+        }
+        // Append the pending change. We keep these persistent so we don't
+        // loose them in case of restoring from a checkpoint.
+        I key = keyFunction.apply(event);
+        V value = valueFunction.apply(event);
+        if (key != null && value != null) {
+            pendingChanges.put(key, value);
+            lastEvent.update(event);
+        }
+    }
+}

@@ -1,10 +1,61 @@
 package com.rolandb;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 /**
  * This implements an order statistic tree with support for querying elements at
  * a given index in the sorted list, and to quickly find their index.
  */
 public class OrderStatisticTree<T extends Comparable<T>> {
+    /**
+     * An iterator for the ordered statistics tree. The start and end are determined
+     * when creating the iterator. The end is moved until it hits the end.
+     */
+    public static class TreeIterator<T extends Comparable<T>> implements Iterator<T> {
+        private List<Node<T>> path;
+        private final Node<T> end;
+
+        private TreeIterator(List<Node<T>> path, Node<T> end) {
+            this.path = path;
+            this.end = end;
+        }
+
+        private Node<T> start() {
+            return path.get(path.size() - 1);
+        }
+
+        @Override
+        public boolean hasNext() {
+            return !path.isEmpty() && start() != end;
+        }
+
+        @Override
+        public T next() {
+            Node<T> start = start();
+            T value = start.key;
+            if (start.right != null) {
+                // We can go right and then all the way to the left.
+                start = start.right;
+                path.add(start);
+                while (start.left != null) {
+                    start = start.left;
+                    path.add(start);
+                }
+            } else {
+                // Can't go right anymore, so we go up.
+                path.remove(path.size() - 1);
+                while (!path.isEmpty() && start().right == start) {
+                    // We just visited the right side, must continue.
+                    start = start();
+                    path.remove(path.size() - 1);
+                }
+            }
+            return value;
+        }
+    }
+
     /**
      * Internal node type. We store size for searching by index, and height for
      * AVL style balancing.
@@ -43,11 +94,13 @@ public class OrderStatisticTree<T extends Comparable<T>> {
     }
 
     /**
-     * Find the index of the given element.
+     * Find the index of the given element. Like {@code binarySearch}, this will
+     * return a negative value of {@code -insertionIndex - 1} if the key does not
+     * currently exist in the collection.
      * 
      * @param key
      *            The element to search for.
-     * @return The index of the element or {@code -1} if not in the collection.
+     * @return The index of the element or {@code -index - 1} if not found.
      */
     public int indexOf(T key) {
         Node<T> node = root;
@@ -63,8 +116,8 @@ public class OrderStatisticTree<T extends Comparable<T>> {
                 return index + size(node.left);
             }
         }
-        // Key was not found
-        return -1;
+        // Key was not found.
+        return -index - 1;
     }
 
     /**
@@ -100,6 +153,33 @@ public class OrderStatisticTree<T extends Comparable<T>> {
         return size(root);
     }
 
+    /**
+     * Return an iterator that will iterator through all of the elements in sorted
+     * order, from smallest to largest. The iterator starts at the given index.
+     * 
+     * @param index
+     *            The index to start at.
+     * @return The new iterator.
+     */
+    public TreeIterator<T> indexIterator(int index) {
+        List<Node<T>> path = new ArrayList<>();
+        Node<T> node = root;
+        while (node != null) {
+            path.add(node);
+            int leftSize = size(node.left);
+            if (index < leftSize) {
+                node = node.left;
+            } else if (index > leftSize) {
+                index -= leftSize + 1;
+                node = node.right;
+            } else {
+                return new TreeIterator<>(path, null);
+            }
+        }
+        path.clear();
+        return new TreeIterator<>(path, null);
+    }
+
     private int size(Node<T> n) {
         return n == null ? 0 : n.size;
     }
@@ -131,7 +211,7 @@ public class OrderStatisticTree<T extends Comparable<T>> {
             int leftSize = size(n.left);
             int rightSize = size(n.right);
             n.size = 1 + leftSize + rightSize;
-            if (leftSize <= n.size / 4 || rightSize <= n.size / 4) {
+            if (leftSize < n.size / 4 || rightSize < n.size / 4) {
                 // The node needs rebalancing
                 if (leftSize > rightSize) {
                     if (size(n.left.left) < size(n.left.right)) {

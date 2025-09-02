@@ -34,12 +34,11 @@ public class CountsHistoryTable extends AbstractTableBuilder {
 
     @Override
     protected DataStream<EventCounts> computeTable() {
-        return getEventStream()
-                .keyBy(event -> event.eventType)
+        return getEventsByTypeStream()
                 .window(TumblingEventTimeWindows.of(Duration.ofMinutes(5)))
                 // Here we can afford to allow more lateness and retroactively
                 // upsert with a new value.
-                .allowedLateness(Duration.ofMinutes(15))
+                .allowedLateness(Duration.ofMinutes(30))
                 .<Integer, Integer, EventCounts>aggregate(new CountAggregation<>(),
                         (key, window, elements, out) -> {
                             out.collect(new EventCounts(

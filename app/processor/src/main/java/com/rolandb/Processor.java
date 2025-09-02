@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rolandb.tables.CountsHistoryTable;
 import com.rolandb.tables.CountsLiveTable;
+import com.rolandb.tables.CountsRankingTable;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -153,6 +154,7 @@ public class Processor {
         // Actually setup table computations.
         builder.build("counts_live", CountsLiveTable.class);
         builder.build("counts_history", CountsHistoryTable.class);
+        builder.build("counts_ranking", CountsRankingTable.class);
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
         env.execute();
