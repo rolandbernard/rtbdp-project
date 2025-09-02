@@ -3,16 +3,10 @@ package com.rolandb.tables;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTableBuilder;
 
-import java.time.Instant;
-
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 public class CountsLiveTable extends AbstractTableBuilder {
     public static class EventCounts {
-        @JsonProperty("ts_start")
-        public final Instant winStart;
-        @JsonProperty("ts_end")
-        public final Instant winEnd;
         @TableEventKey
         @JsonProperty("kind")
         public final String eventType;
@@ -22,9 +16,7 @@ public class CountsLiveTable extends AbstractTableBuilder {
         @JsonProperty("num_events")
         public final int numEvents;
 
-        public EventCounts(Instant winStart, Instant winEnd, String eventType, String windowSize, int numEvents) {
-            this.winStart = winStart;
-            this.winEnd = winEnd;
+        public EventCounts(String eventType, String windowSize, int numEvents) {
             this.eventType = eventType;
             this.windowSize = windowSize;
             this.numEvents = numEvents;

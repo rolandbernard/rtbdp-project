@@ -5,16 +5,12 @@ import com.rolandb.AbstractTableBuilder;
 import com.rolandb.DynamicRanking;
 import com.rolandb.tables.CountsLiveTable.EventCounts;
 
-import java.time.Instant;
+import java.time.Duration;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 public class CountsRankingTable extends AbstractTableBuilder {
     public static class CountsRank {
-        @JsonProperty("ts_start")
-        public final Instant winStart;
-        @JsonProperty("ts_end")
-        public final Instant winEnd;
         @JsonProperty("kind")
         public final String eventType;
         @TableEventKey
@@ -25,35 +21,28 @@ public class CountsRankingTable extends AbstractTableBuilder {
         public final int rowNumber;
         @JsonProperty("rank")
         public final int rank;
-        @JsonProperty("num_events")
-        public final int numEvents;
 
-        public CountsRank(
-                Instant winStart, Instant winEnd, String eventType, String windowSize, int rowNumber, int rank,
-                int numEvents) {
-            this.winStart = winStart;
-            this.winEnd = winEnd;
+        public CountsRank(String eventType, String windowSize, int rowNumber, int rank) {
             this.eventType = eventType;
             this.windowSize = windowSize;
             this.rowNumber = rowNumber;
             this.rank = rank;
-            this.numEvents = numEvents;
         }
     }
 
     @Override
     protected DataStream<CountsRank> computeTable() {
         return getCountsLiveStream()
-                .filter(e -> e.windowSize.equals("5m"))
                 .keyBy(e -> e.windowSize)
                 .process(
                         new DynamicRanking<>(
-                                0, e -> e.eventType, e -> e.numEvents, (a, b) -> a.winEnd != b.winEnd,
+                                0, Duration.ofMillis(250), e -> e.eventType, e -> e.numEvents,
                                 (e, k, v, row, rank) -> {
-                                    return new CountsRank(e.winStart, e.winEnd, k, e.windowSize, row, rank, v);
+                                    return new CountsRank(k, e.windowSize, row, rank);
                                 },
                                 String.class, Integer.class, EventCounts.class))
-                .returns(CountsRank.class);
+                .returns(CountsRank.class)
+                .name("Event Count Rankings");
     }
 
     @Override

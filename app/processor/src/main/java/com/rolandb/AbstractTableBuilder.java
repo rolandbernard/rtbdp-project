@@ -160,10 +160,10 @@ public class AbstractTableBuilder {
                                     new WindowSpec("6h", Duration.ofHours(6)),
                                     new WindowSpec("24h", Duration.ofHours(24))),
                             (windowStart, windowEnd, key, winSpec, count) -> {
-                                return new CountsLiveTable.EventCounts(windowStart, windowEnd, key, winSpec.name,
-                                        count.intValue());
+                                return new CountsLiveTable.EventCounts(key, winSpec.name, count.intValue());
                             }))
-                    .returns(CountsLiveTable.EventCounts.class);
+                    .returns(CountsLiveTable.EventCounts.class)
+                    .name("Live Event Counts");
         });
     }
 

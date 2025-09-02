@@ -157,6 +157,6 @@ public class Processor {
         builder.build("counts_ranking", CountsRankingTable.class);
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
-        env.execute();
+        env.execute("GitHub Event Analysis");
     }
 }

@@ -47,7 +47,8 @@ public class CountsHistoryTable extends AbstractTableBuilder {
                                     key, elements.iterator().next()));
 
                         })
-                .returns(EventCounts.class);
+                .returns(EventCounts.class)
+                .name("Historical Event Counts");
     }
 
     @Override

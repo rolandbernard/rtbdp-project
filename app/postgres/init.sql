@@ -2,8 +2,6 @@
 -- be filled from the Flink processor.
 
 CREATE TABLE counts_live (
-    ts_start TIMESTAMP,
-    ts_end TIMESTAMP,
     ts_write TIMESTAMP,
     kind VARCHAR,
     window_size VARCHAR,
@@ -12,14 +10,11 @@ CREATE TABLE counts_live (
 );
 
 CREATE TABLE counts_ranking (
-    ts_start TIMESTAMP,
-    ts_end TIMESTAMP,
     ts_write TIMESTAMP,
     kind VARCHAR,
     window_size VARCHAR,
     row_number INT,
     rank INT,
-    num_events INT,
     PRIMARY KEY (window_size, row_number)
 );
 
