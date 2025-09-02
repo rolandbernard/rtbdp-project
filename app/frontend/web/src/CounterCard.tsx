@@ -1,5 +1,4 @@
-import { Card, CardContent } from "@mui/material";
-import Stack from "@mui/material/Stack";
+import { Card, CardContent, CardMedia } from "@mui/material";
 import Typography from "@mui/material/Typography";
 import {
     areaElementClasses,
@@ -16,46 +15,41 @@ interface CounterCardProps {
 
 export default function CounterCard({ title, value, data }: CounterCardProps) {
     return (
-        <Card variant="outlined" sx={{ height: 'fit-content' }}>
-            <CardContent
-                sx={{
-                    padding: { xs: 1, md: 1.5 },
-                    "&:last-child": { paddingBottom: { xs: 1, md: 1.5 } },
-                }}
-            >
-                <Stack direction="row">
-                    <Stack direction="column">
-                        <Typography variant="caption" color="text.secondary">
-                            {title}
-                        </Typography>
-                        <Typography variant="h5">{value}</Typography>
-                    </Stack>
-                    <SparkLineChart
-                        height={40}
-                        width={195}
-                        area
-                        showTooltip
-                        showHighlight
-                        axisHighlight={{ x: "line" }}
-                        sx={{
-                            [`& .${areaElementClasses.root}`]: { opacity: 0.2 },
-                            [`& .${lineElementClasses.root}`]: {
-                                strokeWidth: 3,
-                            },
-                            [`& .${chartsAxisHighlightClasses.root}`]: {
-                                stroke: "rgb(137, 86, 255)",
-                                strokeDasharray: "none",
-                                strokeWidth: 2,
-                            },
-                        }}
-                        data={data.map((e) => e.y)}
-                        xAxis={{
-                            scaleType: "band",
-                            data: data.map((e) => e.x),
-                        }}
-                    />
-                </Stack>
+        <Card variant="outlined" sx={{ display: "flex", width: "fit-content" }}>
+            <CardContent sx={{ alignContent: "center" }}>
+                <Typography variant="caption" color="text.secondary">
+                    {title}
+                </Typography>
+                <Typography variant="h5">{value}</Typography>
             </CardContent>
+            <CardMedia>
+                <SparkLineChart
+                    width={200}
+                    height={100}
+                    area
+                    showTooltip
+                    showHighlight
+                    disableClipping
+                    baseline="min"
+                    curve="natural"
+                    axisHighlight={{ x: "line" }}
+                    sx={{
+                        [`& .${areaElementClasses.root}`]: { opacity: 0.2 },
+                        [`& .${lineElementClasses.root}`]: {
+                            strokeWidth: 3,
+                        },
+                        [`& .${chartsAxisHighlightClasses.root}`]: {
+                            stroke: "rgb(137, 86, 255)",
+                            strokeDasharray: "none",
+                            strokeWidth: 2,
+                        },
+                    }}
+                    data={data.map((e) => e.y)}
+                    xAxis={{
+                        data: data.map((e) => e.x),
+                    }}
+                />
+            </CardMedia>
         </Card>
     );
 }
