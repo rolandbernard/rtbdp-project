@@ -113,9 +113,6 @@ public class Producer {
                                     pollingService.unmarkEvent(event);
                                     LOGGER.error("Failed to send event with ID '{}' to Kafka", event.getId(),
                                             exception);
-                                } else {
-                                    LOGGER.info("Successfully sent event with ID '{}' to Kafka topic '{}' at offset {}",
-                                            event.getId(), metadata.topic(), metadata.offset());
                                 }
                             });
                         }

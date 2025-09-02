@@ -32,16 +32,18 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
             this.value = value;
         }
 
+        private <C extends Comparable<C>> int compareWithNull(C a, C b) {
+            return a == null ? (b == null ? 0 : -1) : (b == null ? 1 : a.compareTo(b));
+        }
+
         @Override
         public int compareTo(Tuple<I, V> other) {
-            // `null` means not in the table, meaning it is the lowest possible
-            // value.
-            int valueComp = value == null ? (other.value == null ? 0 : -1)
-                    : (other.value == null ? 1 : value.compareTo(other.value));
+            // `null` means not in the table, meaning it is the lowest possible value.
+            int valueComp = compareWithNull(value, other.value);
             if (valueComp != 0) {
                 return -valueComp;
             } else {
-                return key == null ? (other.key == null ? 0 : -1) : (other.key == null ? 1 : key.compareTo(other.key));
+                return compareWithNull(key, other.key);
             }
         }
     }
@@ -179,7 +181,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                     Tuple<I, V> entry = toAdd.remove(toAdd.size() - 1);
                     if (entry.value.compareTo(cutoff) <= 0) {
                         // This value is to be removed. We emit a final one with `Integer.MAX_VALUE`
-                        // as row number. We use wor as the actual row number.
+                        // as row number. We use rank to send the actual row number.
                         row = -(ranking.indexOf(entry) + 1);
                         out.collect(resultFunction.apply(last, entry.key, entry.value, Integer.MAX_VALUE, row));
                         persistentValues.remove(entry.key);
