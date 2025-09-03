@@ -1,15 +1,25 @@
-import { useEffect, useState } from "react";
-import { useTable } from "./api";
+import { groupBy, map, mergeMap, toArray } from "rxjs";
+import { countsLive, sorted, useTable } from "./api";
 
 export default function App() {
-    const table = useTable("counts_live", ["window_size", "kind"], []);
-    const grouped = Object.groupBy(table, row => row.kind);
-    const sorted = Object.values(grouped);
-    sorted.sort(
-        (a, b) =>
-            b!.find(r => r.window_size === "5m")?.num_events -
-            a!.find(r => r.window_size === "5m")?.num_events
-    );
+    const result =
+        useTable(countsLive, o =>
+            o.pipe(
+                groupBy(r => r.kind),
+                mergeMap(rs =>
+                    rs.pipe(
+                        toArray(),
+                        map(rs =>
+                            sorted(rs, e =>
+                                ["5m", "1h", "6h", "24h"].indexOf(e.window_size)
+                            )
+                        )
+                    )
+                ),
+                toArray(),
+                map(rs => sorted(rs, e => e[0]!.num_events, true))
+            )
+        ) ?? [];
     return (
         <table className="mx-3">
             <thead>
@@ -22,18 +32,14 @@ export default function App() {
                 </tr>
             </thead>
             <tbody>
-                {sorted.map(rows => (
-                    <tr key={rows![0].kind}>
-                        <td>{rows![0].kind}</td>
-                        {rows!
-                            .toSorted(e =>
-                                ["5m", "1h", "6h", "24h"].indexOf(e.window_size)
-                            )
-                            .map(row => (
-                                <td key={row.window_size} className="pt-1 px-3">
-                                    {row.num_events}
-                                </td>
-                            ))}
+                {result.map(rows => (
+                    <tr key={rows[0]!.kind}>
+                        <td>{rows[0]!.kind}</td>
+                        {rows.map(row => (
+                            <td key={row.window_size} className="pt-1 px-3">
+                                {row.num_events}
+                            </td>
+                        ))}
                     </tr>
                 ))}
             </tbody>
