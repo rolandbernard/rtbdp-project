@@ -1,5 +1,8 @@
 {
     "name": "gha",
+    "description": "Real-time Analysis of Public GitHub Activity",
+    "repository": "https://github.com/rolandbernard/rtbdp-project",
+    "license": "MIT",
     "private": true,
     "version": "0.0.0",
     "type": "module",
@@ -10,6 +13,8 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@fontsource-variable/noto-sans": "^5.2.8",
+        "@fontsource-variable/noto-sans-mono": "^5.2.8",
         "react": "^19.1.1",
         "react-dom": "^19.1.1",
         "react-icons": "^5.5.0",

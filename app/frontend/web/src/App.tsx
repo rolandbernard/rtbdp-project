@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
 export default function App() {
-    return <>
-        Hello World
-    </>;
+    return <div>Hello World</div>;
 }
