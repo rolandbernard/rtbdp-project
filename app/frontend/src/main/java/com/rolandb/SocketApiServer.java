@@ -164,8 +164,6 @@ public class SocketApiServer extends WebSocketServer {
     public void start() {
         addTable(new Table("events", List.of()));
         addTable(new Table("counts_live", List.of(
-                new TableField("ts_start", false, String.class),
-                new TableField("ts_end", false, String.class),
                 new TableField("ts_write", false, String.class),
                 new TableField("kind", true, String.class),
                 new TableField("window_size", true, String.class),

@@ -44,7 +44,7 @@ public class KafkaTimedRowSerializer implements KafkaRecordSerializationSchema<T
             byte[] key = objectMapper.writeValueAsBytes(row.getKey());
             // We serialize each row as key-value pairs.
             ObjectNode valueNode = (ObjectNode) objectMapper.valueToTree(row.getRow());
-            valueNode.set("tz_write", objectMapper.valueToTree(row.getTime()));
+            valueNode.set("ts_write", objectMapper.valueToTree(row.getTime()));
             byte[] value = objectMapper.writeValueAsBytes(valueNode);
             return new ProducerRecord<>(tableName, key, value);
         } catch (JsonProcessingException e) {

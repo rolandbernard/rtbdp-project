@@ -153,7 +153,7 @@ public class AbstractTableBuilder {
     protected DataStream<CountsLiveTable.EventCounts> getCountsLiveStream() {
         return getStream("countsLive", () -> {
             return getEventsByTypeStream()
-                    .process(new MultiSlidingBuckets<>(Duration.ofSeconds(15),
+                    .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
                             List.of(
                                     new WindowSpec("5m", Duration.ofMinutes(5)),
                                     new WindowSpec("1h", Duration.ofHours(1)),
