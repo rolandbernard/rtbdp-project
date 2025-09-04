@@ -73,7 +73,7 @@ public class EventPollService {
                 .observeOn(ioScheduler)
                 .flatMapSingle(tick -> {
                     int numPages = (pollingDepth + 99) / 100;
-                    int perPage = Integer.min(100, pollingDepth);
+                    int perPage = (pollingDepth + numPages - 1) / numPages;
                     List<Single<List<GithubEvent>>> pages = IntStream.rangeClosed(1, numPages)
                             .mapToObj(page -> Single.fromCallable(() -> apiClient.getEvents(page, perPage)))
                             .collect(Collectors.toList());

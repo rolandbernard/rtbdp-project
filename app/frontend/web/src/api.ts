@@ -161,6 +161,7 @@ export function useTable<R, T>(
             (onChange: () => void) => {
                 const subscription = events.subscribe(message => {
                     const row = message.row as Row<R>;
+                    console.log(row.ts_write);
                     const rowKey = table.keys.map(k => row[k]).join(":");
                     const oldRow = view.get(rowKey);
                     if (!oldRow || oldRow.ts_write < row.ts_write) {
