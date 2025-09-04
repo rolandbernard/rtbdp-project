@@ -1,6 +1,5 @@
-import { from, Observable } from "rxjs";
 import { webSocket } from "rxjs/webSocket";
-import { retry } from "rxjs/operators";
+import { filter, map, retry, throttleTime } from "rxjs/operators";
 import { useMemo, useRef, useSyncExternalStore } from "react";
 
 type Filter<T> = T[] | { start?: T; end?: T };
@@ -115,22 +114,41 @@ export const countsLive = new Table<{
     num_events: number;
 }>("counts_live", ["window_size", "kind"]);
 
-export function sorted<T, C>(array: T[], fn: (a: T) => C, rev = false): T[] {
-    return array.toSorted((a, b) => {
+export function sortedKey<T, C>(
+    fn: (a: T) => C,
+    rev = false
+): (a: T, b: T) => number {
+    return (a, b) => {
         const [fa, fb] = [fn(a), fn(b)];
         const cmp = fa < fb ? -1 : fa > fb ? 1 : 0;
         return rev ? -cmp : cmp;
-    });
+    };
+}
+
+export function sorted<T, C>(array: T[], fn: (a: T) => C, rev?: boolean): T[] {
+    return array.toSorted(sortedKey(fn, rev));
+}
+
+export function groupKey<R>(row: R, keys: (keyof R)[]): string {
+    return keys.map(k => row[k]).join(":");
+}
+
+export function groupBy<R>(table: R[], ...keys: (keyof R)[]): R[][] {
+    return Object.values(
+        Object.groupBy(table, row => groupKey(row, keys))
+    ) as R[][];
 }
 
 export function useTable<R>(table: Table<R>): Row<R>[] | undefined;
 export function useTable<R, T>(
     table: Table<R>,
-    transform: (o: Observable<Row<R>>) => Observable<T>
+    transform: (o: Row<R>[]) => T,
+    deps?: unknown[]
 ): T | undefined;
 export function useTable<R, T>(
     table: Table<R>,
-    transform?: (o: Observable<Row<R>>) => Observable<T>
+    transform?: (o: Row<R>[]) => T,
+    deps: unknown[] = []
 ): T | undefined {
     const viewRef = useRef(new Map<string, Row<R>>());
     const [subscribe, snapshot] = useMemo(() => {
@@ -155,26 +173,32 @@ export function useTable<R, T>(
                 () => ({ unsubscribe: [subscriptionId] }),
                 message => table.acceptsMessage(message as ServerMessage<R>)
             )
-            .pipe(retry({ delay: 1000 }));
-        let snapshot: T;
-        return [
-            (onChange: () => void) => {
-                const subscription = events.subscribe(message => {
+            .pipe(
+                retry({ delay: 1000 }),
+                map(message => {
                     const row = message.row as Row<R>;
-                    console.log(row.ts_write);
-                    const rowKey = table.keys.map(k => row[k]).join(":");
+                    const rowKey = groupKey(row, table.keys);
                     const oldRow = view.get(rowKey);
                     if (!oldRow || oldRow.ts_write < row.ts_write) {
                         view.set(rowKey, row);
-                        if (transform) {
-                            transform(from(view.values())).subscribe(e => {
-                                snapshot = e;
-                                onChange();
-                            });
-                        } else {
-                            snapshot = [...view.values()] as T;
-                        }
+                        return true;
+                    } else {
+                        return false;
                     }
+                }),
+                filter(e => e),
+                throttleTime(250)
+            );
+        let snapshot: T;
+        return [
+            (onChange: () => void) => {
+                const subscription = events.subscribe(() => {
+                    if (transform) {
+                        snapshot = transform([...view.values()]);
+                    } else {
+                        snapshot = [...view.values()] as T;
+                    }
+                    onChange();
                 });
                 return () => subscription.unsubscribe();
             },
@@ -182,6 +206,6 @@ export function useTable<R, T>(
         ];
         // Must be dynamic, since it is based on the filter we apply.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, table.deps);
+    }, [...table.deps, ...deps]);
     return useSyncExternalStore(subscribe, snapshot);
 }

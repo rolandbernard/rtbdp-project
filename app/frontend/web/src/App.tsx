@@ -1,23 +1,15 @@
-import { groupBy, map, mergeMap, toArray } from "rxjs";
-import { countsLive, sorted, useTable } from "./api";
+import { countsLive, groupBy, sorted, useTable } from "./api";
 
 export default function App() {
     const result =
         useTable(countsLive, o =>
-            o.pipe(
-                groupBy(r => r.kind),
-                mergeMap(rs =>
-                    rs.pipe(
-                        toArray(),
-                        map(rs =>
-                            sorted(rs, e =>
-                                ["5m", "1h", "6h", "24h"].indexOf(e.window_size)
-                            )
-                        )
+            sorted(
+                groupBy(o, "kind").map(rs =>
+                    sorted(rs, e =>
+                        ["5m", "1h", "6h", "24h"].indexOf(e.window_size)
                     )
                 ),
-                toArray(),
-                map(rs => sorted(rs, e => e[0]!.num_events, true))
+                e => -e[0]!.num_events
             )
         ) ?? [];
     return (

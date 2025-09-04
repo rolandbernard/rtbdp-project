@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.InterruptException;
@@ -23,7 +22,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.observables.ConnectableObservable;
 import io.reactivex.rxjava3.subjects.PublishSubject;
 
 /**
@@ -50,7 +48,7 @@ public class Table {
     public final String name;
     public final List<TableField> fields;
     private Thread kafkaPollThread;
-    private ConnectableObservable<Map<String, ?>> liveObservable;
+    private Observable<Map<String, ?>> liveObservable;
 
     public Table(String name, List<TableField> fields) {
         this.name = name;
@@ -89,8 +87,7 @@ public class Table {
                 }
             });
             kafkaPollThread.start();
-            liveObservable = subject.replay(5, TimeUnit.SECONDS);
-            liveObservable.connect();
+            liveObservable = subject.share();
         }
     }
 
