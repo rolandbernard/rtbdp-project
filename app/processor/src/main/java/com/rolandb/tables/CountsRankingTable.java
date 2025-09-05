@@ -3,7 +3,6 @@ package com.rolandb.tables;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTableBuilder;
 import com.rolandb.DynamicRanking;
-import com.rolandb.tables.CountsLiveTable.EventCounts;
 
 import java.time.Duration;
 
@@ -37,10 +36,10 @@ public class CountsRankingTable extends AbstractTableBuilder {
                 .process(
                         new DynamicRanking<>(
                                 0, Duration.ofMillis(250), e -> e.eventType, e -> e.numEvents,
-                                (e, k, v, row, rank) -> {
-                                    return new CountsRank(k, e.windowSize, row, rank);
+                                (w, k, v, row, rank) -> {
+                                    return new CountsRank(k, w, row, rank);
                                 },
-                                String.class, Integer.class, EventCounts.class))
+                                String.class, Integer.class))
                 .returns(CountsRank.class)
                 .name("Event Count Rankings");
     }

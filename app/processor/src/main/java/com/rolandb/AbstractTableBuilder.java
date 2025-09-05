@@ -242,9 +242,9 @@ public class AbstractTableBuilder {
                         })
                 // JDBC execution options.
                 .withExecutionOptions(JdbcExecutionOptions.builder()
-                        .withBatchSize(10_000)
-                        .withBatchIntervalMs(250)
-                        .withMaxRetries(5)
+                        .withBatchSize(10_000) // Allow some batching.
+                        .withBatchIntervalMs(100)
+                        .withMaxRetries(5) // Retry up to 5 times on transient failures.
                         .build())
                 // Use connection setting from setter.
                 .buildAtLeastOnce(jdbcOptions);
@@ -260,8 +260,9 @@ public class AbstractTableBuilder {
                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip")
                 .setProperty(ProducerConfig.ACKS_CONFIG, "1") // Wait for only one in-sync replica to acknowledge.
+                .setProperty(ProducerConfig.BATCH_SIZE_CONFIG, "10000") // Allow some batching.
+                .setProperty(ProducerConfig.LINGER_MS_CONFIG, "100")
                 .setProperty(ProducerConfig.RETRIES_CONFIG, "5") // Retry up to 5 times on transient failures.
-                .setProperty(ProducerConfig.LINGER_MS_CONFIG, "250") // Allow some batching.
                 .build();
     }
 

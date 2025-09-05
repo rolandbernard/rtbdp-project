@@ -11,6 +11,7 @@ import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.time.Duration;
 import java.time.Instant;
@@ -49,16 +50,10 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
     private final ResultFunction<K, R> function;
 
     // Buckets by Timestamp
-    private static final MapStateDescriptor<Long, Long> BUCKETS_DESC = new MapStateDescriptor<>(
-            "bucketCounts", TypeInformation.of(Long.class), TypeInformation.of(Long.class));
     private transient MapState<Long, Long> bucketCounts;
     // Rolling Sum per Window
-    private static final ValueStateDescriptor<long[]> TOTALS_DESC = new ValueStateDescriptor<>(
-            "windowTotals", PrimitiveArrayTypeInfo.LONG_PRIMITIVE_ARRAY_TYPE_INFO);
     private transient ValueState<long[]> windowTotals;
     // When the last window was closed.
-    private static final ValueStateDescriptor<Long> TIMER_DESC = new ValueStateDescriptor<>(
-            "lastClosing", TypeInformation.of(Long.class));
     private transient ValueState<Long> lastTimer;
 
     public MultiSlidingBuckets(Duration slide, List<WindowSpec> windows, ResultFunction<K, R> function) {
@@ -76,13 +71,15 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
 
     @Override
     public void open(OpenContext parameters) throws Exception {
-        bucketCounts = getRuntimeContext().getMapState(BUCKETS_DESC);
-        windowTotals = getRuntimeContext().getState(TOTALS_DESC);
-        lastTimer = getRuntimeContext().getState(TIMER_DESC);
-        // Quick sanity check. Necessary but not sufficient.
-        long[] lastTotals = windowTotals.value();
-        Preconditions.checkState(lastTotals == null || lastTotals.length == windows.size(),
-                "The stored state size does not match the window specifications");
+        MapStateDescriptor<Long, Long> bucketDesc = new MapStateDescriptor<>(
+                "bucketCounts", TypeInformation.of(Long.class), TypeInformation.of(Long.class));
+        ValueStateDescriptor<long[]> totalsDesc = new ValueStateDescriptor<>(
+                "windowTotals", PrimitiveArrayTypeInfo.LONG_PRIMITIVE_ARRAY_TYPE_INFO);
+        ValueStateDescriptor<Long> timerDesc = new ValueStateDescriptor<>(
+                "lastClosing", TypeInformation.of(Long.class));
+        bucketCounts = getRuntimeContext().getMapState(bucketDesc);
+        windowTotals = getRuntimeContext().getState(totalsDesc);
+        lastTimer = getRuntimeContext().getState(timerDesc);
     }
 
     private void addNextBucketTimer(Context ctx, long bucketEnd, Long lastClose) throws Exception {
@@ -109,6 +106,24 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
         }
     }
 
+    /**
+     * Small helper to get the current window totals, and initialize them with
+     * zeros in case they don't exists yet.
+     * 
+     * @return The window totals.
+     * @throws IOException
+     */
+    private long[] getWindowTotals() throws IOException {
+        long[] totals = windowTotals.value();
+        if (totals == null) {
+            totals = new long[windows.size()];
+        }
+        // Quick sanity check. Necessary but not sufficient.
+        Preconditions.checkState(totals.length == windows.size(),
+                "The stored state size does not match the window specifications");
+        return totals;
+    }
+
     @Override
     public void processElement(E event, Context ctx, Collector<R> out) throws Exception {
         long ts = Preconditions.checkNotNull(ctx.timestamp(), "Event timestamp must be assigned");
@@ -131,10 +146,7 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
             // we need to update the value in the totals. We will unpublish a new
             // upsert event.
             if (lastClose != null && bucketEnd <= lastClose) {
-                long[] totals = windowTotals.value();
-                if (totals == null) {
-                    totals = new long[windows.size()];
-                }
+                long[] totals = getWindowTotals();
                 for (int i = 0; i < totals.length; i++) {
                     WindowSpec spec = windows.get(i);
                     long size = spec.sizeMs / slideMs;
@@ -164,10 +176,7 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
             // This bucket must be removed again later.
             addNextBucketTimer(ctx, bucketEnd, bucketEnd);
         }
-        long[] totals = windowTotals.value();
-        if (totals == null) {
-            totals = new long[windows.size()];
-        }
+        long[] totals = getWindowTotals();
         boolean allZero = true;
         for (int i = 0; i < totals.length; i++) {
             WindowSpec spec = windows.get(i);
