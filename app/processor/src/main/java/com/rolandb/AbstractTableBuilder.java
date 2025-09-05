@@ -10,7 +10,6 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -29,8 +28,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.rolandb.MultiSlidingBuckets.WindowSpec;
-import com.rolandb.tables.CountsLiveTable;
 
 /**
  * This class contains the basic logic for writing a computed table to both a
@@ -147,23 +144,6 @@ public class AbstractTableBuilder {
     protected KeyedStream<GithubEvent, String> getEventsByTypeStream() {
         return getStream("eventsByType", () -> {
             return getEventStream().keyBy(event -> event.eventType);
-        });
-    }
-
-    protected DataStream<CountsLiveTable.EventCounts> getCountsLiveStream() {
-        return getStream("countsLive", () -> {
-            return getEventsByTypeStream()
-                    .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
-                            List.of(
-                                    new WindowSpec("5m", Duration.ofMinutes(5)),
-                                    new WindowSpec("1h", Duration.ofHours(1)),
-                                    new WindowSpec("6h", Duration.ofHours(6)),
-                                    new WindowSpec("24h", Duration.ofHours(24))),
-                            (windowStart, windowEnd, key, winSpec, count) -> {
-                                return new CountsLiveTable.EventCounts(key, winSpec.name, count.intValue());
-                            }))
-                    .returns(CountsLiveTable.EventCounts.class)
-                    .name("Live Event Counts");
         });
     }
 

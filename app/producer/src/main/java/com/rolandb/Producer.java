@@ -39,7 +39,7 @@ public class Producer {
         parser.addArgument("--topic").metavar("TOPIC").setDefault("events")
                 .help("Kafka topic name to output events data");
         parser.addArgument("--num-partitions").metavar("PARTITIONS").type(Integer.class)
-                .setDefault(1).help("# partitions for Kafka topic");
+                .setDefault(24).help("# partitions for Kafka topic");
         parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
                 .setDefault(1).help("replication factor for Kafka topic");
         parser.addArgument("--dry-run").action(Arguments.storeTrue()).help("send events to stdout instead of Kafka");

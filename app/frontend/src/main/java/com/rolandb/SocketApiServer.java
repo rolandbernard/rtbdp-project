@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
@@ -154,6 +155,8 @@ public class SocketApiServer extends WebSocketServer {
      * 
      * @param table
      *            The table to add.
+     * @throws ExecutionException
+     * @throws InterruptedException
      */
     private void addTable(Table table) {
         table.startLiveObservable(kafkaProperties);
@@ -163,10 +166,12 @@ public class SocketApiServer extends WebSocketServer {
     @Override
     public void start() {
         addTable(new Table("events", List.of()));
-        addTable(new Table("counts_live", List.of(
+        addTable(new Table("counts_ranking", List.of(
                 new TableField("ts_write", false, String.class),
                 new TableField("kind", true, String.class),
                 new TableField("window_size", true, String.class),
+                new TableField("row_number", true, Long.class),
+                new TableField("rank", false, Long.class),
                 new TableField("num_events", false, Long.class))));
         addTable(new Table("counts_history", List.of(
                 new TableField("ts_start", true, String.class),

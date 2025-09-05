@@ -1,6 +1,5 @@
 package com.rolandb;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -10,7 +9,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.InterruptException;
 import org.slf4j.Logger;
@@ -59,6 +60,11 @@ public class Table {
         if (liveObservable == null) {
             PublishSubject<Map<String, ?>> subject = PublishSubject.create();
             kafkaPollThread = new Thread(() -> {
+                try {
+                    KafkaUtil.waitForTopics(kafkaProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG), name);
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new IllegalStateException("unable to connect to Kafka topics", e);
+                }
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
                 KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaProperties);
@@ -151,9 +157,7 @@ public class Table {
         } else {
             return Observable.using(
                     () -> {
-                        Connection connection = pool.getConnection();
-                        connection.setAutoCommit(false);
-                        return connection;
+                        return pool.getConnection();
                     },
                     con -> Observable.create(emitter -> {
                         try (Statement st = con.createStatement(

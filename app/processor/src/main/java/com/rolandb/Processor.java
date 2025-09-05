@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rolandb.tables.CountsHistoryTable;
-import com.rolandb.tables.CountsLiveTable;
 import com.rolandb.tables.CountsRankingTable;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -57,7 +56,7 @@ public class Processor {
         parser.addArgument("--ui-port").metavar("PORT").type(Integer.class).setDefault(8081)
                 .help("enables Flink UI at specified port when running standalone (mini-cluster mode)");
         parser.addArgument("--num-partitions").metavar("PARTITIONS").type(Integer.class)
-                .setDefault(1).help("# partitions for Kafka topic");
+                .setDefault(24).help("# partitions for Kafka topic");
         parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
                 .setDefault(1).help("replication factor for Kafka topic");
         parser.addArgument("--rewind").action(Arguments.storeTrue())
@@ -152,7 +151,6 @@ public class Processor {
                 .setNumPartitions(numPartitions)
                 .setReplicationFactor(replicationFactor);
         // Actually setup table computations.
-        builder.build("counts_live", CountsLiveTable.class);
         builder.build("counts_history", CountsHistoryTable.class);
         builder.build("counts_ranking", CountsRankingTable.class);
         // Execute all statements as a single job

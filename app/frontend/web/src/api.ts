@@ -1,5 +1,5 @@
 import { webSocket } from "rxjs/webSocket";
-import { filter, map, retry, throttleTime } from "rxjs/operators";
+import { auditTime, filter, map, retry } from "rxjs/operators";
 import { useMemo, useRef, useSyncExternalStore } from "react";
 
 type Filter<T> = T[] | { start?: T; end?: T };
@@ -108,11 +108,13 @@ class Table<R> {
     }
 }
 
-export const countsLive = new Table<{
+export const countsRanking = new Table<{
     window_size: string;
     kind: string;
+    row_number: number;
+    rank: number;
     num_events: number;
-}>("counts_live", ["window_size", "kind"]);
+}>("counts_ranking", ["window_size", "kind"]);
 
 export function sortedKey<T, C>(
     fn: (a: T) => C,
@@ -187,7 +189,7 @@ export function useTable<R, T>(
                     }
                 }),
                 filter(e => e),
-                throttleTime(250)
+                auditTime(100)
             );
         let snapshot: T;
         return [
