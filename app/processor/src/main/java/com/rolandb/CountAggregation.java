@@ -4,26 +4,26 @@ import org.apache.flink.api.common.functions.AggregateFunction;
 
 /**
  * A simple aggregation function that simply counts the number of received
- * elements and returned that as an Integer.
+ * elements and returned that as a Long.
  */
-public class CountAggregation<T> implements AggregateFunction<T, Integer, Integer> {
+public class CountAggregation<T> implements AggregateFunction<T, Long, Long> {
     @Override
-    public Integer createAccumulator() {
-        return 0;
+    public Long createAccumulator() {
+        return 0L;
     }
 
     @Override
-    public Integer add(T value, Integer accumulator) {
+    public Long add(T value, Long accumulator) {
         return accumulator + 1;
     }
 
     @Override
-    public Integer getResult(Integer accumulator) {
+    public Long getResult(Long accumulator) {
         return accumulator;
     }
 
     @Override
-    public Integer merge(Integer a, Integer b) {
+    public Long merge(Long a, Long b) {
         return a + b;
     }
 }

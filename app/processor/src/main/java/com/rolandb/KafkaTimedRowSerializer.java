@@ -20,7 +20,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  * cause the dummy data to be deleted (or ready for deletion) immediately, as
  * that data has timestamps from the past.
  */
-public class KafkaTimedRowSerializer implements KafkaRecordSerializationSchema<TimedRow> {
+public class KafkaTimedRowSerializer implements KafkaRecordSerializationSchema<SequencedRow> {
     private final String tableName;
     private final ObjectMapper objectMapper;
 
@@ -37,14 +37,14 @@ public class KafkaTimedRowSerializer implements KafkaRecordSerializationSchema<T
 
     @Override
     @Nullable
-    public ProducerRecord<byte[], byte[]> serialize(TimedRow row, KafkaSinkContext context, Long timestamp) {
+    public ProducerRecord<byte[], byte[]> serialize(SequencedRow row, KafkaSinkContext context, Long timestamp) {
         try {
             // Set as key the combination of key columns. This ensures in-order
             // delivery per-key, ensuring timestamps are monotonic.
             byte[] key = objectMapper.writeValueAsBytes(row.getKey());
             // We serialize each row as key-value pairs.
             ObjectNode valueNode = (ObjectNode) objectMapper.valueToTree(row.getRow());
-            valueNode.set("ts_write", objectMapper.valueToTree(row.getTime()));
+            valueNode.set("seq_num", objectMapper.valueToTree(row.getSeqNum()));
             byte[] value = objectMapper.writeValueAsBytes(valueNode);
             return new ProducerRecord<>(tableName, key, value);
         } catch (JsonProcessingException e) {

@@ -1,31 +1,32 @@
 package com.rolandb;
 
 import java.lang.reflect.Field;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.rolandb.AbstractTableBuilder.TableEventKey;
 
 /**
- * This is a simple container that contains both a timestamp and a row. The
- * timestamp is set to the time when the object instance is constructed.
+ * This is a simple container that contains both a row and a sequence number.
+ * The.sequence number is to be used for resolving precedence between rows for
+ * the same key. This is required for the client to know whether incoming events
+ * are newer than the snapshot.
  */
-public class TimedRow {
-    private final Object row;
-    private final Instant time;
+public class SequencedRow<T> {
+    private final T row;
+    private final long seqNum;
 
-    public TimedRow(Object row) {
+    public SequencedRow(T row, long seqNum) {
         this.row = row;
-        time = Instant.now();
+        this.seqNum = seqNum;
     }
 
-    public Object getRow() {
+    public T getRow() {
         return row;
     }
 
-    public Instant getTime() {
-        return time;
+    public long getSeqNum() {
+        return seqNum;
     }
 
     public Object getField(Field field) {
@@ -47,7 +48,7 @@ public class TimedRow {
 
     @Override
     public String toString() {
-        return row + " @ " + time;
+        return row + " @ " + seqNum;
     }
 
     public static boolean hasKeyIn(Class<?> clazz) {

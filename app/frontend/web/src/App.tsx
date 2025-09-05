@@ -1,8 +1,8 @@
-import { countsRanking, groupBy, sorted, useTable } from "./api";
+import { countsLive, groupBy, sorted, useTable } from "./api";
 
 export default function App() {
     const result =
-        useTable(countsRanking, o =>
+        useTable(countsLive, o =>
             sorted(
                 groupBy(o, "kind").map(rs =>
                     sorted(rs, e =>
@@ -29,7 +29,7 @@ export default function App() {
                         <td>{rows[0]!.kind}</td>
                         {rows.map(row => (
                             <td key={row.window_size} className="pt-1 px-3">
-                                {row.num_events} ({row.rank})
+                                {row.num_events}
                             </td>
                         ))}
                     </tr>

@@ -166,19 +166,23 @@ public class SocketApiServer extends WebSocketServer {
     @Override
     public void start() {
         addTable(new Table("events", List.of()));
-        addTable(new Table("counts_ranking", List.of(
-                new TableField("ts_write", false, String.class),
+        addTable(new Table("counts_live", List.of(
                 new TableField("kind", true, String.class),
+                new TableField("window_size", true, String.class),
+                new TableField("num_events", false, Long.class),
+                new TableField("seq_num", false, Long.class))));
+        addTable(new Table("counts_ranking", List.of(
+                new TableField("kind", false, String.class),
                 new TableField("window_size", true, String.class),
                 new TableField("row_number", true, Long.class),
                 new TableField("rank", false, Long.class),
-                new TableField("num_events", false, Long.class))));
+                new TableField("seq_num", false, Long.class))));
         addTable(new Table("counts_history", List.of(
                 new TableField("ts_start", true, String.class),
                 new TableField("ts_end", true, String.class),
-                new TableField("ts_write", false, String.class),
                 new TableField("kind", true, String.class),
-                new TableField("num_events", false, Long.class))));
+                new TableField("num_events", false, Long.class),
+                new TableField("seq_num", false, Long.class))));
         setReuseAddr(true);
         super.start();
     }

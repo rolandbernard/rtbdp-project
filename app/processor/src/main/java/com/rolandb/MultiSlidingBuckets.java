@@ -5,8 +5,6 @@ import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
@@ -42,7 +40,7 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
     }
 
     public static interface ResultFunction<K, R> extends Serializable {
-        public abstract R apply(Instant ws, Instant we, K k, WindowSpec win, Long count);
+        public abstract R apply(Instant ws, Instant we, K k, WindowSpec win, long count);
     }
 
     private final long slideMs;
@@ -71,12 +69,9 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
 
     @Override
     public void open(OpenContext parameters) throws Exception {
-        MapStateDescriptor<Long, Long> bucketDesc = new MapStateDescriptor<>(
-                "bucketCounts", TypeInformation.of(Long.class), TypeInformation.of(Long.class));
-        ValueStateDescriptor<long[]> totalsDesc = new ValueStateDescriptor<>(
-                "windowTotals", PrimitiveArrayTypeInfo.LONG_PRIMITIVE_ARRAY_TYPE_INFO);
-        ValueStateDescriptor<Long> timerDesc = new ValueStateDescriptor<>(
-                "lastClosing", TypeInformation.of(Long.class));
+        MapStateDescriptor<Long, Long> bucketDesc = new MapStateDescriptor<>("bucketCounts", Long.class, Long.class);
+        ValueStateDescriptor<long[]> totalsDesc = new ValueStateDescriptor<>("windowTotals", long[].class);
+        ValueStateDescriptor<Long> timerDesc = new ValueStateDescriptor<>("lastClosing", Long.class);
         bucketCounts = getRuntimeContext().getMapState(bucketDesc);
         windowTotals = getRuntimeContext().getState(totalsDesc);
         lastTimer = getRuntimeContext().getState(timerDesc);

@@ -22,9 +22,9 @@ public class CountsHistoryTable extends AbstractTableBuilder {
         @JsonProperty("kind")
         public final String eventType;
         @JsonProperty("num_events")
-        public final int numEvents;
+        public final long numEvents;
 
-        public EventCounts(Instant winStart, Instant winEnd, String eventType, int numEvents) {
+        public EventCounts(Instant winStart, Instant winEnd, String eventType, long numEvents) {
             this.winStart = winStart;
             this.winEnd = winEnd;
             this.eventType = eventType;
@@ -39,7 +39,7 @@ public class CountsHistoryTable extends AbstractTableBuilder {
                 // Here we can afford to allow more lateness and retroactively
                 // upsert with a new value.
                 .allowedLateness(Duration.ofMinutes(30))
-                .<Integer, Integer, EventCounts>aggregate(new CountAggregation<>(),
+                .<Long, Long, EventCounts>aggregate(new CountAggregation<>(),
                         (key, window, elements, out) -> {
                             out.collect(new EventCounts(
                                     Instant.ofEpochMilli(window.getStart()),

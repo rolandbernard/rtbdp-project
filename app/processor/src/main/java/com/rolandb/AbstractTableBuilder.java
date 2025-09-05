@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -28,6 +29,8 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.rolandb.MultiSlidingBuckets.WindowSpec;
+import com.rolandb.tables.CountsLiveTable.EventCounts;
 
 /**
  * This class contains the basic logic for writing a computed table to both a
@@ -147,6 +150,23 @@ public class AbstractTableBuilder {
         });
     }
 
+    protected DataStream<EventCounts> getLiveEventCounts() {
+        return getStream("eventsLive", () -> {
+            return getEventsByTypeStream()
+                    .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
+                            List.of(
+                                    new WindowSpec("5m", Duration.ofMinutes(5)),
+                                    new WindowSpec("1h", Duration.ofHours(1)),
+                                    new WindowSpec("6h", Duration.ofHours(6)),
+                                    new WindowSpec("24h", Duration.ofHours(24))),
+                            (windowStart, windowEnd, key, winSpec, count) -> {
+                                return new EventCounts(key, winSpec.name, count);
+                            }))
+                    .returns(EventCounts.class)
+                    .name("Live Event Counts");
+        });
+    }
+
     protected DataStream<?> computeTable() {
         return getEventStream();
     }
@@ -166,7 +186,7 @@ public class AbstractTableBuilder {
             builder.append(prop == null ? field.getName() : prop.value());
             builder.append(", ");
         }
-        builder.append("ts_write) VALUES (");
+        builder.append("seq_num) VALUES (");
         for (int i = 0; i < fields.length; i++) {
             builder.append("?, ");
         }
@@ -198,13 +218,15 @@ public class AbstractTableBuilder {
                     builder.append(", ");
                 }
             }
-            builder.append("ts_write = EXCLUDED.ts_write");
+            builder.append("seq_num = EXCLUDED.seq_num WHERE ");
+            builder.append(tableName);
+            builder.append(".seq_num < EXCLUDED.seq_num");
         }
         return builder.toString();
     }
 
-    protected JdbcSink<TimedRow> buildJdbcSink() {
-        return Jdbc.<TimedRow>sinkBuilder()
+    protected JdbcSink<SequencedRow> buildJdbcSink() {
+        return Jdbc.<SequencedRow>sinkBuilder()
                 .withQueryStatement(
                         // The UPSERT SQL statement for PostgreSQL.
                         buildJdbcSinkStatement(getOutputType()),
@@ -218,7 +240,7 @@ public class AbstractTableBuilder {
                                     statement.setObject(idx++, value);
                                 }
                             }
-                            statement.setTimestamp(idx, Timestamp.from(row.getTime()));
+                            statement.setLong(idx, row.getSeqNum());
                         })
                 // JDBC execution options.
                 .withExecutionOptions(JdbcExecutionOptions.builder()
@@ -230,8 +252,30 @@ public class AbstractTableBuilder {
                 .buildAtLeastOnce(jdbcOptions);
     }
 
-    protected KafkaSink<TimedRow> buildKafkaSink() {
-        return KafkaSink.<TimedRow>builder()
+    protected <T> JdbcSinkAndContinue<Object, T> buildJdbcSinkAndContinue() {
+        return new JdbcSinkAndContinue<>(
+                // Use connection setting from setter.
+                jdbcOptions,
+                // JDBC execution options.
+                10_000, Duration.ofMillis(100),
+                // The UPSERT SQL statement for PostgreSQL.
+                buildJdbcSinkStatement(getOutputType()),
+                // A lambda function to map the Row objects to the prepared statement.
+                (statement, row) -> {
+                    int idx = 1;
+                    for (Object value : row.getValues()) {
+                        if (value instanceof Instant) {
+                            statement.setTimestamp(idx++, Timestamp.from((Instant) value));
+                        } else {
+                            statement.setObject(idx++, value);
+                        }
+                    }
+                    statement.setLong(idx, row.getSeqNum());
+                });
+    }
+
+    protected KafkaSink<SequencedRow> buildKafkaSink() {
+        return KafkaSink.<SequencedRow>builder()
                 .setBootstrapServers(bootstrapServers)
                 // We use a custom serialization schema, because otherwise it will set the
                 // event-time as the created time, with is not really what we want, especially
@@ -247,19 +291,19 @@ public class AbstractTableBuilder {
     }
 
     protected AbstractTableBuilder build() throws ExecutionException, InterruptedException {
-        DataStream<?> stream = computeTable();
         // We partition here by key so that all rows for the same key are
         // handled by the same subtask, ensuring timestamps are monotonic.
-        if (TimedRow.hasKeyIn(getOutputType())) {
-            stream = stream.<Object>keyBy(row -> TimedRow.readKeyFrom(row));
-        }
-        DataStream<TimedRow> dataStream = stream.map(row -> new TimedRow(row)).name("Adding Process Time");
+        DataStream<?> rawStream = computeTable();
         if (dryRun) {
-            dataStream.print().setParallelism(1);
+            rawStream.print().setParallelism(1);
         } else {
             KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor);
-            dataStream.sinkTo(buildJdbcSink()).name("PostgreSQL Sink");
-            dataStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
+            DataStream<SequencedRow> committedStream = rawStream
+                    .<Object>keyBy(row -> SequencedRow.readKeyFrom(row))
+                    .process(buildJdbcSinkAndContinue())
+                    .returns(SequencedRow.class)
+                    .name("PostgreSQL Sink");
+            committedStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
         }
         return this;
     }

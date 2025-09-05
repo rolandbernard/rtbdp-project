@@ -57,7 +57,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
     }
 
     private final V cutoff;
-    private final Duration debounce;
+    private final long debounceMs;
     private final KeyFunction<I, E> keyFunction;
     private final KeyFunction<V, E> valueFunction;
     private final ResultFunction<K, R, I, V> resultFunction;
@@ -100,7 +100,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
             V cutoff, Duration debounce, KeyFunction<I, E> keyFunction, KeyFunction<V, E> valueFunction,
             ResultFunction<K, R, I, V> resultFunction, Class<I> keyClass, Class<V> valueClass) {
         this.cutoff = cutoff;
-        this.debounce = debounce;
+        this.debounceMs = debounce.toMillis();
         this.keyFunction = keyFunction;
         this.valueFunction = valueFunction;
         this.resultFunction = resultFunction;
@@ -110,10 +110,8 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
 
     @Override
     public void open(OpenContext parameters) throws Exception {
-        MapStateDescriptor<I, V> persistentDesc = new MapStateDescriptor<>(
-                "persistentValues", keyClass, valueClass);
-        MapStateDescriptor<I, V> pendingDesc = new MapStateDescriptor<>(
-                "pendingChanges", keyClass, valueClass);
+        MapStateDescriptor<I, V> persistentDesc = new MapStateDescriptor<>("persistentValues", keyClass, valueClass);
+        MapStateDescriptor<I, V> pendingDesc = new MapStateDescriptor<>("pendingChanges", keyClass, valueClass);
         persistentValues = getRuntimeContext().getMapState(persistentDesc);
         pendingChanges = getRuntimeContext().getMapState(pendingDesc);
         rankings = new HashMap<>();
@@ -148,7 +146,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
         if (key != null && value != null) {
             if (pendingChanges.isEmpty()) {
                 ctx.timerService()
-                        .registerProcessingTimeTimer(ctx.timerService().currentProcessingTime() + debounce.toMillis());
+                        .registerProcessingTimeTimer(ctx.timerService().currentProcessingTime() + debounceMs);
             }
             pendingChanges.put(key, value);
         }
@@ -192,8 +190,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                         // This value is to be removed. We emit a final one with `Integer.MAX_VALUE`
                         // as row number but don't add it to the ranking.
                         row = -(ranking.indexOf(entry) + 1);
-                        out.collect(resultFunction.apply(key, entry.key, entry.value, Integer.MAX_VALUE,
-                                Integer.MAX_VALUE));
+                        out.collect(resultFunction.apply(key, entry.key, entry.value, Integer.MAX_VALUE, row));
                         persistentValues.remove(entry.key);
                         offset = lastOffset;
                     } else {

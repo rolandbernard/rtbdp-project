@@ -5,7 +5,7 @@ import { useMemo, useRef, useSyncExternalStore } from "react";
 type Filter<T> = T[] | { start?: T; end?: T };
 type RowFilter<R> = { [P in keyof R]?: Filter<R[P]> };
 type Filters<R> = RowFilter<R>[];
-type Row<R> = R & { ts_write: string };
+type Row<R> = R & { seq_num: number };
 
 type ServerMessage<R> = {
     table: string;
@@ -108,13 +108,11 @@ class Table<R> {
     }
 }
 
-export const countsRanking = new Table<{
+export const countsLive = new Table<{
     window_size: string;
     kind: string;
-    row_number: number;
-    rank: number;
     num_events: number;
-}>("counts_ranking", ["window_size", "kind"]);
+}>("counts_live", ["window_size", "kind"]);
 
 export function sortedKey<T, C>(
     fn: (a: T) => C,
@@ -181,7 +179,7 @@ export function useTable<R, T>(
                     const row = message.row as Row<R>;
                     const rowKey = groupKey(row, table.keys);
                     const oldRow = view.get(rowKey);
-                    if (!oldRow || oldRow.ts_write < row.ts_write) {
+                    if (!oldRow || oldRow.seq_num < row.seq_num) {
                         view.set(rowKey, row);
                         return true;
                     } else {
