@@ -18,7 +18,7 @@ import org.apache.flink.util.Collector;
 /**
  * This is a processing function that will keep a ranking of all values based on
  * a key and value extracted from the incoming stream. All the changed rankings
- * will be emitted once a given predicate is true.
+ * above a certain threshold will be emitted, and updated if changed.
  */
 public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparable<V>>
         extends KeyedProcessFunction<K, E, R> {
@@ -79,8 +79,9 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
      * 
      * @param cutoff
      *            The minimal value to keep. Note that all elements with a smaller
-     *            value will be dropped of the ranking, after emitting it once with
-     *            a rank of Integer.MAX_VALUE.
+     *            value will be dropped of the ranking. If the number of rows in
+     *            the ranking shrinks, events with a key of null will be emitted
+     *            to indicate absence.
      * @param keyFunction
      *            The function for extracting the key.
      * @param valueFunction
@@ -187,10 +188,10 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                         && toAdd.get(toAdd.size() - 1).compareTo(toRemove.get(toRemove.size() - 1)) < 0)) {
                     Tuple<I, V> entry = toAdd.remove(toAdd.size() - 1);
                     if (entry.value.compareTo(cutoff) <= 0) {
-                        // This value is to be removed. We emit a final one with `Integer.MAX_VALUE`
-                        // as row number but don't add it to the ranking.
+                        // This value is to be removed. We do not need to emit it,
+                        // it is already below the threshold. We will emit events
+                        // to clear the rows later.
                         row = -(ranking.indexOf(entry) + 1);
-                        out.collect(resultFunction.apply(key, entry.key, entry.value, Integer.MAX_VALUE, row));
                         persistentValues.remove(entry.key);
                         offset = lastOffset;
                     } else {

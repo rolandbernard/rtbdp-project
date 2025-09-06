@@ -22,6 +22,13 @@ public class GithubEvent {
     @JsonProperty("repo_id")
     public final long repoId;
 
+    public GithubEvent(String eventType, Instant createdAt, long userId, long repoId) {
+        this.eventType = eventType;
+        this.createdAt = createdAt;
+        this.userId = userId;
+        this.repoId = repoId;
+    }
+
     /**
      * Constructor to create a new event from the raw event data. This constructor
      * is marked with {@code @JsonCreator} so that it will be used automatically

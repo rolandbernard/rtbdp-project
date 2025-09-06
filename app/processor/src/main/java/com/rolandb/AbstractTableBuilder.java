@@ -140,7 +140,14 @@ public class AbstractTableBuilder {
                             WatermarkStrategy
                                     .<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
                                     .withTimestampAssigner((event, timestamp) -> event.createdAt.toEpochMilli()))
-                    .name("Event Stream");
+                    .name("Event Stream")
+                    // Add in an additional "fake" event with kind "all".
+                    .<GithubEvent>flatMap((event, out) -> {
+                        out.collect(event);
+                        out.collect(new GithubEvent("all", event.createdAt, event.userId, event.repoId));
+                    })
+                    .returns(GithubEvent.class)
+                    .name("Add 'all' Events");
         });
     }
 
@@ -252,12 +259,12 @@ public class AbstractTableBuilder {
                 .buildAtLeastOnce(jdbcOptions);
     }
 
-    protected <T> JdbcSinkAndContinue<Object, T> buildJdbcSinkAndContinue() {
+    protected <T> JdbcSinkAndContinue<String, T> buildJdbcSinkAndContinue() {
         return new JdbcSinkAndContinue<>(
                 // Use connection setting from setter.
                 jdbcOptions,
                 // JDBC execution options.
-                10_000, Duration.ofMillis(100),
+                5, 10_000, Duration.ofMillis(100),
                 // The UPSERT SQL statement for PostgreSQL.
                 buildJdbcSinkStatement(getOutputType()),
                 // A lambda function to map the Row objects to the prepared statement.
@@ -299,10 +306,13 @@ public class AbstractTableBuilder {
         } else {
             KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor);
             DataStream<SequencedRow> committedStream = rawStream
-                    .<Object>keyBy(row -> SequencedRow.readKeyFrom(row))
+                    .keyBy(row -> "dummyKey")
                     .process(buildJdbcSinkAndContinue())
                     .returns(SequencedRow.class)
-                    .name("PostgreSQL Sink");
+                    .name("PostgreSQL Sink")
+                    // One writer per-table/topic should be sufficient. Also, we
+                    // key by a dummy, so there is no parallelism anyway.
+                    .setParallelism(1);
             committedStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
         }
         return this;

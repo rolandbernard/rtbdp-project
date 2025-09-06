@@ -10,7 +10,7 @@ CREATE TABLE counts_live (
 );
 
 CREATE TABLE counts_ranking (
-    kind VARCHAR NOT NULL,
+    kind VARCHAR,
     window_size VARCHAR NOT NULL,
     row_number INT NOT NULL,
     rank INT NOT NULL,

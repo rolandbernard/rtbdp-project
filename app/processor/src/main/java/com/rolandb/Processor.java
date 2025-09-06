@@ -135,8 +135,7 @@ public class Processor {
                                 .withTimestampAssigner((event, timestamp) -> Instant
                                         .parse(event.get("created_at").asText())
                                         .toEpochMilli()),
-                        "Kafka Source")
-                .rebalance();
+                        "Kafka Source");
         // Setup parameters for table builder.
         AbstractTableBuilder builder = (new AbstractTableBuilder())
                 .setEnv(env)

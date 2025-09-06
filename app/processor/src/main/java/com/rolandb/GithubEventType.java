@@ -7,6 +7,7 @@ package com.rolandb;
  * less important events are combined in the {@code OTHER} category.
  */
 public enum GithubEventType {
+    ALL("all"),
     PUSH("push"),
     WATCH("watch"),
     CREATE_REPO("create_repo"),

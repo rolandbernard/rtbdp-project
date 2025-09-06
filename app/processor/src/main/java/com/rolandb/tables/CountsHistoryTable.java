@@ -45,7 +45,6 @@ public class CountsHistoryTable extends AbstractTableBuilder {
                                     Instant.ofEpochMilli(window.getStart()),
                                     Instant.ofEpochMilli(window.getEnd()),
                                     key, elements.iterator().next()));
-
                         })
                 .returns(EventCounts.class)
                 .name("Historical Event Counts");
