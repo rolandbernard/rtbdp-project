@@ -36,10 +36,10 @@ public interface TableValueFilter<T> {
         @Override
         public boolean accept(T obj) {
             Comparable<T> cmp = (Comparable<T>) obj;
-            if (start != null && cmp.compareTo(start) < 0) {
+            if (start != null && (cmp == null || cmp.compareTo(start) < 0)) {
                 return false;
             }
-            if (end != null && cmp.compareTo(end) >= 0 && (!inclusive || cmp.compareTo(end) > 0)) {
+            if (end != null && (cmp == null || cmp.compareTo(end) >= 0 && (!inclusive || cmp.compareTo(end) > 0))) {
                 return false;
             }
             return true;
@@ -108,7 +108,7 @@ public interface TableValueFilter<T> {
 
         @Override
         public boolean accept(T obj) {
-            return options.contains(obj);
+            return obj != null && options.contains(obj);
         }
 
         @Override

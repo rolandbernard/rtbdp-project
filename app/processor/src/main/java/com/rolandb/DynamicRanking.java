@@ -12,6 +12,8 @@ import java.util.Map.Entry;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
@@ -30,6 +32,21 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
         public Tuple(I key, V value) {
             this.key = key;
             this.value = value;
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * key.hashCode() ^ value.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof Tuple) {
+                Tuple other = (Tuple) obj;
+                return key.equals(other.key) && value.equals(other.value);
+            } else {
+                return false;
+            }
         }
 
         private <C extends Comparable<C>> int compareWithNull(C a, C b) {
@@ -57,7 +74,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
     }
 
     private final V cutoff;
-    private final long debounceMs;
+    private final long discreteMs;
     private final KeyFunction<I, E> keyFunction;
     private final KeyFunction<V, E> valueFunction;
     private final ResultFunction<K, R, I, V> resultFunction;
@@ -68,10 +85,11 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
     // The last value for each key.
     private transient MapState<I, V> persistentValues;
     // The set of keys that have changed with their previous positions.
-    private transient MapState<I, V> pendingChanges;
+    private transient MapState<Tuple<Long, I>, V> pendingChanges;
 
     // The current dynamic ranking of all the keys. Can be restored from
-    // `persistentValues` in case of recovery from snapshot.
+    // `persistentValues` in case of recovery from snapshot. This is basically
+    // only a more efficiently organized cache of `persistentValues`.
     private transient Map<K, OrderStatisticTree<Tuple<I, V>>> rankings;
 
     /**
@@ -81,7 +99,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
      *            The minimal value to keep. Note that all elements with a smaller
      *            value will be dropped of the ranking. If the number of rows in
      *            the ranking shrinks, events with a key of null will be emitted
-     *            to indicate absence.
+     *            to indicate that.
      * @param keyFunction
      *            The function for extracting the key.
      * @param valueFunction
@@ -98,10 +116,10 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
      *            The class of the events.
      */
     public DynamicRanking(
-            V cutoff, Duration debounce, KeyFunction<I, E> keyFunction, KeyFunction<V, E> valueFunction,
+            V cutoff, Duration discrete, KeyFunction<I, E> keyFunction, KeyFunction<V, E> valueFunction,
             ResultFunction<K, R, I, V> resultFunction, Class<I> keyClass, Class<V> valueClass) {
         this.cutoff = cutoff;
-        this.debounceMs = debounce.toMillis();
+        this.discreteMs = discrete.toMillis();
         this.keyFunction = keyFunction;
         this.valueFunction = valueFunction;
         this.resultFunction = resultFunction;
@@ -112,7 +130,9 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
     @Override
     public void open(OpenContext parameters) throws Exception {
         MapStateDescriptor<I, V> persistentDesc = new MapStateDescriptor<>("persistentValues", keyClass, valueClass);
-        MapStateDescriptor<I, V> pendingDesc = new MapStateDescriptor<>("pendingChanges", keyClass, valueClass);
+        MapStateDescriptor<Tuple<Long, I>, V> pendingDesc = new MapStateDescriptor<>("pendingChanges",
+                TypeInformation.of(new TypeHint<Tuple<Long, I>>() {
+                }), TypeInformation.of(valueClass));
         persistentValues = getRuntimeContext().getMapState(persistentDesc);
         pendingChanges = getRuntimeContext().getMapState(pendingDesc);
         rankings = new HashMap<>();
@@ -143,35 +163,52 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
         // Append the pending change. We keep these persistent so we don't
         // loose them in case of restoring from a checkpoint.
         I key = keyFunction.apply(event);
+        long flushTime = (ctx.timestamp() / discreteMs + 1) * discreteMs;
         V value = valueFunction.apply(event);
         if (key != null && value != null) {
-            if (pendingChanges.isEmpty()) {
-                ctx.timerService()
-                        .registerProcessingTimeTimer(ctx.timerService().currentProcessingTime() + debounceMs);
-            }
-            pendingChanges.put(key, value);
+            pendingChanges.put(new Tuple<>(flushTime, key), value);
+            ctx.timerService().registerEventTimeTimer(flushTime);
         }
     }
 
     @Override
-    public void onTimer(long bucketEnd, OnTimerContext ctx, Collector<R> out) throws Exception {
-        // Flush all pending changes.
+    public void onTimer(long timestamp, OnTimerContext ctx, Collector<R> out) throws Exception {
+        // Find all pending changes before the flush timestamp.
+        Map<I, Tuple<Long, V>> changes = new HashMap<>();
+        for (Entry<Tuple<Long, I>, V> entry : pendingChanges.entries()) {
+            I key = entry.getKey().value;
+            Long time = entry.getKey().key;
+            if (time <= timestamp) {
+                pendingChanges.remove(entry.getKey());
+                Tuple<Long, V> old = changes.get(key);
+                if (old == null || old.key < time) {
+                    changes.put(key, new Tuple<>(time, entry.getValue()));
+                }
+            }
+        }
+        // Figure out old values from the persistent state, and also update it.
         List<Tuple<I, V>> toAdd = new ArrayList<>();
         List<Tuple<I, V>> toRemove = new ArrayList<>();
-        for (Entry<I, V> entry : pendingChanges.entries()) {
+        for (Entry<I, Tuple<Long, V>> entry : changes.entrySet()) {
             I key = entry.getKey();
-            V newValue = entry.getValue();
+            V newValue = entry.getValue().value;
             V oldValue = persistentValues.get(key);
             if (oldValue == null || newValue.compareTo(oldValue) != 0) {
-                toAdd.add(new Tuple<>(key, newValue));
                 if (oldValue != null) {
                     toRemove.add(new Tuple<>(key, oldValue));
+                }
+                if (newValue.compareTo(cutoff) <= 0) {
+                    persistentValues.remove(key);
+                } else {
+                    persistentValues.put(key, newValue);
+                    toAdd.add(new Tuple<>(key, newValue));
                 }
             }
         }
         if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
             K key = ctx.getCurrentKey();
             OrderStatisticTree<Tuple<I, V>> ranking = getRanking(key);
+            int lastSize = ranking.size();
             // Sort from smallest to largest. Note that the `Tuple` comparator
             // sorts largest values first, for ranking indices to be equal to
             // the output row numbers.
@@ -187,21 +224,11 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                 if (toRemove.isEmpty() || (!toAdd.isEmpty()
                         && toAdd.get(toAdd.size() - 1).compareTo(toRemove.get(toRemove.size() - 1)) < 0)) {
                     Tuple<I, V> entry = toAdd.remove(toAdd.size() - 1);
-                    if (entry.value.compareTo(cutoff) <= 0) {
-                        // This value is to be removed. We do not need to emit it,
-                        // it is already below the threshold. We will emit events
-                        // to clear the rows later.
-                        row = -(ranking.indexOf(entry) + 1);
-                        persistentValues.remove(entry.key);
-                        offset = lastOffset;
-                    } else {
-                        ranking.add(entry);
-                        row = ranking.indexOf(entry);
-                        int rank = -(ranking.indexOf(new Tuple<>(null, entry.value)) + 1);
-                        out.collect(resultFunction.apply(key, entry.key, entry.value, row, rank));
-                        persistentValues.put(entry.key, entry.value);
-                        offset = lastOffset + 1;
-                    }
+                    ranking.add(entry);
+                    row = ranking.indexOf(entry);
+                    int rank = -(ranking.indexOf(new Tuple<>(null, entry.value)) + 1);
+                    out.collect(resultFunction.apply(key, entry.key, entry.value, row, rank));
+                    offset = lastOffset + 1;
                 } else {
                     Tuple<I, V> entry = toRemove.remove(toRemove.size() - 1);
                     row = ranking.indexOf(entry);
@@ -210,10 +237,9 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                 }
                 if (lastOffset != 0 && lastRow != row) {
                     Iterator<Tuple<I, V>> it = ranking.indexIterator(lastRow);
-                    for (int i = lastRow; i < row; i++) {
+                    for (int rown = lastRow; rown < row; rown++) {
                         assert it.hasNext();
                         Tuple<I, V> moved = it.next();
-                        int rown = ranking.indexOf(moved);
                         int rank = -(ranking.indexOf(new Tuple<>(null, moved.value)) + 1);
                         out.collect(resultFunction.apply(key, moved.key, moved.value, rown, rank));
                     }
@@ -221,7 +247,11 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                 lastRow = row + (offset > lastOffset ? 1 : 0);
                 lastOffset = offset;
             }
+            // Clear all row numbers that are no longer used. Rows can become
+            // free when a element is removed due to the cutoff.
+            for (int i = ranking.size(); i < lastSize; i++) {
+                out.collect(resultFunction.apply(key, null, null, i, i));
+            }
         }
-        pendingChanges.clear();
     }
 }

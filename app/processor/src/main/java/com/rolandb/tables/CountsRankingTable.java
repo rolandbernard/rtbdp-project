@@ -35,7 +35,7 @@ public class CountsRankingTable extends AbstractTableBuilder {
                 .keyBy(e -> e.windowSize)
                 .process(
                         new DynamicRanking<>(
-                                0L, Duration.ofMillis(50), e -> e.eventType, e -> e.numEvents,
+                                0L, Duration.ofSeconds(1), e -> e.eventType, e -> e.numEvents,
                                 (w, k, v, row, rank) -> {
                                     return new CountsRank(k, w, row, rank);
                                 },

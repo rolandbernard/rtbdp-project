@@ -169,7 +169,7 @@ public class Table {
                                 Map<String, Object> row = new HashMap<>();
                                 for (TableField field : fields) {
                                     Object value = rs.getObject(field.name);
-                                    if (value.getClass() == field.type) {
+                                    if (value == null || value.getClass() == field.type) {
                                         row.put(field.name, value);
                                     } else if (value instanceof Integer && field.type == Long.class) {
                                         row.put(field.name, Long.valueOf((int) value));
