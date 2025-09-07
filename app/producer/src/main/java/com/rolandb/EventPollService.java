@@ -80,11 +80,17 @@ public class EventPollService {
                     Single<List<GithubEvent>> ret = Single.zip(pages, (lists) -> {
                         LOGGER.info("Successfully fetched data from {} pages", numPages);
                         Observable<GithubEvent> combinedObservable = Observable.empty();
+                        long pageNr = 0;
                         for (Object result : lists) {
                             @SuppressWarnings("unchecked")
                             List<GithubEvent> pageList = (List<GithubEvent>) result;
                             Collections.reverse(pageList); // we reverse so the oldest ones are first
+                            for (int i = 0; i < pageList.size(); i++) {
+                                long timestamp = Instant.now().toEpochMilli();
+                                pageList.get(i).seqNum = timestamp * numPages * perPage + pageNr * perPage + i;
+                            }
                             combinedObservable = Observable.fromIterable(pageList).concatWith(combinedObservable);
+                            pageNr++;
                         }
                         return combinedObservable.toList().blockingGet();
                     });

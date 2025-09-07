@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.LongNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -36,7 +38,7 @@ public class Producer {
                 .description("Kafka producer for public GitHub Events via REST API");
         parser.addArgument("--bootstrap-servers").metavar("HOST:PORT")
                 .setDefault("localhost:29092").help("bootstrap servers");
-        parser.addArgument("--topic").metavar("TOPIC").setDefault("events")
+        parser.addArgument("--topic").metavar("TOPIC").setDefault("raw_events")
                 .help("Kafka topic name to output events data");
         parser.addArgument("--num-partitions").metavar("PARTITIONS").type(Integer.class)
                 .setDefault(24).help("# partitions for Kafka topic");
@@ -99,7 +101,9 @@ public class Producer {
         pollingService.getEventsStream().subscribe(
                 event -> {
                     try {
-                        String eventJson = objectMapper.writeValueAsString(event.getRawEvent());
+                        ObjectNode rawEvent = (ObjectNode) event.getRawEvent();
+                        rawEvent.set("sequence_number", LongNode.valueOf(event.seqNum));
+                        String eventJson = objectMapper.writeValueAsString(rawEvent);
                         if (kafkaProducer == null) {
                             // For dry-run, print to stdout.
                             System.out.println(eventJson);
