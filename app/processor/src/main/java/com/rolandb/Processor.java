@@ -47,7 +47,7 @@ public class Processor {
         parser.addArgument("--group-id").metavar("ID")
                 .setDefault("processor").help("group id when consuming edits");
         parser.addArgument("--topic").metavar("TOPIC")
-                .setDefault("events").help("Kafka topic name for input events data");
+                .setDefault("raw_events").help("Kafka topic name for input events data");
         parser.addArgument("--db-url").metavar("JDBCURL")
                 .setDefault("jdbc:postgresql://localhost:25432/db").help("JDBC URL of output database");
         parser.addArgument("--db-username").metavar("USERNAME")
