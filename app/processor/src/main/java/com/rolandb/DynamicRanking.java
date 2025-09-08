@@ -12,6 +12,8 @@ import java.util.Map.Entry;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
@@ -70,7 +72,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
     }
 
     public static interface ResultFunction<K, R, I, V> extends Serializable {
-        public abstract R apply(K key, I i, V v, int row_number, int rank);
+        public abstract R apply(K key, I i, V v, int row_number, int rank, long ts);
     }
 
     private final V cutoff;
@@ -82,6 +84,9 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
     private final Class<I> keyClass;
     private final Class<V> valueClass;
 
+    // Record the timestamp of the last flush. We will not output updates for the
+    // same timestamp multiple times.
+    private transient ValueState<Long> lastFlush;
     // The last value for each key.
     private transient MapState<I, V> persistentValues;
     // The set of keys that have changed with their previous positions.
@@ -129,10 +134,12 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
 
     @Override
     public void open(OpenContext parameters) throws Exception {
+        ValueStateDescriptor<Long> lastFlushDesc = new ValueStateDescriptor<>("lastFlush", Long.class);
         MapStateDescriptor<I, V> persistentDesc = new MapStateDescriptor<>("persistentValues", keyClass, valueClass);
         MapStateDescriptor<Tuple<Long, I>, V> pendingDesc = new MapStateDescriptor<>("pendingChanges",
                 TypeInformation.of(new TypeHint<Tuple<Long, I>>() {
                 }), TypeInformation.of(valueClass));
+        lastFlush = getRuntimeContext().getState(lastFlushDesc);
         persistentValues = getRuntimeContext().getMapState(persistentDesc);
         pendingChanges = getRuntimeContext().getMapState(pendingDesc);
         rankings = new HashMap<>();
@@ -167,7 +174,15 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
         V value = valueFunction.apply(event);
         if (key != null && value != null) {
             pendingChanges.put(new Tuple<>(flushTime, key), value);
-            ctx.timerService().registerEventTimeTimer(flushTime);
+            Long lastTime = lastFlush.value();
+            if (lastTime != null && lastTime <= flushTime) {
+                // We already flushed this timestamp. We will wait until the next
+                // one and flush it together with those records. We have logic in
+                // the flushing to only keep the latest.
+                ctx.timerService().registerEventTimeTimer(lastTime + discreteMs);
+            } else {
+                ctx.timerService().registerEventTimeTimer(flushTime);
+            }
         }
     }
 
@@ -227,7 +242,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                     ranking.add(entry);
                     row = ranking.indexOf(entry);
                     int rank = -(ranking.indexOf(new Tuple<>(null, entry.value)) + 1);
-                    out.collect(resultFunction.apply(key, entry.key, entry.value, row, rank));
+                    out.collect(resultFunction.apply(key, entry.key, entry.value, row, rank, timestamp));
                     offset = lastOffset + 1;
                 } else {
                     Tuple<I, V> entry = toRemove.remove(toRemove.size() - 1);
@@ -241,7 +256,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                         assert it.hasNext();
                         Tuple<I, V> moved = it.next();
                         int rank = -(ranking.indexOf(new Tuple<>(null, moved.value)) + 1);
-                        out.collect(resultFunction.apply(key, moved.key, moved.value, rown, rank));
+                        out.collect(resultFunction.apply(key, moved.key, moved.value, rown, rank, timestamp));
                     }
                 }
                 lastRow = row + (offset > lastOffset ? 1 : 0);
@@ -250,8 +265,9 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
             // Clear all row numbers that are no longer used. Rows can become
             // free when a element is removed due to the cutoff.
             for (int i = ranking.size(); i < lastSize; i++) {
-                out.collect(resultFunction.apply(key, null, null, i, i));
+                out.collect(resultFunction.apply(key, null, null, i, i, timestamp));
             }
         }
+        lastFlush.update(timestamp);
     }
 }
