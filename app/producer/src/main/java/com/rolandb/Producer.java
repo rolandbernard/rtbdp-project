@@ -102,7 +102,7 @@ public class Producer {
                 event -> {
                     try {
                         ObjectNode rawEvent = (ObjectNode) event.getRawEvent();
-                        rawEvent.set("sequence_number", LongNode.valueOf(event.seqNum));
+                        rawEvent.set("seq_num", LongNode.valueOf(event.seqNum));
                         String eventJson = objectMapper.writeValueAsString(rawEvent);
                         if (kafkaProducer == null) {
                             // For dry-run, print to stdout.

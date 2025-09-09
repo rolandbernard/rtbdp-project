@@ -144,7 +144,7 @@ public class AbstractTableBuilder {
                     // Add in an additional "fake" event with kind "all".
                     .<GithubEvent>flatMap((event, out) -> {
                         out.collect(event);
-                        out.collect(new GithubEvent("all", event.createdAt, event.userId, event.repoId));
+                        out.collect(new GithubEvent("all", event.createdAt, event.userId, event.repoId, event.seqNum));
                     })
                     .returns(GithubEvent.class)
                     .name("Add 'all' Events");
@@ -167,6 +167,10 @@ public class AbstractTableBuilder {
                                     new WindowSpec("6h", Duration.ofHours(6)),
                                     new WindowSpec("24h", Duration.ofHours(24))),
                             (windowStart, windowEnd, key, winSpec, count) -> {
+                                // The combination of windowStart and count could act as
+                                // a sequence number, since we always want to override
+                                // older windowStart with newer onces, and always want
+                                // the latest (highest) count for that window.
                                 return new EventCounts(key, winSpec.name, count);
                             }))
                     .returns(EventCounts.class)
@@ -174,33 +178,42 @@ public class AbstractTableBuilder {
         });
     }
 
-    protected DataStream<?> computeTable() {
+    protected DataStream<? extends SequencedRow> computeTable() {
         return getEventStream();
     }
 
-    protected Class<?> getOutputType() {
+    protected Class<? extends SequencedRow> getOutputType() {
         return GithubEvent.class;
     }
 
-    protected String buildJdbcSinkStatement(Class<?> output) {
+    protected String buildJdbcSinkStatement(Class<? extends SequencedRow> output) {
         StringBuilder builder = new StringBuilder();
         builder.append("INSERT INTO ");
         builder.append(tableName);
         builder.append(" (");
         Field[] fields = output.getFields();
+        boolean first = true;
         for (Field field : fields) {
             JsonProperty prop = field.getAnnotation(JsonProperty.class);
+            if (!first) {
+                builder.append(", ");
+            }
+            first = false;
             builder.append(prop == null ? field.getName() : prop.value());
-            builder.append(", ");
         }
-        builder.append("seq_num) VALUES (");
+        builder.append(") VALUES (");
+        first = true;
         for (int i = 0; i < fields.length; i++) {
-            builder.append("?, ");
+            if (!first) {
+                builder.append(", ");
+            }
+            first = false;
+            builder.append("?");
         }
-        builder.append("?)");
+        builder.append(")");
         // If there is a conflict, we only want to update the non-key values.
         StringBuilder keyNames = new StringBuilder();
-        boolean first = true;
+        first = true;
         for (Field field : fields) {
             if (field.getAnnotation(TableEventKey.class) != null) {
                 if (!first) {
@@ -215,17 +228,21 @@ public class AbstractTableBuilder {
             builder.append(" ON CONFLICT (");
             builder.append(keyNames);
             builder.append(") DO UPDATE SET ");
+            first = true;
             for (Field field : fields) {
                 if (field.getAnnotation(TableEventKey.class) == null) {
                     JsonProperty prop = field.getAnnotation(JsonProperty.class);
                     String name = prop == null ? field.getName() : prop.value();
+                    if (!first) {
+                        builder.append(", ");
+                    }
+                    first = false;
                     builder.append(name);
                     builder.append(" = EXCLUDED.");
                     builder.append(name);
-                    builder.append(", ");
                 }
             }
-            builder.append("seq_num = EXCLUDED.seq_num WHERE ");
+            builder.append(" WHERE ");
             builder.append(tableName);
             builder.append(".seq_num < EXCLUDED.seq_num");
         }
@@ -247,7 +264,6 @@ public class AbstractTableBuilder {
                                     statement.setObject(idx++, value);
                                 }
                             }
-                            statement.setLong(idx, row.getSeqNum());
                         })
                 // JDBC execution options.
                 .withExecutionOptions(JdbcExecutionOptions.builder()
@@ -259,7 +275,7 @@ public class AbstractTableBuilder {
                 .buildAtLeastOnce(jdbcOptions);
     }
 
-    protected <T> JdbcSinkAndContinue<String, T> buildJdbcSinkAndContinue() {
+    protected <T extends SequencedRow> JdbcSinkAndContinue<String, T> buildJdbcSinkAndContinue() {
         return new JdbcSinkAndContinue<>(
                 // Use connection setting from setter.
                 jdbcOptions,
@@ -277,17 +293,16 @@ public class AbstractTableBuilder {
                             statement.setObject(idx++, value);
                         }
                     }
-                    statement.setLong(idx, row.getSeqNum());
                 });
     }
 
-    protected KafkaSink<SequencedRow> buildKafkaSink() {
-        return KafkaSink.<SequencedRow>builder()
+    protected <T extends SequencedRow> KafkaSink<T> buildKafkaSink() {
+        return KafkaSink.<T>builder()
                 .setBootstrapServers(bootstrapServers)
                 // We use a custom serialization schema, because otherwise it will set the
                 // event-time as the created time, with is not really what we want, especially
                 // when using the dummy data.
-                .setRecordSerializer(new KafkaTimedRowSerializer(tableName))
+                .setRecordSerializer(new KafkaTimedRowSerializer<T>(tableName))
                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip")
                 .setProperty(ProducerConfig.ACKS_CONFIG, "1") // Wait for only one in-sync replica to acknowledge.
@@ -300,15 +315,14 @@ public class AbstractTableBuilder {
     protected AbstractTableBuilder build() throws ExecutionException, InterruptedException {
         // We partition here by key so that all rows for the same key are
         // handled by the same subtask, ensuring timestamps are monotonic.
-        DataStream<?> rawStream = computeTable();
+        DataStream<? extends SequencedRow> rawStream = computeTable();
         if (dryRun) {
             rawStream.print().setParallelism(1);
         } else {
             KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor);
-            DataStream<SequencedRow> committedStream = rawStream
+            DataStream<? extends SequencedRow> committedStream = rawStream
                     .keyBy(row -> "dummyKey")
                     .process(buildJdbcSinkAndContinue())
-                    .returns(SequencedRow.class)
                     .name("PostgreSQL Sink")
                     // One writer per-table/topic should be sufficient. Also, we
                     // key by a dummy, so there is no parallelism anyway.

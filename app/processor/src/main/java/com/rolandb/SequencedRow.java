@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTableBuilder.TableEventKey;
 
 /**
@@ -12,26 +13,15 @@ import com.rolandb.AbstractTableBuilder.TableEventKey;
  * the same key. This is required for the client to know whether incoming events
  * are newer than the snapshot.
  */
-public class SequencedRow<T> {
-    private final T row;
-    private final long seqNum;
-
-    public SequencedRow(T row, long seqNum) {
-        this.row = row;
-        this.seqNum = seqNum;
-    }
-
-    public T getRow() {
-        return row;
-    }
-
-    public long getSeqNum() {
-        return seqNum;
-    }
+public class SequencedRow {
+    // A single number that is used by the client (and the database) to ignore
+    // updates that arrive to late and are older that what is already in the db.
+    @JsonProperty("seq_num")
+    public Long seqNum;
 
     public Object getField(Field field) {
         try {
-            return field.get(row);
+            return field.get(this);
         } catch (IllegalArgumentException | IllegalAccessException e) {
             // Should actually never happen.
             return null;
@@ -39,16 +29,16 @@ public class SequencedRow<T> {
     }
 
     public List<?> getKey() {
-        return readKeyFrom(row);
+        return readKeyFrom(this);
     }
 
     public Object[] getValues() {
-        return readValuesFrom(row);
+        return readValuesFrom(this);
     }
 
     @Override
     public String toString() {
-        return row + " @ " + seqNum;
+        return this + " @ " + seqNum;
     }
 
     public static boolean hasKeyIn(Class<?> clazz) {

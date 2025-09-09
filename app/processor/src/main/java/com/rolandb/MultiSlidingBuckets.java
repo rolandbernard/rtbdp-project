@@ -138,7 +138,7 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
                 addNextBucketTimer(ctx, bucketEnd, lastClose);
             }
             // If this bucket has already been added to some of the window totals,
-            // we need to update the value in the totals. We will unpublish a new
+            // we need to update the value in the totals. We will publish a new
             // upsert event.
             if (lastClose != null && bucketEnd <= lastClose) {
                 long[] totals = getWindowTotals();

@@ -3,13 +3,14 @@ package com.rolandb.tables;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTableBuilder;
 import com.rolandb.DynamicRanking;
+import com.rolandb.SequencedRow;
 
 import java.time.Duration;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 public class CountsRankingTable extends AbstractTableBuilder {
-    public static class CountsRank {
+    public static class CountsRank extends SequencedRow {
         @JsonProperty("kind")
         public final String eventType;
         @TableEventKey
@@ -36,7 +37,10 @@ public class CountsRankingTable extends AbstractTableBuilder {
                 .process(
                         new DynamicRanking<>(
                                 0L, Duration.ofSeconds(1), e -> e.eventType, e -> e.numEvents,
-                                (w, k, v, row, rank) -> {
+                                (w, k, v, row, rank, ts) -> {
+                                    // We output a new ranking at discrete timestamps, and only
+                                    // output once per timestamp. This means the timestamp could
+                                    // be used as a sequence number.
                                     return new CountsRank(k, w, row, rank);
                                 },
                                 String.class, Long.class))
@@ -45,7 +49,7 @@ public class CountsRankingTable extends AbstractTableBuilder {
     }
 
     @Override
-    protected Class<?> getOutputType() {
+    protected Class<CountsRank> getOutputType() {
         return CountsRank.class;
     }
 }

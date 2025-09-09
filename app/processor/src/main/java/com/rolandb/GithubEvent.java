@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * class stores only those fields that we actually need for processing, not any
  * additional information that we don't need.
  */
-public class GithubEvent {
+public class GithubEvent extends SequencedRow {
     // These are all public so that this is a POJO.
     @JsonProperty("kind")
     public final String eventType;
@@ -22,7 +22,8 @@ public class GithubEvent {
     @JsonProperty("repo_id")
     public final long repoId;
 
-    public GithubEvent(String eventType, Instant createdAt, long userId, long repoId) {
+    public GithubEvent(String eventType, Instant createdAt, long userId, long repoId, long seqNum) {
+        this.seqNum = seqNum;
         this.eventType = eventType;
         this.createdAt = createdAt;
         this.userId = userId;
@@ -39,6 +40,8 @@ public class GithubEvent {
      */
     @JsonCreator
     public GithubEvent(JsonNode rawEvent) {
+        // Steal the sequence number from the raw event.
+        seqNum = rawEvent.get("seq_num").asLong();
         GithubEventType type = null;
         switch (rawEvent.get("type").asText()) {
             case "CommitCommentEvent":

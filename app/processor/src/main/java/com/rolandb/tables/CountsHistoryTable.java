@@ -9,9 +9,10 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindo
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTableBuilder;
 import com.rolandb.CountAggregation;
+import com.rolandb.SequencedRow;
 
 public class CountsHistoryTable extends AbstractTableBuilder {
-    public static class EventCounts {
+    public static class EventCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("ts_start")
         public final Instant winStart;
@@ -41,17 +42,22 @@ public class CountsHistoryTable extends AbstractTableBuilder {
                 .allowedLateness(Duration.ofMinutes(30))
                 .<Long, Long, EventCounts>aggregate(new CountAggregation<>(),
                         (key, window, elements, out) -> {
+                            // The count could function as a sequence number, since
+                            // it must be monotonic only within a single key, and
+                            // within a window (which defines the key), the count
+                            // is only ever increased.
+                            long count = elements.iterator().next();
                             out.collect(new EventCounts(
                                     Instant.ofEpochMilli(window.getStart()),
                                     Instant.ofEpochMilli(window.getEnd()),
-                                    key, elements.iterator().next()));
+                                    key, count));
                         })
                 .returns(EventCounts.class)
                 .name("Historical Event Counts");
     }
 
     @Override
-    protected Class<?> getOutputType() {
+    protected Class<EventCounts> getOutputType() {
         return EventCounts.class;
     }
 }
