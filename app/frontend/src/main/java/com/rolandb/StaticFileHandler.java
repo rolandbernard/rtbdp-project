@@ -141,7 +141,7 @@ public class StaticFileHandler implements HttpHandler {
      * A simple function to extract from a string the part after the last
      * occurrence of '.', yielding what we would normally call the file extension.
      * If there is no '.' after the last '/', then an empty string will be returned.
-     * 
+     *
      * @param fileName
      *            The filename
      * @return The extension of the filename
@@ -159,7 +159,7 @@ public class StaticFileHandler implements HttpHandler {
     /**
      * Generate a MD5 hash value value for the HTTP `ETag` header. This is for
      * better caching on the browser side.
-     * 
+     *
      * @param content
      *            The content of the file we want to get an ETag for.
      * @return The `ETag` header value.

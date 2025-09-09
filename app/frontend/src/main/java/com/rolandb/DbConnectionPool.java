@@ -21,7 +21,7 @@ public class DbConnectionPool implements AutoCloseable {
 
     /**
      * Get a new or reused connection from the connection pool.
-     * 
+     *
      * @return The connection.
      * @throws SQLException
      */
@@ -37,7 +37,7 @@ public class DbConnectionPool implements AutoCloseable {
      * Return a borrowed connection to the connection pool. The connection does
      * not necessarily have to have been created with {@code getConnection()},
      * but this is normally expected.
-     * 
+     *
      * @param connection
      *            The connection to return.
      */

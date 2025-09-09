@@ -109,7 +109,7 @@ public class Table {
      * Get the observable for the live event updates. Note that this may return
      * {@code null} in the case that the live observable has not been created
      * yet.
-     * 
+     *
      * @return A hot observable that emits new rows as soon as they are received
      *         from the Kafka topic.
      */
@@ -121,7 +121,7 @@ public class Table {
      * Get the SQL query expression that would load the complete table, with all
      * of its fields. The query consists of the `SELECT` and `FROM` parts, but
      * does not include any other clause, so a `WHERE` could be added to it.
-     * 
+     *
      * @return The SQL query expression.
      */
     public String asSqlQuery() {
@@ -144,7 +144,7 @@ public class Table {
      * Get an observable that is reading the database table with the given
      * connection. This can be used to replay the events for the current
      * snapshot in the database.
-     * 
+     *
      * @param subscription
      *            The subscription determining which rows to read.
      * @param pool

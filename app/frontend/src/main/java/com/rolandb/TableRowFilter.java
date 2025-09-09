@@ -21,7 +21,7 @@ public class TableRowFilter {
 
     /**
      * Test whether this filter can be used with the given table.
-     * 
+     *
      * @param table
      *            The table to check against.
      * @return {@code true} if the filter can be used with the table, {@code false}
@@ -42,7 +42,7 @@ public class TableRowFilter {
 
     /**
      * Test whether a given row matches the filter.
-     * 
+     *
      * @param row
      *            The row to test against.
      * @return {@code true} in case we match, {@code false} otherwise.
@@ -70,7 +70,7 @@ public class TableRowFilter {
      * Returns an SQL expression that can be used as the condition in a
      * select statement that in the `WHERE` clause to filter only for events
      * relevant to this filter.
-     * 
+     *
      * @return The SQL expression.
      */
     public String asSqlQueryCondition() {

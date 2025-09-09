@@ -39,7 +39,7 @@ public class Frontend {
 
     /**
      * Create a new server.
-     * 
+     *
      * @param httpPort
      *            The port the server should listen on.
      * @throws IOException
@@ -57,7 +57,7 @@ public class Frontend {
     /**
      * Start listening on the port specified in the constructor and answer to
      * client requests. Starts both the HTTP and the WebSocket servers.
-     * 
+     *
      * @throws IOException
      *             In case the server can not be started.
      */

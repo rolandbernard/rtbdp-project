@@ -109,7 +109,7 @@ public class AbstractTableBuilder {
      * Create or reuse a named stream defined by the given supplier. This is
      * intended for easier reuse between the different tables. Ideally, only define
      * each method using this only once.
-     * 
+     *
      * @param <T>
      *            The type of stream to return.
      * @param name

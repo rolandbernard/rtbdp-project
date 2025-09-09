@@ -41,7 +41,7 @@ public class DummyData {
     /**
      * Crate a new instance of the dummy data. The dummy data will loop starting
      * from the time this instance is created.
-     * 
+     *
      * @throws IOException
      *             In case the dummy resources can not be accessed.
      */
@@ -56,7 +56,7 @@ public class DummyData {
 
     /**
      * Get the events for the current timestamp.
-     * 
+     *
      * @return The currently present events.
      * @throws IOException
      *             In case the dummy resources can not be accessed.
@@ -68,7 +68,7 @@ public class DummyData {
     /**
      * Get the current event in paginated form. Return only a single page, with
      * the number of events determined by {@code perPage}.
-     * 
+     *
      * @param page
      *            The page number to fetch. (Starting at 1)
      * @param perPage
@@ -89,7 +89,7 @@ public class DummyData {
     /**
      * Modify all timestamps such that they are moved forward by the given number
      * of repetitions.
-     * 
+     *
      * @param original
      *            The original list of events to modify.
      * @param repeat
@@ -109,7 +109,7 @@ public class DummyData {
     /**
      * The current timestamp to used for reading the dummy resources. This
      * timestamp will loop around back to 0 whenever the dummy data is exhausted.
-     * 
+     *
      * @return The current timestamp.
      */
     private long currentTimestamp() {
@@ -124,7 +124,7 @@ public class DummyData {
 
     /**
      * The current number of repetitions of the event stream.
-     * 
+     *
      * @return The current repeat count.
      */
     private int currentRepeat() {
@@ -136,7 +136,7 @@ public class DummyData {
      * Read the dummy resources for the given timestamp. Not that the timestamp
      * must actually exists in the resources, otherwise the method will throw an
      * exception.
-     * 
+     *
      * @param timestamp
      *            The timestamp to load the dummy events for.
      * @return The list of events for the given timestamp.
@@ -170,7 +170,7 @@ public class DummyData {
     /**
      * Read the set of all possible timestamp that can be loaded. The server only
      * includes a limited number of dummy events.
-     * 
+     *
      * @return The list of possible timestamps.
      * @throws IOException
      *             In case the dummy resources can not be accessed.

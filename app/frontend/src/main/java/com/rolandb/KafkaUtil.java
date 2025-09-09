@@ -20,7 +20,7 @@ public class KafkaUtil {
      * Block until the specified topics are available in Kafka before returning
      * from the method. The list of available topics will be polled one a second
      * until all of the requested ones are available.
-     * 
+     *
      * @param bootstrapServers
      *            The address:port of one or more bootstrap servers, required for
      *            using the admin client.

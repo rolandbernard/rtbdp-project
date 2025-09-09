@@ -99,7 +99,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
 
     /**
      * Create a new dynamic ranking operator.
-     * 
+     *
      * @param cutoff
      *            The minimal value to keep. Note that all elements with a smaller
      *            value will be dropped of the ranking. If the number of rows in
@@ -148,7 +148,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
     /**
      * Small helper to return the rankings for the current key. If necessary, the
      * ranking is rebuild from the currently saved persistent state.
-     * 
+     *
      * @return The ranking for the current key.
      * @throws Exception
      */

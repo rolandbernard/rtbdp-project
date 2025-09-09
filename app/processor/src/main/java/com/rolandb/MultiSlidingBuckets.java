@@ -104,7 +104,7 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
     /**
      * Small helper to get the current window totals, and initialize them with
      * zeros in case they don't exists yet.
-     * 
+     *
      * @return The window totals.
      * @throws IOException
      */

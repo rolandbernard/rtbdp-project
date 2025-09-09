@@ -1,11 +1,11 @@
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%highlight(%d{YYYY-dd-MM HH:mm:ss.SSS} \(%level\)) %msg [%thread %logger{15}]%n</pattern>
-        </encoder>
-    </appender>
-    <root level="WARN">
-        <appender-ref ref="STDOUT"/>
-    </root>
-    <logger name="com.rolandb" level="DEBUG"/>
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%highlight(%d{YYYY-dd-MM HH:mm:ss.SSS} \(%level\)) %msg [%thread %logger{15}]%n</pattern>
+		</encoder>
+	</appender>
+	<root level="WARN">
+		<appender-ref ref="STDOUT" />
+	</root>
+	<logger name="com.rolandb" level="DEBUG" />
 </configuration>

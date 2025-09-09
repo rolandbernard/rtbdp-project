@@ -161,7 +161,7 @@ public interface TableValueFilter<T> {
 
     /**
      * Test whether a given value matches the filter.
-     * 
+     *
      * @param row
      *            The row to test against.
      * @return {@code true} in case we match, {@code false} otherwise.
@@ -172,7 +172,7 @@ public interface TableValueFilter<T> {
      * Returns an SQL expression that can be used as the condition in a
      * select statement that in the `WHERE` clause to filter only for events
      * relevant to this filter.
-     * 
+     *
      * @param name
      *            The name of the field to check.
      * @return The SQL expression.
@@ -181,7 +181,7 @@ public interface TableValueFilter<T> {
 
     /**
      * Test whether this filter can be used with the given field.
-     * 
+     *
      * @param field
      *            The filed to check against.
      * @return {@code true} if the filter can be used with the field, {@code false}
@@ -191,7 +191,7 @@ public interface TableValueFilter<T> {
 
     /**
      * Escape a string for use in an SQL query.
-     * 
+     *
      * @param string
      *            The string to escape.
      * @return The escaped string.

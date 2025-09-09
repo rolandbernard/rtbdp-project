@@ -39,7 +39,7 @@ public class DummyServer {
 
     /**
      * Handle a given request by returning a list of events.
-     * 
+     *
      * @param exchange
      *            The HTTP request to handle.
      * @throws IOException
@@ -95,7 +95,7 @@ public class DummyServer {
 
     /**
      * Create a new dummy server.
-     * 
+     *
      * @param port
      *            The port the server should listen on.
      * @throws IOException
@@ -109,7 +109,7 @@ public class DummyServer {
     /**
      * Start listening on the port specified in the constructor and answer to
      * client requests.
-     * 
+     *
      * @throws IOException
      *             In case the server can not be started.
      */

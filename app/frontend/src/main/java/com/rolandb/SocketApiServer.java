@@ -134,7 +134,7 @@ public class SocketApiServer extends WebSocketServer {
 
     /**
      * Initialize a new socket server to listen on the given address.
-     * 
+     *
      * @param address
      *            The address to listen on.
      */
@@ -152,7 +152,7 @@ public class SocketApiServer extends WebSocketServer {
     /**
      * Add the table to the set of available ones. Also start the live observable
      * for the table.
-     * 
+     *
      * @param table
      *            The table to add.
      * @throws ExecutionException
@@ -226,7 +226,7 @@ public class SocketApiServer extends WebSocketServer {
 
     /**
      * Send the given row, from the given table to the given WebSocket.
-     * 
+     *
      * @param socket
      *            The socket to send to.
      * @param table

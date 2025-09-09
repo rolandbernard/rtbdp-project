@@ -75,7 +75,7 @@ public class OrderStatisticTree<T extends Comparable<T>> {
 
     /**
      * Add an element to the collection. Note that duplicates will be ignored.
-     * 
+     *
      * @param key
      *            The element to add.
      */
@@ -85,7 +85,7 @@ public class OrderStatisticTree<T extends Comparable<T>> {
 
     /**
      * Delete an element from the collection-
-     * 
+     *
      * @param key
      *            The element to delete.
      */
@@ -97,7 +97,7 @@ public class OrderStatisticTree<T extends Comparable<T>> {
      * Find the index of the given element. Like {@code binarySearch}, this will
      * return a negative value of {@code -insertionIndex - 1} if the key does not
      * currently exist in the collection.
-     * 
+     *
      * @param key
      *            The element to search for.
      * @return The index of the element or {@code -index - 1} if not found.
@@ -122,7 +122,7 @@ public class OrderStatisticTree<T extends Comparable<T>> {
 
     /**
      * Get the element at the given index.
-     * 
+     *
      * @param index
      *            The index to query.
      * @return The element at that index.
@@ -146,7 +146,7 @@ public class OrderStatisticTree<T extends Comparable<T>> {
 
     /**
      * Get the size of the collection.
-     * 
+     *
      * @return Size of the collection.
      */
     public int size() {
@@ -156,7 +156,7 @@ public class OrderStatisticTree<T extends Comparable<T>> {
     /**
      * Return an iterator that will iterator through all of the elements in sorted
      * order, from smallest to largest. The iterator starts at the given index.
-     * 
+     *
      * @param index
      *            The index to start at.
      * @return The new iterator.
