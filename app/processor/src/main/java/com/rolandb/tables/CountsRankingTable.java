@@ -1,7 +1,7 @@
 package com.rolandb.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.rolandb.AbstractTableBuilder;
+import com.rolandb.AbstractTable;
 import com.rolandb.DynamicRanking;
 import com.rolandb.SequencedRow;
 
@@ -9,7 +9,7 @@ import java.time.Duration;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
-public class CountsRankingTable extends AbstractTableBuilder {
+public class CountsRankingTable extends AbstractTable<CountsRankingTable.CountsRank> {
     public static class CountsRank extends SequencedRow {
         @JsonProperty("kind")
         public final String eventType;

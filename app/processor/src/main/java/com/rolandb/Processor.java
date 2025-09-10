@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rolandb.AbstractTable.TableBuilder;
 import com.rolandb.tables.CountsHistoryTable;
 import com.rolandb.tables.CountsLiveTable;
 import com.rolandb.tables.CountsRankingTable;
@@ -137,7 +138,7 @@ public class Processor {
                                         .toEpochMilli()),
                         "Kafka Source");
         // Setup parameters for table builder.
-        AbstractTableBuilder builder = (new AbstractTableBuilder())
+        TableBuilder builder = (new TableBuilder())
                 .setEnv(env)
                 .addStream("rawEvents", rawEventsStream)
                 .setJdbcOptions(new JdbcConnectionOptionsBuilder()

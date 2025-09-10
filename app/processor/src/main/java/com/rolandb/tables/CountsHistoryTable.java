@@ -7,11 +7,11 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.rolandb.AbstractTableBuilder;
+import com.rolandb.AbstractTable;
 import com.rolandb.CountAggregation;
 import com.rolandb.SequencedRow;
 
-public class CountsHistoryTable extends AbstractTableBuilder {
+public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCounts> {
     public static class EventCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("ts_start")

@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.rolandb.AbstractTableBuilder.TableEventKey;
+import com.rolandb.AbstractTable.TableEventKey;
 
 /**
  * This is a simple container that contains both a row and a sequence number.

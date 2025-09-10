@@ -41,7 +41,7 @@ import com.rolandb.tables.CountsLiveTable.EventCounts;
  * This is intended to be an subclassed, but if used as it it will simply write
  * out the events table as-is.
  */
-public class AbstractTableBuilder {
+public abstract class AbstractTable<E extends SequencedRow> {
     /**
      * This class is used to indicate in a table output type, which values are
      * part of the key.
@@ -49,6 +49,74 @@ public class AbstractTableBuilder {
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.FIELD)
     public @interface TableEventKey {
+    }
+
+    public static class TableBuilder {
+        protected StreamExecutionEnvironment env;
+        protected Map<String, Object> streams = new HashMap<>();
+        private JdbcConnectionOptions jdbcOptions;
+        private String bootstrapServers = "localhost:29092";
+        private boolean dryRun = false;
+        private int numPartitions = 1;
+        private int replicationFactor = 1;
+
+        public TableBuilder setEnv(StreamExecutionEnvironment env) {
+            this.env = env;
+            return this;
+        }
+
+        public TableBuilder addStream(String name, Object stream) {
+            this.streams.put(name, stream);
+            return this;
+        }
+
+        public TableBuilder setJdbcOptions(JdbcConnectionOptions jdbcOptions) {
+            this.jdbcOptions = jdbcOptions;
+            return this;
+        }
+
+        public TableBuilder setBootstrapServers(String bootstrapServers) {
+            this.bootstrapServers = bootstrapServers;
+            return this;
+        }
+
+        public TableBuilder setDryRun(boolean dryRun) {
+            this.dryRun = dryRun;
+            return this;
+        }
+
+        public TableBuilder setNumPartitions(int numPartitions) {
+            this.numPartitions = numPartitions;
+            return this;
+        }
+
+        public TableBuilder setReplicationFactor(int replicationFactor) {
+            this.replicationFactor = replicationFactor;
+            return this;
+        }
+
+        public <E extends SequencedRow> TableBuilder build(String tableName,
+                Class<? extends AbstractTable<E>> clazz)
+                throws ExecutionException, InterruptedException {
+            AbstractTable<E> instance;
+            try {
+                instance = clazz.getDeclaredConstructor().newInstance();
+            } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+                    | InvocationTargetException
+                    | NoSuchMethodException | SecurityException e) {
+                throw new IllegalStateException("There should always be a default constructor", e);
+            }
+            instance.env = this.env;
+            instance.streams = this.streams;
+            instance.jdbcOptions = this.jdbcOptions;
+            instance.bootstrapServers = this.bootstrapServers;
+            instance.dryRun = this.dryRun;
+            instance.numPartitions = this.numPartitions;
+            instance.replicationFactor = this.replicationFactor;
+            instance.tableName = tableName;
+            instance.build();
+            return this;
+        }
     }
 
     protected StreamExecutionEnvironment env;
@@ -59,46 +127,6 @@ public class AbstractTableBuilder {
     private int numPartitions = 1;
     private int replicationFactor = 1;
     private String tableName;
-
-    public AbstractTableBuilder setEnv(StreamExecutionEnvironment env) {
-        this.env = env;
-        return this;
-    }
-
-    public AbstractTableBuilder addStream(String name, Object stream) {
-        this.streams.put(name, stream);
-        return this;
-    }
-
-    public AbstractTableBuilder setJdbcOptions(JdbcConnectionOptions jdbcOptions) {
-        this.jdbcOptions = jdbcOptions;
-        return this;
-    }
-
-    public AbstractTableBuilder setBootstrapServers(String bootstrapServers) {
-        this.bootstrapServers = bootstrapServers;
-        return this;
-    }
-
-    public AbstractTableBuilder setTableName(String tableName) {
-        this.tableName = tableName;
-        return this;
-    }
-
-    public AbstractTableBuilder setDryRun(boolean dryRun) {
-        this.dryRun = dryRun;
-        return this;
-    }
-
-    public AbstractTableBuilder setNumPartitions(int numPartitions) {
-        this.numPartitions = numPartitions;
-        return this;
-    }
-
-    public AbstractTableBuilder setReplicationFactor(int replicationFactor) {
-        this.replicationFactor = replicationFactor;
-        return this;
-    }
 
     @SuppressWarnings("unchecked")
     protected <T> T getStream(String name) {
@@ -178,15 +206,11 @@ public class AbstractTableBuilder {
         });
     }
 
-    protected DataStream<? extends SequencedRow> computeTable() {
-        return getEventStream();
-    }
+    protected abstract DataStream<E> computeTable();
 
-    protected Class<? extends SequencedRow> getOutputType() {
-        return GithubEvent.class;
-    }
+    protected abstract Class<E> getOutputType();
 
-    protected String buildJdbcSinkStatement(Class<? extends SequencedRow> output) {
+    protected String buildJdbcSinkStatement(Class<E> output) {
         StringBuilder builder = new StringBuilder();
         builder.append("INSERT INTO ");
         builder.append(tableName);
@@ -312,44 +336,24 @@ public class AbstractTableBuilder {
                 .build();
     }
 
-    protected AbstractTableBuilder build() throws ExecutionException, InterruptedException {
+    protected AbstractTable build() throws ExecutionException, InterruptedException {
         // We partition here by key so that all rows for the same key are
         // handled by the same subtask, ensuring timestamps are monotonic.
-        DataStream<? extends SequencedRow> rawStream = computeTable();
+        DataStream<E> rawStream = computeTable();
         if (dryRun) {
             rawStream.print().setParallelism(1);
         } else {
             KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor);
-            DataStream<? extends SequencedRow> committedStream = rawStream
+            DataStream<E> committedStream = rawStream
                     .keyBy(row -> "dummyKey")
                     .process(buildJdbcSinkAndContinue())
+                    .returns(getOutputType())
                     .name("PostgreSQL Sink")
                     // One writer per-table/topic should be sufficient. Also, we
                     // key by a dummy, so there is no parallelism anyway.
                     .setParallelism(1);
             committedStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
         }
-        return this;
-    }
-
-    public AbstractTableBuilder build(String tableName, Class<? extends AbstractTableBuilder> clazz)
-            throws ExecutionException, InterruptedException {
-        AbstractTableBuilder instance;
-        try {
-            instance = clazz.getDeclaredConstructor().newInstance();
-        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
-                | NoSuchMethodException | SecurityException e) {
-            throw new IllegalStateException("There should always be a default constructor", e);
-        }
-        instance.env = this.env;
-        instance.streams = this.streams;
-        instance.jdbcOptions = this.jdbcOptions;
-        instance.bootstrapServers = this.bootstrapServers;
-        instance.dryRun = this.dryRun;
-        instance.numPartitions = this.numPartitions;
-        instance.replicationFactor = this.replicationFactor;
-        instance.tableName = tableName;
-        instance.build();
         return this;
     }
 }

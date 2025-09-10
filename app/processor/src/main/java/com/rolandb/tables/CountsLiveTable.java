@@ -1,12 +1,12 @@
 package com.rolandb.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.rolandb.AbstractTableBuilder;
+import com.rolandb.AbstractTable;
 import com.rolandb.SequencedRow;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
-public class CountsLiveTable extends AbstractTableBuilder {
+public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> {
     public static class EventCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("kind")
