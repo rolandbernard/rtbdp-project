@@ -299,7 +299,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .buildAtLeastOnce(jdbcOptions);
     }
 
-    protected <T extends SequencedRow> JdbcSinkAndContinue<String, T> buildJdbcSinkAndContinue() {
+    protected JdbcSinkAndContinue<String, E> buildJdbcSinkAndContinue() {
         return new JdbcSinkAndContinue<>(
                 // Use connection setting from setter.
                 jdbcOptions,
@@ -317,7 +317,8 @@ public abstract class AbstractTable<E extends SequencedRow> {
                             statement.setObject(idx++, value);
                         }
                     }
-                });
+                },
+                getOutputType());
     }
 
     protected <T extends SequencedRow> KafkaSink<T> buildKafkaSink() {

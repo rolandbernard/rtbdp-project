@@ -15,8 +15,6 @@ import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.api.common.typeinfo.TypeHint;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
@@ -36,6 +34,9 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
     private final JdbcConnectionOptions jdbcOptions;
     private final String sqlInsert;
     private final StatementFunction<E> stmtFunction;
+    // Event class needed to create the state descriptor for saving the temporarily
+    // buffered events.
+    private final Class<E> eventClass;
 
     // Currently buffered events.
     private transient ListState<E> buffer;
@@ -54,13 +55,14 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
 
     public JdbcSinkAndContinue(
             JdbcConnectionOptions jdbcOptions, int retries, long batchSize, Duration batchDuration,
-            String sqlInsert, StatementFunction<E> stmtFunction) {
+            String sqlInsert, StatementFunction<E> stmtFunction, Class<E> eventClass) {
         this.jdbcOptions = jdbcOptions;
         this.retires = retries;
         this.batchMs = batchDuration.toMillis();
         this.batchSize = batchSize;
         this.sqlInsert = sqlInsert;
         this.stmtFunction = stmtFunction;
+        this.eventClass = eventClass;
     }
 
     @Override
@@ -68,9 +70,7 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
         ValueStateDescriptor<Long> sequenceNumberDesc = new ValueStateDescriptor<>("sequenceNumber", Long.class);
         ValueStateDescriptor<Long> currentTimerDesc = new ValueStateDescriptor<>("currentTimer", Long.class);
         ValueStateDescriptor<Long> bufferSizeDesc = new ValueStateDescriptor<>("bufferSize", Long.class);
-        ListStateDescriptor<E> bufferDesc = new ListStateDescriptor<>("buffer",
-                TypeInformation.of(new TypeHint<E>() {
-                }));
+        ListStateDescriptor<E> bufferDesc = new ListStateDescriptor<>("buffer", eventClass);
         sequenceNumber = getRuntimeContext().getState(sequenceNumberDesc);
         currentTimer = getRuntimeContext().getState(currentTimerDesc);
         bufferSize = getRuntimeContext().getState(bufferSizeDesc);
