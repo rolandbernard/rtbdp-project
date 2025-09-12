@@ -44,9 +44,9 @@ services:
       LOGGING_LEVEL_ROOT: 'WARN' # optional, along with next option reduces verbosity
       LOGGING_LEVEL_COM_PROVECTUS: 'WARN'
 
-  # PostgreSQL Containers (DB + pgadmin)
+  # PostgreSQL Containers (TimescaleDB + pgadmin)
   postgres:
-    image: postgres:16.2-alpine3.19
+    image: timescale/timescaledb:latest-pg17
     container_name: '${COMPOSE_PROJECT_NAME:-gha}-postgres'
     ports:
       - '${PORT_POSTGRES:-25432}:5432'
