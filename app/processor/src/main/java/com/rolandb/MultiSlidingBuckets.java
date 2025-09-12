@@ -28,24 +28,19 @@ import java.util.List;
  * sizes or slide duration are not the same. Names or collection function may
  * be changed however.
  */
-public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> {
-    public static class WindowSpec implements Serializable {
-        public final String name;
-        public final long sizeMs;
-
-        public WindowSpec(String name, Duration size) {
-            this.name = name;
-            this.sizeMs = size.toMillis();
-        }
+public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSpec>
+        extends KeyedProcessFunction<K, E, R> {
+    public static interface WindowSpec extends Serializable {
+        public long sizeInMs();
     }
 
-    public static interface ResultFunction<K, R> extends Serializable {
-        public abstract R apply(Instant ws, Instant we, K k, WindowSpec win, long count);
+    public static interface ResultFunction<K, R, W> extends Serializable {
+        public abstract R apply(Instant ws, Instant we, K k, W win, long count);
     }
 
     private final long slideMs;
-    private final List<WindowSpec> windows;
-    private final ResultFunction<K, R> function;
+    private final List<W> windows;
+    private final ResultFunction<K, R, W> function;
 
     // Buckets by Timestamp
     private transient MapState<Long, Long> bucketCounts;
@@ -54,16 +49,16 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
     // When the last window was closed.
     private transient ValueState<Long> lastTimer;
 
-    public MultiSlidingBuckets(Duration slide, List<WindowSpec> windows, ResultFunction<K, R> function) {
+    public MultiSlidingBuckets(Duration slide, List<W> windows, ResultFunction<K, R, W> function) {
         this.slideMs = slide.toMillis();
         // We sort the windows, so the first is the shortest and the last is the
         // longers. The sort is stable so we get the same result each time.
-        this.windows = windows.stream().sorted((a, b) -> Long.compare(a.sizeMs, b.sizeMs)).toList();
+        this.windows = windows.stream().sorted((a, b) -> Long.compare(a.sizeInMs(), b.sizeInMs())).toList();
         this.function = function;
         // We only support exact multiples of the slide duration.
         windows.stream().forEach(w -> {
             Preconditions.checkArgument(
-                    w.sizeMs % slideMs == 0, "Window size must be multiple of slide duration");
+                    w.sizeInMs() % slideMs == 0, "Window size must be multiple of slide duration");
         });
     }
 
@@ -88,7 +83,7 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
             // Since this bucket has already been added to the different windows
             // add instead a timer for when it gets removed from the first window.
             for (WindowSpec spec : windows) {
-                long size = spec.sizeMs / slideMs;
+                long size = spec.sizeInMs() / slideMs;
                 if (bucketEnd + size * slideMs > lastClose) {
                     ctx.timerService().registerEventTimeTimer(bucketEnd + size * slideMs);
                     return;
@@ -127,7 +122,7 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
         // close will have removed the bucket at `lastClose - maxWindowsSize * slideMs`,
         // so if this event is even older we should completely discard it.
         Long lastClose = lastTimer.value();
-        long maxWindowsSize = windows.get(windows.size() - 1).sizeMs / slideMs;
+        long maxWindowsSize = windows.get(windows.size() - 1).sizeInMs() / slideMs;
         if (lastClose == null || bucketEnd > lastClose - maxWindowsSize * slideMs) {
             Long current = bucketCounts.get(bucketEnd);
             bucketCounts.put(bucketEnd, current == null ? 1 : current + 1);
@@ -143,8 +138,8 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
             if (lastClose != null && bucketEnd <= lastClose) {
                 long[] totals = getWindowTotals();
                 for (int i = 0; i < totals.length; i++) {
-                    WindowSpec spec = windows.get(i);
-                    long size = spec.sizeMs / slideMs;
+                    W spec = windows.get(i);
+                    long size = spec.sizeInMs() / slideMs;
                     if (bucketEnd > lastClose - size * slideMs) {
                         totals[i]++;
                         out.collect(function.apply(
@@ -174,8 +169,8 @@ public class MultiSlidingBuckets<K, E, R> extends KeyedProcessFunction<K, E, R> 
         long[] totals = getWindowTotals();
         boolean allZero = true;
         for (int i = 0; i < totals.length; i++) {
-            WindowSpec spec = windows.get(i);
-            long expiredBucketEnd = bucketEnd - (spec.sizeMs / slideMs) * slideMs;
+            W spec = windows.get(i);
+            long expiredBucketEnd = bucketEnd - (spec.sizeInMs() / slideMs) * slideMs;
             Long expiredCount = bucketCounts.get(expiredBucketEnd);
             if (expiredCount == null) {
                 expiredCount = 0L;

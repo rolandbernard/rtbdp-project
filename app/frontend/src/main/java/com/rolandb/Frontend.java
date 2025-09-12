@@ -138,7 +138,7 @@ public class Frontend {
         try {
             Frontend server = new Frontend(
                     httpPort, wsPort, bootstrapServer, groupId,
-                    dbUrl + "?user=" + dbUsername + "&password=" + dbPassword);
+                    dbUrl + "?stringtype=unspecified" + "&user=" + dbUsername + "&password=" + dbPassword);
             // Add a shutdown hook to ensure a clean exit.
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 LOGGER.info("Shutting down servers");

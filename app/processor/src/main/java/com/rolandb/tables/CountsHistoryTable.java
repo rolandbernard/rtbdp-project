@@ -9,6 +9,7 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindo
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTable;
 import com.rolandb.CountAggregation;
+import com.rolandb.GithubEventType;
 import com.rolandb.SequencedRow;
 
 public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCounts> {
@@ -21,11 +22,11 @@ public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCo
         public final Instant winEnd;
         @TableEventKey
         @JsonProperty("kind")
-        public final String eventType;
+        public final GithubEventType eventType;
         @JsonProperty("num_events")
         public final long numEvents;
 
-        public EventCounts(Instant winStart, Instant winEnd, String eventType, long numEvents) {
+        public EventCounts(Instant winStart, Instant winEnd, GithubEventType eventType, long numEvents) {
             this.winStart = winStart;
             this.winEnd = winEnd;
             this.eventType = eventType;
@@ -50,7 +51,7 @@ public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCo
                             out.collect(new EventCounts(
                                     Instant.ofEpochMilli(window.getStart()),
                                     Instant.ofEpochMilli(window.getEnd()),
-                                    key, count));
+                                    GithubEventType.fromString(key), count));
                         })
                 .returns(EventCounts.class)
                 .name("Historical Event Counts");

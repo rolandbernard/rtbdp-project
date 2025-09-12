@@ -6,6 +6,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -29,8 +31,8 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.rolandb.MultiSlidingBuckets.WindowSpec;
 import com.rolandb.tables.CountsLiveTable.EventCounts;
+import com.rolandb.tables.CountsLiveTable.WindowSize;
 
 /**
  * This class contains the basic logic for writing a computed table to both a
@@ -172,7 +174,8 @@ public abstract class AbstractTable<E extends SequencedRow> {
                     // Add in an additional "fake" event with kind "all".
                     .<GithubEvent>flatMap((event, out) -> {
                         out.collect(event);
-                        out.collect(new GithubEvent("all", event.createdAt, event.userId, event.repoId, event.seqNum));
+                        out.collect(new GithubEvent(
+                                GithubEventType.ALL, event.createdAt, event.userId, event.repoId, event.seqNum));
                     })
                     .returns(GithubEvent.class)
                     .name("Add 'all' Events");
@@ -181,7 +184,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
 
     protected KeyedStream<GithubEvent, String> getEventsByTypeStream() {
         return getStream("eventsByType", () -> {
-            return getEventStream().keyBy(event -> event.eventType);
+            return getEventStream().keyBy(event -> event.eventType.toString());
         });
     }
 
@@ -190,16 +193,16 @@ public abstract class AbstractTable<E extends SequencedRow> {
             return getEventsByTypeStream()
                     .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
                             List.of(
-                                    new WindowSpec("5m", Duration.ofMinutes(5)),
-                                    new WindowSpec("1h", Duration.ofHours(1)),
-                                    new WindowSpec("6h", Duration.ofHours(6)),
-                                    new WindowSpec("24h", Duration.ofHours(24))),
+                                    WindowSize.MINUTES_5,
+                                    WindowSize.HOURS_1,
+                                    WindowSize.HOURS_6,
+                                    WindowSize.HOURS_24),
                             (windowStart, windowEnd, key, winSpec, count) -> {
                                 // The combination of windowStart and count could act as
                                 // a sequence number, since we always want to override
                                 // older windowStart with newer onces, and always want
                                 // the latest (highest) count for that window.
-                                return new EventCounts(key, winSpec.name, count);
+                                return new EventCounts(GithubEventType.fromString(key), winSpec, count);
                             }))
                     .returns(EventCounts.class)
                     .name("Live Event Counts");
@@ -273,22 +276,27 @@ public abstract class AbstractTable<E extends SequencedRow> {
         return builder.toString();
     }
 
+    protected static void jdbcSinkSetStatementValues(PreparedStatement statement, SequencedRow row)
+            throws SQLException {
+        int idx = 1;
+        for (Object value : row.getValues()) {
+            if (value instanceof Instant) {
+                statement.setTimestamp(idx++, Timestamp.from((Instant) value));
+            } else if (value instanceof Enum) {
+                statement.setObject(idx++, value.toString());
+            } else {
+                statement.setObject(idx++, value);
+            }
+        }
+    }
+
     protected JdbcSink<SequencedRow> buildJdbcSink() {
         return Jdbc.<SequencedRow>sinkBuilder()
                 .withQueryStatement(
                         // The UPSERT SQL statement for PostgreSQL.
                         buildJdbcSinkStatement(getOutputType()),
                         // A lambda function to map the Row objects to the prepared statement.
-                        (statement, row) -> {
-                            int idx = 1;
-                            for (Object value : row.getValues()) {
-                                if (value instanceof Instant) {
-                                    statement.setTimestamp(idx++, Timestamp.from((Instant) value));
-                                } else {
-                                    statement.setObject(idx++, value);
-                                }
-                            }
-                        })
+                        AbstractTable::jdbcSinkSetStatementValues)
                 // JDBC execution options.
                 .withExecutionOptions(JdbcExecutionOptions.builder()
                         .withBatchSize(10_000) // Allow some batching.
@@ -308,16 +316,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 // The UPSERT SQL statement for PostgreSQL.
                 buildJdbcSinkStatement(getOutputType()),
                 // A lambda function to map the Row objects to the prepared statement.
-                (statement, row) -> {
-                    int idx = 1;
-                    for (Object value : row.getValues()) {
-                        if (value instanceof Instant) {
-                            statement.setTimestamp(idx++, Timestamp.from((Instant) value));
-                        } else {
-                            statement.setObject(idx++, value);
-                        }
-                    }
-                },
+                AbstractTable::jdbcSinkSetStatementValues,
                 getOutputType());
     }
 

@@ -142,7 +142,7 @@ public class Processor {
                 .setEnv(env)
                 .addStream("rawEvents", rawEventsStream)
                 .setJdbcOptions(new JdbcConnectionOptionsBuilder()
-                        .withUrl(dbUrl)
+                        .withUrl(dbUrl + "?stringtype=unspecified")
                         .withDriverName("org.postgresql.Driver")
                         .withUsername(dbUsername)
                         .withPassword(dbPassword)
