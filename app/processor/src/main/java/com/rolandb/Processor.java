@@ -29,6 +29,7 @@ import com.rolandb.AbstractTable.TableBuilder;
 import com.rolandb.tables.CountsHistoryTable;
 import com.rolandb.tables.CountsLiveTable;
 import com.rolandb.tables.CountsRankingTable;
+import com.rolandb.tables.GithubEventsTable;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -152,6 +153,7 @@ public class Processor {
                 .setNumPartitions(numPartitions)
                 .setReplicationFactor(replicationFactor);
         // Actually setup table computations.
+        builder.build("events", GithubEventsTable.class);
         builder.build("counts_history", CountsHistoryTable.class);
         builder.build("counts_live", CountsLiveTable.class);
         builder.build("counts_ranking", CountsRankingTable.class);
