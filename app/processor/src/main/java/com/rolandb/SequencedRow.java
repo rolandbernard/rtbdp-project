@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTable.TableEventKey;
 
@@ -28,10 +29,12 @@ public class SequencedRow {
         }
     }
 
+    @JsonIgnore
     public List<?> getKey() {
         return readKeyFrom(this);
     }
 
+    @JsonIgnore
     public Object[] getValues() {
         return readValuesFrom(this);
     }
