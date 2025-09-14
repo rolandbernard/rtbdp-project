@@ -8,7 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.rolandb.Table.TableField;
+import com.rolandb.Table.Field;
 
 /**
  * Interface used for filters that filter based on a single columns value.
@@ -83,14 +83,14 @@ public interface TableValueFilter<T> {
         }
 
         @Override
-        public boolean applicableTo(TableField field) {
+        public boolean applicableTo(Field field) {
             if (start != null && !field.type.isInstance(start)) {
                 return false;
             }
             if (end != null && !field.type.isInstance(end)) {
                 return false;
             }
-            return field.isKey;
+            return field.isKey();
         }
     }
 
@@ -138,13 +138,13 @@ public interface TableValueFilter<T> {
         }
 
         @Override
-        public boolean applicableTo(TableField field) {
+        public boolean applicableTo(Field field) {
             for (Object o : options) {
                 if (!field.type.isInstance(o)) {
                     return false;
                 }
             }
-            return field.isKey;
+            return field.isKey();
         }
     }
 
@@ -187,7 +187,7 @@ public interface TableValueFilter<T> {
      * @return {@code true} if the filter can be used with the field, {@code false}
      *         otherwise.
      */
-    public abstract boolean applicableTo(TableField field);
+    public abstract boolean applicableTo(Field field);
 
     /**
      * Escape a string for use in an SQL query.

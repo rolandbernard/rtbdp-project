@@ -6,7 +6,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.rolandb.Table.TableField;
+import com.rolandb.Table.Field;
 
 /**
  * A filter that filters rows of a table.
@@ -28,11 +28,11 @@ public class TableRowFilter {
      *         otherwise.
      */
     public boolean applicableTo(Table table) {
-        Map<String, TableField> keys = table.fields.stream()
-                .filter(e -> e.isKey)
+        Map<String, Field> keys = table.fields.stream()
+                .filter(e -> e.isKey())
                 .collect(Collectors.toMap(e -> e.name, e -> e));
         for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
-            TableField field = keys.get(filter.getKey());
+            Field field = keys.get(filter.getKey());
             if (field == null || !filter.getValue().applicableTo(field)) {
                 return false;
             }

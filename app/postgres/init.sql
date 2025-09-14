@@ -19,8 +19,8 @@ CREATE TYPE window_size AS ENUM (
 -- These are not the raw events, but the processed ones that contain only enough
 -- information to display in the stream on the frontend.
 CREATE TABLE events (
-    id BIGINT NOT NULL,
     created_at TIMESTAMP NOT NULL,
+    id BIGINT NOT NULL,
     kind event_kind NOT NULL,
     repo_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
@@ -41,26 +41,26 @@ SELECT create_hypertable('events', by_range('created_at', INTERVAL '10 minutes')
 SELECT add_retention_policy('events', INTERVAL '30 days');
 
 CREATE TABLE counts_live (
-    kind event_kind NOT NULL,
     window_size window_size NOT NULL,
+    kind event_kind NOT NULL,
     num_events BIGINT NOT NULL,
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (window_size, kind)
 );
 
 CREATE TABLE counts_ranking (
-    kind event_kind,
     window_size window_size NOT NULL,
     row_number INT NOT NULL,
+    kind event_kind NOT NULL,
     rank INT NOT NULL,
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (window_size, row_number)
 );
 
 CREATE TABLE counts_history (
+    kind event_kind NOT NULL,
     ts_start TIMESTAMP NOT NULL,
     ts_end TIMESTAMP NOT NULL,
-    kind event_kind NOT NULL,
     num_events BIGINT NOT NULL,
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (kind, ts_start, ts_end)

@@ -32,26 +32,34 @@ import io.reactivex.rxjava3.subjects.PublishSubject;
  * changes to that table. This class provides an abstraction over that.
  */
 public class Table {
-    public static class TableField {
+    public static enum FieldKind {
+        NORMAL, KEY, SORTED_KEY
+    }
+
+    public static class Field {
         public final String name;
-        public final boolean isKey;
+        public final FieldKind kind;
         public final Class<?> type;
 
-        public TableField(String name, boolean isKey, Class<?> type) {
+        public Field(String name, FieldKind kind, Class<?> type) {
             this.name = name;
-            this.isKey = isKey;
+            this.kind = kind;
             this.type = type;
+        }
+
+        public boolean isKey() {
+            return kind == FieldKind.KEY || kind == FieldKind.SORTED_KEY;
         }
     };
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
 
     public final String name;
-    public final List<TableField> fields;
+    public final List<Field> fields;
     private Thread kafkaPollThread;
     private Observable<Map<String, ?>> liveObservable;
 
-    public Table(String name, List<TableField> fields) {
+    public Table(String name, List<Field> fields) {
         this.name = name;
         this.fields = fields;
     }
@@ -128,7 +136,7 @@ public class Table {
         StringBuilder builder = new StringBuilder();
         builder.append("SELECT ");
         boolean first = true;
-        for (TableField field : fields) {
+        for (Field field : fields) {
             if (!first) {
                 builder.append(", ");
             }
@@ -138,6 +146,34 @@ public class Table {
         builder.append(" FROM ");
         builder.append(name);
         return builder.toString();
+    }
+
+    /**
+     * Get the SQL query order expression to use for this table. This is only
+     * used if the client asked for a limited set of results.
+     *
+     * @return The SQL order expression.
+     */
+    public String asSqlQueryOrder() {
+        if (fields.stream().anyMatch(f -> f.kind == FieldKind.SORTED_KEY)) {
+            StringBuilder builder = new StringBuilder();
+            builder.append(" ORDER BY ");
+            boolean first = true;
+            for (Field field : fields) {
+                if (field.kind == FieldKind.SORTED_KEY) {
+                    if (!first) {
+                        builder.append(", ");
+                    }
+                    first = false;
+                    builder.append(field.name);
+                    builder.append(" DESC");
+                }
+            }
+            builder.append(" ");
+            return builder.toString();
+        } else {
+            return "";
+        }
     }
 
     /**
@@ -163,11 +199,15 @@ public class Table {
                         try (Statement st = con.createStatement(
                                 ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
                             st.setFetchSize(1_000);
+                            String query = asSqlQuery() + " WHERE " + subscription.asSqlQueryCondition();
+                            if (subscription.isSorted()) {
+                                query += asSqlQueryOrder() + subscription.asSqlQueryLimit();
+                            }
                             ResultSet rs = st
-                                    .executeQuery(asSqlQuery() + " WHERE " + subscription.asSqlQueryCondition());
+                                    .executeQuery(query);
                             while (rs.next() && !emitter.isDisposed()) {
                                 Map<String, Object> row = new HashMap<>();
-                                for (TableField field : fields) {
+                                for (Field field : fields) {
                                     Object value = rs.getObject(field.name);
                                     if (value == null || value.getClass() == field.type) {
                                         row.put(field.name, value);

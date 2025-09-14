@@ -25,7 +25,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.rolandb.Table.TableField;
+import com.rolandb.Table.Field;
+import com.rolandb.Table.FieldKind;
 
 import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -165,24 +166,31 @@ public class SocketApiServer extends WebSocketServer {
 
     @Override
     public void start() {
-        addTable(new Table("events", List.of()));
+        addTable(new Table("events", List.of(
+                new Field("created_at", FieldKind.SORTED_KEY, String.class),
+                new Field("id", FieldKind.SORTED_KEY, Long.class),
+                new Field("kind", FieldKind.NORMAL, String.class),
+                new Field("repo_id", FieldKind.NORMAL, Long.class),
+                new Field("user_id", FieldKind.NORMAL, Long.class),
+                new Field("details", FieldKind.NORMAL, String.class),
+                new Field("seq_num", FieldKind.NORMAL, Long.class))));
         addTable(new Table("counts_live", List.of(
-                new TableField("kind", true, String.class),
-                new TableField("window_size", true, String.class),
-                new TableField("num_events", false, Long.class),
-                new TableField("seq_num", false, Long.class))));
+                new Field("window_size", FieldKind.KEY, String.class),
+                new Field("kind", FieldKind.KEY, String.class),
+                new Field("num_events", FieldKind.NORMAL, Long.class),
+                new Field("seq_num", FieldKind.NORMAL, Long.class))));
         addTable(new Table("counts_ranking", List.of(
-                new TableField("kind", false, String.class),
-                new TableField("window_size", true, String.class),
-                new TableField("row_number", true, Long.class),
-                new TableField("rank", false, Long.class),
-                new TableField("seq_num", false, Long.class))));
+                new Field("window_size", FieldKind.KEY, String.class),
+                new Field("row_number", FieldKind.KEY, Long.class),
+                new Field("kind", FieldKind.NORMAL, String.class),
+                new Field("rank", FieldKind.NORMAL, Long.class),
+                new Field("seq_num", FieldKind.NORMAL, Long.class))));
         addTable(new Table("counts_history", List.of(
-                new TableField("ts_start", true, String.class),
-                new TableField("ts_end", true, String.class),
-                new TableField("kind", true, String.class),
-                new TableField("num_events", false, Long.class),
-                new TableField("seq_num", false, Long.class))));
+                new Field("kind", FieldKind.KEY, String.class),
+                new Field("ts_start", FieldKind.SORTED_KEY, String.class),
+                new Field("ts_end", FieldKind.SORTED_KEY, String.class),
+                new Field("num_events", FieldKind.NORMAL, Long.class),
+                new Field("seq_num", FieldKind.NORMAL, Long.class))));
         setReuseAddr(true);
         super.start();
     }

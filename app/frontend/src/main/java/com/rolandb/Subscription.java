@@ -16,14 +16,16 @@ public class Subscription {
     public final long id;
     public final String tableName;
     private final List<TableRowFilter> filters;
+    private final Long limit;
 
     @JsonCreator
     public Subscription(
             @JsonProperty("id") long id, @JsonProperty("table") String tableName,
-            @JsonProperty("filters") List<TableRowFilter> filters) {
+            @JsonProperty("filters") List<TableRowFilter> filters, @JsonProperty("limit") Long limit) {
         this.id = id;
         this.tableName = tableName == null ? "" : tableName;
         this.filters = filters;
+        this.limit = limit;
     }
 
     /**
@@ -45,6 +47,17 @@ public class Subscription {
             }
             return false;
         }
+    }
+
+    /**
+     * Answer whether this type of subscription requires the results to be
+     * sorted. Since we in any case don't guarantee ordering, this is only
+     * relevant for queries that only request the last `N` results.
+     * 
+     * @return Whether to sort in the SQL query.
+     */
+    public boolean isSorted() {
+        return limit != null;
     }
 
     /**
@@ -92,6 +105,20 @@ public class Subscription {
             }
             builder.append(")");
             return builder.toString();
+        }
+    }
+
+    /**
+     * Returns an SQL expression that can be used as the limit in a select
+     * statement, if requested to return only the first set of results.
+     *
+     * @return The SQL expression.
+     */
+    public String asSqlQueryLimit() {
+        if (limit == null) {
+            return "";
+        } else {
+            return " LIMIT " + limit;
         }
     }
 }
