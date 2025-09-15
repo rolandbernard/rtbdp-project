@@ -68,6 +68,7 @@ public class EventPollService {
      */
     public EventPollService(RestApiClient apiClient, int pollingIntervalMs, int pollingDepth) {
         // Create the observable that will emit the events.
+        long[] errorDelay = new long[] { 1 };
         Scheduler ioScheduler = Schedulers.from(Executors.newFixedThreadPool(8));
         Observable<GithubEvent> coldObservable = Observable.interval(pollingIntervalMs, TimeUnit.MILLISECONDS)
                 .observeOn(ioScheduler)
@@ -77,6 +78,7 @@ public class EventPollService {
                     List<Single<List<GithubEvent>>> pages = IntStream.rangeClosed(1, numPages)
                             .mapToObj(page -> Single.fromCallable(() -> apiClient.getEvents(page, perPage)))
                             .collect(Collectors.toList());
+                    errorDelay[0] = 1;
                     Single<List<GithubEvent>> ret = Single.zip(pages, (lists) -> {
                         LOGGER.info("Successfully fetched data from {} pages", numPages);
                         Observable<GithubEvent> combinedObservable = Observable.empty();
@@ -111,8 +113,11 @@ public class EventPollService {
                         LOGGER.warn("Rate limit exceeded. Retrying in {} seconds, at {}", delaySeconds, retryAfter);
                         return Observable.timer(delaySeconds, TimeUnit.SECONDS);
                     } else {
-                        LOGGER.error("An error occurred during polling. Retrying in 60 seconds", ex);
-                        return Observable.timer(60, TimeUnit.SECONDS);
+                        LOGGER.error("An error occurred during polling. Retrying in " + errorDelay[0] + " seconds", ex);
+                        if (errorDelay[0] < 60) {
+                            errorDelay[0] *= 2;
+                        }
+                        return Observable.timer(errorDelay[0], TimeUnit.SECONDS);
                     }
                 }))
                 .observeOn(Schedulers.computation())

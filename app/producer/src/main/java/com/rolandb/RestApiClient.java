@@ -25,7 +25,8 @@ public class RestApiClient {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final String baseUrl;
-    private final String accessToken;
+    private final String[] accessToken;
+    private int lastToken = 0;
 
     /**
      * Create a new REST API client instance.
@@ -38,7 +39,7 @@ public class RestApiClient {
      */
     public RestApiClient(String baseUrl, String accessToken) {
         this.baseUrl = baseUrl;
-        this.accessToken = accessToken;
+        this.accessToken = accessToken.split(",");
         httpClient = HttpClient.newHttpClient();
         objectMapper = new ObjectMapper();
     }
@@ -66,9 +67,10 @@ public class RestApiClient {
                 .uri(URI.create(url))
                 .header("Accept", "application/vnd.github+json")
                 .header("X-GitHub-Api-Version", "2022-11-28")
-                .header("Authorization", "token " + accessToken)
+                .header("Authorization", "token " + accessToken[lastToken])
                 .GET()
                 .build();
+        lastToken = (lastToken + 1) % accessToken.length;
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         int status = response.statusCode();
         if (status == 200) {

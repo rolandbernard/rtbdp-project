@@ -48,7 +48,7 @@ public class Producer {
         parser.addArgument("--url").metavar("URL")
                 .setDefault("http://localhost:8889").help("GitHub API URL to poll from");
         parser.addArgument("--gh-token").metavar("GITHUB_TOKEN")
-                .setDefault("").help("GitHub API access token");
+                .setDefault("github_dummy").help("GitHub API access token");
         parser.addArgument("--poll-ms").metavar("POLL_MS").type(Integer.class)
                 .setDefault(2250).help("polling interval in milliseconds");
         parser.addArgument("--poll-depth").metavar("POLL_DEPTH").type(Integer.class)

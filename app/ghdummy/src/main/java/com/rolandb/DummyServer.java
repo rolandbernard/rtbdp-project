@@ -51,6 +51,16 @@ public class DummyServer {
             int page = 1;
             int perPage = 30;
             String query = exchange.getRequestURI().getQuery();
+            String token = exchange.getRequestHeaders().getFirst("Authorization");
+            if (token == null || !token.startsWith("token github_")) {
+                // Make sure we actually send the token correctly.
+                String response = "403 Forbidden";
+                exchange.sendResponseHeaders(403, response.length());
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+                return;
+            }
             if (query != null) {
                 for (String param : query.split("&")) {
                     String[] entry = param.split("=");
