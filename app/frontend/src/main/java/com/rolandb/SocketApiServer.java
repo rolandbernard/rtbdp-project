@@ -167,28 +167,28 @@ public class SocketApiServer extends WebSocketServer {
     @Override
     public void start() {
         addTable(new Table("events", List.of(
-                new Field("created_at", FieldKind.SORTED_KEY, String.class),
-                new Field("id", FieldKind.SORTED_KEY, Long.class),
-                new Field("kind", FieldKind.NORMAL, String.class),
-                new Field("repo_id", FieldKind.NORMAL, Long.class),
-                new Field("user_id", FieldKind.NORMAL, Long.class),
+                new Field("created_at", FieldKind.SORTED, String.class),
+                new Field("id", FieldKind.SORTED, Long.class),
+                new Field("kind", FieldKind.INDEXED, String.class),
+                new Field("repo_id", FieldKind.INDEXED, Long.class),
+                new Field("user_id", FieldKind.INDEXED, Long.class),
                 new Field("details", FieldKind.NORMAL, String.class),
                 new Field("seq_num", FieldKind.NORMAL, Long.class))));
         addTable(new Table("counts_live", List.of(
-                new Field("window_size", FieldKind.KEY, String.class),
-                new Field("kind", FieldKind.KEY, String.class),
+                new Field("window_size", FieldKind.INDEXED, String.class),
+                new Field("kind", FieldKind.INDEXED, String.class),
                 new Field("num_events", FieldKind.NORMAL, Long.class),
                 new Field("seq_num", FieldKind.NORMAL, Long.class))));
         addTable(new Table("counts_ranking", List.of(
-                new Field("window_size", FieldKind.KEY, String.class),
-                new Field("row_number", FieldKind.KEY, Long.class),
+                new Field("window_size", FieldKind.INDEXED, String.class),
+                new Field("row_number", FieldKind.INDEXED, Long.class),
                 new Field("kind", FieldKind.NORMAL, String.class),
                 new Field("rank", FieldKind.NORMAL, Long.class),
                 new Field("seq_num", FieldKind.NORMAL, Long.class))));
         addTable(new Table("counts_history", List.of(
-                new Field("kind", FieldKind.KEY, String.class),
-                new Field("ts_start", FieldKind.SORTED_KEY, String.class),
-                new Field("ts_end", FieldKind.SORTED_KEY, String.class),
+                new Field("kind", FieldKind.INDEXED, String.class),
+                new Field("ts_start", FieldKind.SORTED, String.class),
+                new Field("ts_end", FieldKind.SORTED, String.class),
                 new Field("num_events", FieldKind.NORMAL, Long.class),
                 new Field("seq_num", FieldKind.NORMAL, Long.class))));
         setReuseAddr(true);

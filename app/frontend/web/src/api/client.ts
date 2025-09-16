@@ -1,6 +1,7 @@
 import { webSocket } from "rxjs/webSocket";
 import { auditTime, filter, map, retry } from "rxjs/operators";
 import { useMemo, useRef, useSyncExternalStore } from "react";
+import { groupKey, sort } from "./util";
 
 type Filter<T> = T[] | { start?: T; end?: T };
 type RowFilter<R> = { [P in keyof R]?: Filter<R[P]> };
@@ -18,14 +19,17 @@ const socketConnection = webSocket<ServerMessage<unknown>>(
 );
 socketConnection.pipe(retry({ delay: 1000 })).subscribe(() => {
     // Not sure why we need this, but otherwise the multiplex below does not
-    // seem to connect correctly.
+    // seem to connect correctly. I assume there is some issue with the socket
+    // connection being closed and opened in every rerender of the app.
 });
+// Subscriptions each get a unique id that can be used to unsubscribe them again.
 let nextSubscriptionId = 0;
 
-class Table<R> {
+export class Table<R> {
     name: string;
     keys: (keyof R)[];
     filters?: Filters<R>;
+    limited?: number;
     deps: unknown[] = [];
 
     constructor(name: string, keys: (keyof R)[]) {
@@ -69,6 +73,26 @@ class Table<R> {
         return message.table == this.name && this.acceptsRow(message.row);
     }
 
+    applyLimiting(view: Map<string, Row<R>>) {
+        if (this.limited && view.size > this.limited) {
+            const sorted = sort(
+                [...view.entries()],
+                this.keys.map(
+                    k =>
+                        ([_key, row]) =>
+                            row[k]
+                ),
+                true
+            );
+            for (const [key, _row] of sorted.splice(this.limited)) {
+                view.delete(key);
+            }
+            return sorted.map(([_key, row]) => row);
+        } else {
+            return [...view.values()];
+        }
+    }
+
     where<C extends keyof R>(column: C, options: R[C][]): Table<R>;
     where<C extends keyof R>(column: C, start?: R[C], end?: R[C]): Table<R>;
     where<C extends keyof R>(column: C, start?: R[C] | R[C][], end?: R[C]) {
@@ -90,7 +114,16 @@ class Table<R> {
         }
         const new_table = new Table(this.name, this.keys);
         new_table.filters = new_filters;
+        new_table.limited = this.limited;
         new_table.deps = new_deps;
+        return new_table;
+    }
+
+    limit(limit: number) {
+        const new_table = new Table(this.name, this.keys);
+        new_table.filters = this.filters;
+        new_table.limited = limit;
+        new_table.deps = this.deps;
         return new_table;
     }
 
@@ -103,40 +136,10 @@ class Table<R> {
         }
         const new_table = new Table(this.name, this.keys);
         new_table.filters = new_filters;
+        new_table.limited = this.limited;
         new_table.deps = this.deps;
         return new_table;
     }
-}
-
-export const countsLive = new Table<{
-    window_size: string;
-    kind: string;
-    num_events: number;
-}>("counts_live", ["window_size", "kind"]);
-
-export function sortedKey<T, C>(
-    fn: (a: T) => C,
-    rev = false
-): (a: T, b: T) => number {
-    return (a, b) => {
-        const [fa, fb] = [fn(a), fn(b)];
-        const cmp = fa < fb ? -1 : fa > fb ? 1 : 0;
-        return rev ? -cmp : cmp;
-    };
-}
-
-export function sorted<T, C>(array: T[], fn: (a: T) => C, rev?: boolean): T[] {
-    return array.toSorted(sortedKey(fn, rev));
-}
-
-export function groupKey<R>(row: R, keys: (keyof R)[]): string {
-    return keys.map(k => row[k]).join(":");
-}
-
-export function groupBy<R>(table: R[], ...keys: (keyof R)[]): R[][] {
-    return Object.values(
-        Object.groupBy(table, row => groupKey(row, keys))
-    ) as R[][];
 }
 
 export function useTable<R>(table: Table<R>): Row<R>[] | undefined;
@@ -187,16 +190,17 @@ export function useTable<R, T>(
                     }
                 }),
                 filter(e => e),
-                auditTime(100)
+                auditTime(50)
             );
         let snapshot: T;
         return [
             (onChange: () => void) => {
                 const subscription = events.subscribe(() => {
+                    const values = table.applyLimiting(view);
                     if (transform) {
-                        snapshot = transform([...view.values()]);
+                        snapshot = transform(values);
                     } else {
-                        snapshot = [...view.values()] as T;
+                        snapshot = values as T;
                     }
                     onChange();
                 });

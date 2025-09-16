@@ -90,7 +90,7 @@ public interface TableValueFilter<T> {
             if (end != null && !field.type.isInstance(end)) {
                 return false;
             }
-            return field.isKey();
+            return field.canFilter();
         }
     }
 
@@ -144,7 +144,7 @@ public interface TableValueFilter<T> {
                     return false;
                 }
             }
-            return field.isKey();
+            return field.canFilter();
         }
     }
 

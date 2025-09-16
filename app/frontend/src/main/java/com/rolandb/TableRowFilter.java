@@ -29,7 +29,7 @@ public class TableRowFilter {
      */
     public boolean applicableTo(Table table) {
         Map<String, Field> keys = table.fields.stream()
-                .filter(e -> e.isKey())
+                .filter(e -> e.canFilter())
                 .collect(Collectors.toMap(e -> e.name, e -> e));
         for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
             Field field = keys.get(filter.getKey());

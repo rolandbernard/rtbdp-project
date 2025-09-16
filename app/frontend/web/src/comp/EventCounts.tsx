@@ -1,15 +1,17 @@
-import { countsLive, groupBy, sorted, useTable } from "./api";
+import { useTable } from "../api/client";
+import { countsLive } from "../api/tables";
+import { groupBy, sort } from "../api/util";
 
-export default function App() {
+export default function EventCounts() {
     const result =
         useTable(countsLive, o =>
-            sorted(
+            sort(
                 groupBy(o, "kind").map(rs =>
-                    sorted(rs, e =>
-                        ["5m", "1h", "6h", "24h"].indexOf(e.window_size)
-                    )
+                    sort(rs, [
+                        e => ["5m", "1h", "6h", "24h"].indexOf(e.window_size),
+                    ])
                 ),
-                e => -e[0]!.num_events
+                [e => -e[0]!.num_events]
             )
         ) ?? [];
     return (
