@@ -263,7 +263,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                 lastOffset = offset;
             }
             // Clear all row numbers that are no longer used. Rows can become
-            // free when a element is removed due to the cutoff.
+            // free when an element is removed due to the cutoff.
             for (int i = ranking.size(); i < lastSize; i++) {
                 out.collect(resultFunction.apply(key, null, null, i, i, timestamp));
             }

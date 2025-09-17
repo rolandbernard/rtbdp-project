@@ -59,7 +59,7 @@ public class Processor {
         parser.addArgument("--ui-port").metavar("PORT").type(Integer.class).setDefault(8081)
                 .help("enables Flink UI at specified port when running standalone (mini-cluster mode)");
         parser.addArgument("--num-partitions").metavar("PARTITIONS").type(Integer.class)
-                .setDefault(24).help("# partitions for Kafka topic");
+                .setDefault(4).help("# partitions for Kafka topic");
         parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
                 .setDefault(1).help("replication factor for Kafka topic");
         parser.addArgument("--rewind").action(Arguments.storeTrue())

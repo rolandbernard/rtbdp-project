@@ -97,10 +97,8 @@ public abstract class AbstractTable<E extends SequencedRow> {
             return this;
         }
 
-        public <E extends SequencedRow> TableBuilder build(String tableName,
-                Class<? extends AbstractTable<E>> clazz)
-                throws ExecutionException, InterruptedException {
-            AbstractTable<E> instance;
+        public <E extends SequencedRow, T extends AbstractTable<E>> T get(String tableName, Class<T> clazz) {
+            T instance;
             try {
                 instance = clazz.getDeclaredConstructor().newInstance();
             } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
@@ -116,6 +114,12 @@ public abstract class AbstractTable<E extends SequencedRow> {
             instance.numPartitions = this.numPartitions;
             instance.replicationFactor = this.replicationFactor;
             instance.tableName = tableName;
+            return instance;
+        }
+
+        public <E extends SequencedRow, T extends AbstractTable<E>> TableBuilder build(String tableName, Class<T> clazz)
+                throws ExecutionException, InterruptedException {
+            T instance = get(tableName, clazz);
             instance.build();
             return this;
         }
@@ -123,12 +127,12 @@ public abstract class AbstractTable<E extends SequencedRow> {
 
     protected StreamExecutionEnvironment env;
     protected Map<String, Object> streams = new HashMap<>();
-    private JdbcConnectionOptions jdbcOptions;
-    private String bootstrapServers = "localhost:29092";
-    private boolean dryRun = false;
-    private int numPartitions = 1;
-    private int replicationFactor = 1;
-    private String tableName;
+    protected String tableName;
+    protected JdbcConnectionOptions jdbcOptions;
+    protected String bootstrapServers = "localhost:29092";
+    protected boolean dryRun = false;
+    protected int numPartitions = 1;
+    protected int replicationFactor = 1;
 
     @SuppressWarnings("unchecked")
     protected <T> T getStream(String name) {
@@ -213,6 +217,29 @@ public abstract class AbstractTable<E extends SequencedRow> {
 
     protected abstract Class<E> getOutputType();
 
+    protected void buildSqlConflictResolution(String keyNames, Field[] fields, StringBuilder builder) {
+        builder.append(" ON CONFLICT (");
+        builder.append(keyNames);
+        builder.append(") DO UPDATE SET ");
+        boolean first = true;
+        for (Field field : fields) {
+            if (field.getAnnotation(TableEventKey.class) == null) {
+                JsonProperty prop = field.getAnnotation(JsonProperty.class);
+                String name = prop == null ? field.getName() : prop.value();
+                if (!first) {
+                    builder.append(", ");
+                }
+                first = false;
+                builder.append(name);
+                builder.append(" = EXCLUDED.");
+                builder.append(name);
+            }
+        }
+        builder.append(" WHERE ");
+        builder.append(tableName);
+        builder.append(".seq_num < EXCLUDED.seq_num");
+    }
+
     protected String buildJdbcSinkStatement(Class<E> output) {
         StringBuilder builder = new StringBuilder();
         builder.append("INSERT INTO ");
@@ -252,26 +279,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
             }
         }
         if (!first) {
-            builder.append(" ON CONFLICT (");
-            builder.append(keyNames);
-            builder.append(") DO UPDATE SET ");
-            first = true;
-            for (Field field : fields) {
-                if (field.getAnnotation(TableEventKey.class) == null) {
-                    JsonProperty prop = field.getAnnotation(JsonProperty.class);
-                    String name = prop == null ? field.getName() : prop.value();
-                    if (!first) {
-                        builder.append(", ");
-                    }
-                    first = false;
-                    builder.append(name);
-                    builder.append(" = EXCLUDED.");
-                    builder.append(name);
-                }
-            }
-            builder.append(" WHERE ");
-            builder.append(tableName);
-            builder.append(".seq_num < EXCLUDED.seq_num");
+            buildSqlConflictResolution(keyNames.toString(), fields, builder);
         }
         return builder.toString();
     }
@@ -336,7 +344,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .build();
     }
 
-    protected AbstractTable build() throws ExecutionException, InterruptedException {
+    public void build() throws ExecutionException, InterruptedException {
         // We partition here by key so that all rows for the same key are
         // handled by the same subtask, ensuring timestamps are monotonic.
         DataStream<E> rawStream = computeTable();
@@ -354,6 +362,5 @@ public abstract class AbstractTable<E extends SequencedRow> {
                     .setParallelism(1);
             committedStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
         }
-        return this;
     }
 }
