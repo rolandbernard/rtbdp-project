@@ -50,11 +50,12 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
         @JsonCreator
         public DetailedGithubEvent(JsonNode rawEvent) {
             GithubEvent event = new GithubEvent(rawEvent);
-            this.id = Long.valueOf(rawEvent.get("id").asText());
-            this.createdAt = event.createdAt;
-            this.eventType = event.eventType;
-            this.repoId = event.repoId;
-            this.userId = event.userId;
+            id = Long.valueOf(rawEvent.get("id").asText());
+            createdAt = event.createdAt;
+            eventType = event.eventType;
+            repoId = event.repoId;
+            userId = event.userId;
+            seqNum = event.seqNum;
             StringBuilder builder = new StringBuilder();
             String username = rawEvent.get("actor").get("login").asText();
             String reponame = rawEvent.get("repo").get("name").asText();
@@ -353,7 +354,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("This is an unknown event type.");
                     break;
             }
-            this.details = builder.toString();
+            details = builder.toString();
         }
     }
 

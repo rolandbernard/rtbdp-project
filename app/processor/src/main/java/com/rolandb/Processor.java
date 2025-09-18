@@ -30,6 +30,7 @@ import com.rolandb.tables.CountsHistoryTable;
 import com.rolandb.tables.CountsLiveTable;
 import com.rolandb.tables.CountsRankingTable;
 import com.rolandb.tables.GithubEventsTable;
+import com.rolandb.tables.UsersTable;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -137,7 +138,11 @@ public class Processor {
                                 .withTimestampAssigner((event, timestamp) -> Instant
                                         .parse(event.get("created_at").asText())
                                         .toEpochMilli()),
-                        "Kafka Source");
+                        "Kafka Source")
+                // We can not use more parallelism for the Kafka source than we have partitions,
+                // because for some reason it messes up the watermarks. In the sense that subtasks
+                // that don't get any events seems to hold back the watermarks.
+                .setParallelism(KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic));
         // Setup parameters for table builder.
         TableBuilder builder = (new TableBuilder())
                 .setEnv(env)
@@ -154,6 +159,7 @@ public class Processor {
                 .setReplicationFactor(replicationFactor);
         // Actually setup table computations.
         builder.build("events", GithubEventsTable.class);
+        builder.build("users", UsersTable.class);
         builder.build("counts_history", CountsHistoryTable.class);
         builder.build("counts_live", CountsLiveTable.class);
         builder.build("counts_ranking", CountsRankingTable.class);

@@ -106,4 +106,27 @@ public class KafkaUtil {
             }
         }
     }
+
+    /**
+     * Find the number of partitions in the given topic.
+     *
+     * @param bootstrapServers
+     *            The address:port of one or more bootstrap servers, required for
+     *            using the admin client.
+     * @param topics
+     *            The name of the topic that we want to get the info for.
+     * @return The number of partitions used for the requested Kafka topic.
+     * @throws ExecutionException
+     * @throws InterruptedException
+     */
+    public static int partitionsForTopic(String bootstrapServers, String topic)
+            throws InterruptedException, ExecutionException {
+        Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        try (AdminClient client = AdminClient.create(props)) {
+            DescribeTopicsResult result = client.describeTopics(Arrays.asList(topic));
+            TopicDescription td = result.allTopicNames().get().get(topic);
+            return td.partitions().size();
+        }
+    }
 }

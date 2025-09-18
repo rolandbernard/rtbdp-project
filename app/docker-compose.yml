@@ -99,8 +99,8 @@ services:
       '--bootstrap-server', 'broker:9092',
       '--url', '${GITHUB_URL:-http://ghdummy:${PORT_GHDUMMY:-8889}}',
       '--gh-token', '${GITHUB_TOKEN}',
-      '--poll-ms', '${GITHUB_POLL_MS:2250}',
-      '--poll-depth', '${GITHUB_POLL_DEPTH:300}'
+      '--poll-ms', '${GITHUB_POLL_MS:-2250}',
+      '--poll-depth', '${GITHUB_POLL_DEPTH:-300}'
     ]
 
 volumes:

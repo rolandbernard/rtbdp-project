@@ -54,6 +54,7 @@ CREATE TABLE users (
     avatar_url TEXT NOT NULL,
     html_url TEXT,
     user_type TEXT,
+    seq_num BIGINT NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -73,6 +74,7 @@ CREATE TABLE repos (
     fork_count BIGINT,
     issue_count BIGINT,
     star_count BIGINT,
+    seq_num BIGINT NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -91,7 +93,7 @@ CREATE TABLE counts_live (
 CREATE TABLE counts_ranking (
     window_size window_size NOT NULL,
     row_number INT NOT NULL,
-    kind event_kind NOT NULL,
+    kind event_kind,
     rank INT NOT NULL,
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (window_size, row_number)
