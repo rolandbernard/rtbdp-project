@@ -135,8 +135,10 @@ public class UsersTable extends AbstractUpdateTable<UsersTable.UserUpdateEvent> 
     @Override
     protected DataStream<UserUpdateEvent> computeTable() {
         return getRawEventStream()
-                .<UserUpdateEvent>flatMap((jsonNode, out) -> {
-                    for (UserUpdateEvent event : UserUpdateEvent.readFromRawEvent(jsonNode)) {
+                .<UserUpdateEvent>flatMap((rawEvent, out) -> {
+                    long seqNum = rawEvent.get("seq_num").asLong();
+                    for (UserUpdateEvent event : UserUpdateEvent.readFromRawEvent(rawEvent)) {
+                        event.seqNum = seqNum;
                         out.collect(event);
                     }
                 })

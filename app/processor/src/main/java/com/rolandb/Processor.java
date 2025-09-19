@@ -30,6 +30,7 @@ import com.rolandb.tables.CountsHistoryTable;
 import com.rolandb.tables.CountsLiveTable;
 import com.rolandb.tables.CountsRankingTable;
 import com.rolandb.tables.GithubEventsTable;
+import com.rolandb.tables.RepositoriesTable;
 import com.rolandb.tables.UsersTable;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -160,6 +161,7 @@ public class Processor {
         // Actually setup table computations.
         builder.build("events", GithubEventsTable.class);
         builder.build("users", UsersTable.class);
+        builder.build("repos", RepositoriesTable.class);
         builder.build("counts_history", CountsHistoryTable.class);
         builder.build("counts_live", CountsLiveTable.class);
         builder.build("counts_ranking", CountsRankingTable.class);

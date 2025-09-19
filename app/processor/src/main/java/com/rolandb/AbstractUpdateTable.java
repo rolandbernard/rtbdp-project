@@ -11,13 +11,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * already non-null in the database.
  */
 public abstract class AbstractUpdateTable<E extends SequencedRow> extends AbstractTable<E> {
-    private boolean override = true;
-
-    public AbstractUpdateTable<E> setOverride(boolean override) {
-        this.override = override;
-        return this;
-    }
-
     protected void buildSqlConflictResolution(String keyNames, Field[] fields, StringBuilder builder) {
         builder.append(" ON CONFLICT (");
         builder.append(keyNames);
@@ -32,27 +25,28 @@ public abstract class AbstractUpdateTable<E extends SequencedRow> extends Abstra
                 }
                 first = false;
                 builder.append(name);
-                builder.append(" = COALESCE(");
-                if (override) {
-                    builder.append("EXCLUDED.");
-                    builder.append(name);
-                    builder.append(", ");
-                    builder.append(tableName);
-                    builder.append(".");
-                    builder.append(name);
-                } else {
-                    builder.append(tableName);
-                    builder.append(".");
-                    builder.append(name);
-                    builder.append(", ");
-                    builder.append("EXCLUDED.");
-                    builder.append(name);
-                }
+                builder.append(" = CASE WHEN ");
+                builder.append(tableName);
+                builder.append(".seq_num < EXCLUDED.seq_num THEN ");
+                builder.append("COALESCE(");
+                builder.append("EXCLUDED.");
+                builder.append(name);
+                builder.append(", ");
+                builder.append(tableName);
+                builder.append(".");
+                builder.append(name);
                 builder.append(")");
+                builder.append(" ELSE ");
+                builder.append("COALESCE(");
+                builder.append(tableName);
+                builder.append(".");
+                builder.append(name);
+                builder.append(", ");
+                builder.append("EXCLUDED.");
+                builder.append(name);
+                builder.append(")");
+                builder.append("END");
             }
         }
-        builder.append(" WHERE ");
-        builder.append(tableName);
-        builder.append(".seq_num < EXCLUDED.seq_num");
     }
 }
