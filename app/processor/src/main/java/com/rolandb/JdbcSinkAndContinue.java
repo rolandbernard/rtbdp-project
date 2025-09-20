@@ -142,9 +142,9 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
                 return;
             } catch (SQLException exc) {
                 if (r >= retires) {
-                    throw new SQLException("failed to insert elements into db", exc);
+                    throw new SQLException("Failed to insert elements into db", exc);
                 } else {
-                    LOGGER.error("failed to insert elements into db", exc);
+                    LOGGER.error("Failed to insert elements into db", exc);
                     ps.close();
                     connection.close();
                     ps = null;

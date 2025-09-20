@@ -127,13 +127,17 @@ public class DummyServer {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/events", this::handleDataRequest);
         server.start();
+        data.startWorker();
         LOGGER.info("Server on port {} started. Access it at http://localhost:{}/", port, port);
     }
 
     /**
      * Stop the server from running.
+     * 
+     * @throws InterruptedException
      */
-    public void stopListen() {
+    public void stopListen() throws InterruptedException {
+        data.stopWorker();
         server.stop((int) Duration.ofSeconds(1).toSeconds());
         server = null;
         LOGGER.info("Server on port {} stopped", port);
@@ -153,8 +157,12 @@ public class DummyServer {
                 .setDefault(8889).help("the HTTP port for the exposed HTTP server");
         parser.addArgument("--speed-up").metavar("MULTIPLE").type(Float.class)
                 .setDefault(1.0f).help("speed up serving of events by the following multiple");
-        parser.addArgument("--data-dir").metavar("FOLDER")
-                .help("use this data directory as an alternative to the built-in one");
+        parser.addArgument("--data-dir").metavar("DIR")
+                .help("use this directory to cache data retrieved from the archive");
+        parser.addArgument("--archive-url").metavar("URL").setDefault("https://data.gharchive.org")
+                .help("use this url to access the GH Archive");
+        parser.addArgument("--archive-delay").metavar("HOURS").setDefault(24)
+                .help("the initial delay, in hours, between the real time and the served events");
         parser.addArgument("--log-level").type(String.class).setDefault("debug")
                 .help("configures the log level (default: debug; values: all|trace|debug|info|warn|error|off");
         Namespace cmd;
@@ -167,19 +175,31 @@ public class DummyServer {
         // Read options
         int port = cmd.getInt("port");
         float speedUp = cmd.getFloat("speed_up");
-        String datDir = cmd.getString("data_dir");
+        String dataDir = cmd.getString("data_dir");
+        if (dataDir.isBlank()) {
+            dataDir = null;
+        }
+        String archiveUrl = cmd.getString("archive_url");
+        if (archiveUrl.isBlank()) {
+            archiveUrl = null;
+        }
+        Duration archiveDelay = Duration.ofHours(cmd.getInt("archive_delay"));
         String logLevel = cmd.getString("log_level");
         // Configures logging
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
         // Create and start HTTP server
         try {
-            DummyData data = new DummyData(speedUp, datDir);
+            DummyData data = new DummyData(speedUp, archiveDelay, archiveUrl, dataDir);
             DummyServer server = new DummyServer(port, data);
             // Add a shutdown hook to ensure a clean exit.
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 LOGGER.info("Shutting down HTTP server");
-                server.stopListen();
+                try {
+                    server.stopListen();
+                } catch (InterruptedException e) {
+                    LOGGER.error("Interrupted while stopping the server", e);
+                }
             }));
             server.startListen();
         } catch (IOException e) {
