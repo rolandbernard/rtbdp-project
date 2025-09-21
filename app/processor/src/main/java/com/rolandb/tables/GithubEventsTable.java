@@ -39,6 +39,11 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
             this.details = details;
         }
 
+        private String apiToHtmlUrl(String url) {
+            return url.replace("https://api.github.com/repos", "https://github.com")
+                    .replace("/pulls/", "/pull/");
+        }
+
         /**
          * Constructor to create a new detailed event from the raw event data. This
          * constructor is marked with {@code @JsonCreator} so that it will be used
@@ -228,8 +233,11 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case PULL_CLOSE: {
-                    String issueUrl = rawEvent.get("payload").get("pull_request").get("html_url").asText();
-                    String title = rawEvent.get("payload").get("pull_request").get("title").asText();
+                    JsonNode pullRequest = rawEvent.get("payload").get("pull_request");
+                    String issueUrl = pullRequest.has("html_url")
+                            ? pullRequest.get("html_url").asText()
+                            : apiToHtmlUrl(pullRequest.get("url").asText());
+                    String title = pullRequest.has("title") ? pullRequest.get("title").asText() : "";
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -251,7 +259,9 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     if (rawEvent.get("payload").has("issue")) {
                         issueUrl = rawEvent.get("payload").get("issue").get("html_url").asText();
                     } else {
-                        issueUrl = rawEvent.get("payload").get("pull_request").get("html_url").asText();
+                        JsonNode pullRequest = rawEvent.get("payload").get("pull_request");
+                        issueUrl = pullRequest.has("html_url") ? pullRequest.get("html_url").asText()
+                                : apiToHtmlUrl(pullRequest.get("url").asText());
                     }
                     String commentUrl = rawEvent.get("payload").get("comment").get("html_url").asText();
                     JsonNode content = rawEvent.get("payload").get("comment").get("body");
@@ -276,9 +286,12 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case PULL_OPEN: {
-                    String issueUrl = rawEvent.get("payload").get("pull_request").get("html_url").asText();
-                    String title = rawEvent.get("payload").get("pull_request").get("title").asText();
-                    JsonNode content = rawEvent.get("payload").get("pull_request").get("body");
+                    JsonNode pullRequest = rawEvent.get("payload").get("pull_request");
+                    String issueUrl = pullRequest.has("html_url")
+                            ? pullRequest.get("html_url").asText()
+                            : apiToHtmlUrl(pullRequest.get("url").asText());
+                    String title = pullRequest.has("title") ? pullRequest.get("title").asText() : "";
+                    JsonNode content = pullRequest.get("body");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -301,7 +314,9 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                 }
                 case PUSH: {
                     String branchName = rawEvent.get("payload").get("ref").asText();
-                    long numCommits = rawEvent.get("payload").get("size").asLong();
+                    long numCommits = rawEvent.get("payload").has("size")
+                            ? rawEvent.get("payload").get("size").asLong()
+                            : 0;
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");

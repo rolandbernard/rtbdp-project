@@ -50,8 +50,8 @@ SELECT add_retention_policy('events', INTERVAL '30 days');
 
 CREATE TABLE users (
     id BIGINT NOT NULL,
-    username TEXT NOT NULL,
-    avatar_url TEXT NOT NULL,
+    username TEXT,
+    avatar_url TEXT,
     html_url TEXT,
     user_type TEXT,
     seq_num BIGINT NOT NULL,
@@ -60,8 +60,8 @@ CREATE TABLE users (
 
 CREATE TABLE repos (
     id BIGINT NOT NULL,
-    reponame TEXT NOT NULL,
-    fullname TEXT NOT NULL,
+    reponame TEXT,
+    fullname TEXT,
     owner_id BIGINT,
     html_url TEXT,
     homepage TEXT,
