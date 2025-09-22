@@ -41,6 +41,25 @@ public class TableRowFilter {
     }
 
     /**
+     * Estimate the maximum number of tuples that can be returned in the presence
+     * of this filter. This assumes the filter is on a key, i.e., no two tuples
+     * will have the same values.
+     * 
+     * @return The estimated cardinality
+     */
+    public Long estimateCardinality() {
+        if (filters.isEmpty()) {
+            return null;
+        } else {
+            long est = 0;
+            for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
+                est = Long.max(est, filter.getValue().estimateCardinality());
+            }
+            return est;
+        }
+    }
+
+    /**
      * Test whether a given row matches the filter.
      *
      * @param row

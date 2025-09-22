@@ -92,6 +92,15 @@ public interface TableValueFilter<T> {
             }
             return field.canFilter();
         }
+
+        @Override
+        public Long estimateCardinality() {
+            if (start instanceof Long && end instanceof Long) {
+                return Long.max(0, (Long) end - (Long) start);
+            } else {
+                return null;
+            }
+        }
     }
 
     /**
@@ -146,6 +155,11 @@ public interface TableValueFilter<T> {
             }
             return field.canFilter();
         }
+
+        @Override
+        public Long estimateCardinality() {
+            return (long) options.size();
+        }
     }
 
     @JsonCreator
@@ -188,6 +202,15 @@ public interface TableValueFilter<T> {
      *         otherwise.
      */
     public abstract boolean applicableTo(Field field);
+
+    /**
+     * Estimate the maximum number of tuples that can be returned in the presence
+     * of this filter. This assumes the filter is on a key, i.e., no two tuples
+     * will have the same values.
+     * 
+     * @return The estimated cardinality
+     */
+    public abstract Long estimateCardinality();
 
     /**
      * Escape a string for use in an SQL query.

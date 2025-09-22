@@ -55,12 +55,14 @@ public class Table {
     private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
 
     public final String name;
+    public final Long maxLimit;
     public final List<Field> fields;
     private Thread kafkaPollThread;
     private Observable<Map<String, ?>> liveObservable;
 
-    public Table(String name, List<Field> fields) {
+    public Table(String name, Long maxLimit, List<Field> fields) {
         this.name = name;
+        this.maxLimit = maxLimit;
         this.fields = fields;
     }
 

@@ -37,15 +37,28 @@ public class Subscription {
      *         {@code false} otherwise.
      */
     public boolean applicableTo(Table table) {
+        if (table.maxLimit != null && (limit == null || limit > table.maxLimit)) {
+            long estimate = 0;
+            for (TableRowFilter filter : filters) {
+                Long est = filter.estimateCardinality();
+                if (est == null) {
+                    return false;
+                }
+                estimate += est;
+            }
+            if (estimate > table.maxLimit) {
+                return false;
+            }
+        }
         if (filters == null) {
             return true;
         } else {
             for (TableRowFilter filter : filters) {
-                if (filter.applicableTo(table)) {
-                    return true;
+                if (!filter.applicableTo(table)) {
+                    return false;
                 }
             }
-            return false;
+            return true;
         }
     }
 
