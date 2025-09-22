@@ -36,7 +36,6 @@ public class StaticFileHandler implements HttpHandler {
      * headers.
      */
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
-    private static final String RESOURCE_NAME = "static";
     /**
      * This is a mapping from file extension to MIME types. This is so that we
      * can give the correct Content-Type header. This is not really required by
@@ -54,6 +53,12 @@ public class StaticFileHandler implements HttpHandler {
         MIME_TYPES.put("svg", "image/svg+xml");
     }
 
+    private final String rootDir;
+
+    public StaticFileHandler(String rootDir) {
+        this.rootDir = rootDir;
+    }
+
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         try {
@@ -68,8 +73,8 @@ public class StaticFileHandler implements HttpHandler {
             // resource folder name.
             assert uriPath.charAt(1) == '/';
             String normalizedPath = Path.of(uriPath).normalize().toString();
-            String resourcePath = RESOURCE_NAME + normalizedPath;
-            URL url = StaticFileHandler.class.getResource(resourcePath);
+            Path resourcePath = Path.of(rootDir, normalizedPath);
+            URL url = resourcePath.toUri().toURL();
             if (url == null) {
                 sendNotFound(exchange);
                 return;

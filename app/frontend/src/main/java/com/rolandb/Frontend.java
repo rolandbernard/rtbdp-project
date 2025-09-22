@@ -34,6 +34,7 @@ public class Frontend {
     private final String bootstrapServer;
     private final String groupId;
     private final String jdbcUrl;
+    private final String staticDir;
     private HttpServer httpServer;
     private WebSocketServer webSocketServer;
 
@@ -45,12 +46,13 @@ public class Frontend {
      * @throws IOException
      *             In case the events data can not be loaded.
      */
-    public Frontend(int httpPort, int wsPort, String bootstrapServer, String groupId, String jdbcUrl)
+    public Frontend(int httpPort, int wsPort, String bootstrapServer, String groupId, String staticDir, String jdbcUrl)
             throws IOException {
         this.httpPort = httpPort;
         this.wsPort = wsPort;
         this.bootstrapServer = bootstrapServer;
         this.groupId = groupId;
+        this.staticDir = staticDir;
         this.jdbcUrl = jdbcUrl;
     }
 
@@ -63,7 +65,7 @@ public class Frontend {
      */
     public void startListen() throws IOException {
         httpServer = HttpServer.create(new InetSocketAddress(httpPort), 0);
-        httpServer.createContext("/", new StaticFileHandler());
+        httpServer.createContext("/", new StaticFileHandler(staticDir));
         httpServer.start();
         LOGGER.info("Server started on port {}. Access it at http://localhost:{}/", httpPort, httpPort);
         webSocketServer = new SocketApiServer(new InetSocketAddress(wsPort), bootstrapServer, groupId, jdbcUrl);
@@ -113,6 +115,8 @@ public class Frontend {
                 .setDefault("user").help("username for accessing database");
         parser.addArgument("--db-password").metavar("PASSWORD")
                 .setDefault("user").help("password for accessing database");
+        parser.addArgument("--static-dir").metavar("DIR")
+                .setDefault("web/dist").help("directory to host static files from");
         parser.addArgument("--log-level").type(String.class).setDefault("debug")
                 .help("configures the log level (default: debug; values: all|trace|debug|info|warn|error|off");
         Namespace cmd;
@@ -130,6 +134,7 @@ public class Frontend {
         String dbUrl = cmd.getString("db_url");
         String dbUsername = cmd.getString("db_username");
         String dbPassword = cmd.getString("db_password");
+        String staticDir = cmd.getString("static_dir");
         String logLevel = cmd.getString("log_level");
         // Configures logging
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -137,7 +142,7 @@ public class Frontend {
         // Create and start HTTP server
         try {
             Frontend server = new Frontend(
-                    httpPort, wsPort, bootstrapServer, groupId,
+                    httpPort, wsPort, bootstrapServer, groupId, staticDir,
                     dbUrl + "?stringtype=unspecified" + "&user=" + dbUsername + "&password=" + dbPassword);
             // Add a shutdown hook to ensure a clean exit.
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {

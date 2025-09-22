@@ -166,6 +166,7 @@ export function useTable<R, T>(
             id: subscriptionId,
             table: table.name,
             filters: table.filters,
+            limit: table.limited,
         };
         const events = socketConnection
             .multiplex(
