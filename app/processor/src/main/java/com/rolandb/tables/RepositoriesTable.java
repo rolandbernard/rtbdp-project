@@ -96,8 +96,11 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
                 if (rawRepo.has("owner")) {
                     ownerId = rawRepo.get("owner").get("id").asLong();
                 }
-                if (rawRepo.has("html_url")) {
+                if (rawRepo.has("html_url") && !rawRepo.get("html_url").isNull()) {
                     htmlUrl = rawRepo.get("html_url").asText();
+                    if (htmlUrl.isEmpty() || htmlUrl.equals("null")) {
+                        htmlUrl = null;
+                    }
                 }
                 if (rawRepo.has("description") && !rawRepo.get("description").isNull()) {
                     description = rawRepo.get("description").asText();

@@ -174,6 +174,28 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("user_id", FieldKind.INDEXED, Long.class),
                 new Field("details", FieldKind.NORMAL, String.class),
                 new Field("seq_num", FieldKind.NORMAL, Long.class))));
+        addTable(new Table("users", 500L, List.of(
+                new Field("id", FieldKind.INDEXED, Long.class),
+                new Field("username", FieldKind.INDEXED, String.class),
+                new Field("avatar_url", FieldKind.NORMAL, String.class),
+                new Field("html_url", FieldKind.NORMAL, String.class),
+                new Field("user_type", FieldKind.NORMAL, String.class),
+                new Field("seq_num", FieldKind.NORMAL, Long.class))));
+        addTable(new Table("repos", 500L, List.of(
+                new Field("id", FieldKind.INDEXED, Long.class),
+                new Field("reponame", FieldKind.INDEXED, String.class),
+                new Field("fullname", FieldKind.INDEXED, String.class),
+                new Field("owner_id", FieldKind.NORMAL, Long.class),
+                new Field("html_url", FieldKind.NORMAL, String.class),
+                new Field("homepage", FieldKind.NORMAL, String.class),
+                new Field("descr", FieldKind.NORMAL, String.class),
+                new Field("topics", FieldKind.NORMAL, String.class),
+                new Field("lang", FieldKind.NORMAL, String.class),
+                new Field("license", FieldKind.NORMAL, String.class),
+                new Field("fork_count", FieldKind.NORMAL, Long.class),
+                new Field("issue_count", FieldKind.NORMAL, Long.class),
+                new Field("star_count", FieldKind.NORMAL, Long.class),
+                new Field("seq_num", FieldKind.NORMAL, Long.class))));
         addTable(new Table("counts_live", null, List.of(
                 new Field("window_size", FieldKind.INDEXED, String.class),
                 new Field("kind", FieldKind.INDEXED, String.class),
@@ -185,7 +207,7 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("kind", FieldKind.NORMAL, String.class),
                 new Field("rank", FieldKind.NORMAL, Long.class),
                 new Field("seq_num", FieldKind.NORMAL, Long.class))));
-        addTable(new Table("counts_history", null, List.of(
+        addTable(new Table("counts_history", 5_000L, List.of(
                 new Field("kind", FieldKind.INDEXED, String.class),
                 new Field("ts_start", FieldKind.SORTED, String.class),
                 new Field("ts_end", FieldKind.SORTED, String.class),
@@ -262,6 +284,8 @@ public class SocketApiServer extends WebSocketServer {
                     state.subscribe(subscription, table, row -> {
                         sendRow(socket, table.name, row);
                     });
+                } else {
+                    LOGGER.warn("Client sent a non-applicable subscription request");
                 }
             }
             for (Long unsubscribe : message.unsubscribe) {
@@ -280,6 +304,8 @@ public class SocketApiServer extends WebSocketServer {
                             .subscribe(row -> {
                                 sendRow(socket, table.name, row);
                             });
+                } else {
+                    LOGGER.warn("Client sent a non-applicable replay request");
                 }
             }
         } catch (JsonProcessingException e) {

@@ -61,6 +61,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
         private boolean dryRun = false;
         private int numPartitions = 1;
         private int replicationFactor = 1;
+        private boolean toKafka = true;
 
         public TableBuilder setEnv(StreamExecutionEnvironment env) {
             this.env = env;
@@ -84,6 +85,11 @@ public abstract class AbstractTable<E extends SequencedRow> {
 
         public TableBuilder setDryRun(boolean dryRun) {
             this.dryRun = dryRun;
+            return this;
+        }
+
+        public TableBuilder setToKafka(boolean toKafka) {
+            this.toKafka = toKafka;
             return this;
         }
 
@@ -113,6 +119,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
             instance.dryRun = this.dryRun;
             instance.numPartitions = this.numPartitions;
             instance.replicationFactor = this.replicationFactor;
+            instance.toKafka = this.toKafka;
             instance.tableName = tableName;
             return instance;
         }
@@ -133,6 +140,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
     protected boolean dryRun = false;
     protected int numPartitions = 1;
     protected int replicationFactor = 1;
+    protected boolean toKafka = true;
 
     @SuppressWarnings("unchecked")
     protected <T> T getStream(String name) {
@@ -360,7 +368,9 @@ public abstract class AbstractTable<E extends SequencedRow> {
                     // One writer per-table/topic should be sufficient. Also, we
                     // key by a dummy, so there is no parallelism anyway.
                     .setParallelism(1);
-            committedStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
+            if (toKafka) {
+                committedStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
+            }
         }
     }
 }

@@ -21,14 +21,16 @@ public interface TableValueFilter<T> {
     public static class RangeFilter<T> implements TableValueFilter<T> {
         private final T start;
         private final T end;
+        private final T substr;
         private final boolean inclusive;
 
         @JsonCreator
         public RangeFilter(
-                @JsonProperty("start") T start, @JsonProperty("end") T end,
+                @JsonProperty("start") T start, @JsonProperty("end") T end, @JsonProperty("substr") T substr,
                 @JsonProperty(value = "inclusive", defaultValue = "false") boolean inclusive) {
             this.start = start;
             this.end = end;
+            this.substr = substr;
             this.inclusive = inclusive;
         }
 
@@ -42,12 +44,15 @@ public interface TableValueFilter<T> {
             if (end != null && (cmp == null || cmp.compareTo(end) >= 0 && (!inclusive || cmp.compareTo(end) > 0))) {
                 return false;
             }
+            if (substr != null && !((String) obj).contains((String) substr)) {
+                return false;
+            }
             return true;
         }
 
         @Override
         public String asSqlQueryCondition(String name) {
-            if (start == null && end == null) {
+            if (start == null && end == null && substr == null) {
                 return "TRUE";
             } else {
                 StringBuilder builder = new StringBuilder();
@@ -77,6 +82,14 @@ public interface TableValueFilter<T> {
                         builder.append(escapeString(end.toString()));
                     }
                 }
+                if (substr != null) {
+                    if (start != null || end != null) {
+                        builder.append(" AND ");
+                    }
+                    builder.append(name);
+                    builder.append(" LIKE ");
+                    builder.append(escapeString("%" + escapeLikeString(substr.toString()) + "%"));
+                }
                 builder.append(")");
                 return builder.toString();
             }
@@ -88,6 +101,12 @@ public interface TableValueFilter<T> {
                 return false;
             }
             if (end != null && !field.type.isInstance(end)) {
+                return false;
+            }
+            if (substr != null && !field.type.isInstance(substr)) {
+                return false;
+            }
+            if (substr != null && !(substr instanceof String)) {
                 return false;
             }
             return field.canFilter();
@@ -224,5 +243,19 @@ public interface TableValueFilter<T> {
                 .replace("\\", "\\\\")
                 .replace("'", "''")
                 .replace("\0", "\\x00") + "'";
+    }
+
+    /**
+     * Escape a string for use in an SQL `LIKE` expression. This will escape all
+     * occurrences of `_` and `%`.
+     *
+     * @param string
+     *            The string to escape.
+     * @return The escaped string.
+     */
+    public static String escapeLikeString(String string) {
+        return string
+                .replace("_", "\\_")
+                .replace("%", "\\%");
     }
 }

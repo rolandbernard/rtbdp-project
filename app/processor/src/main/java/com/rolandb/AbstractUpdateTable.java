@@ -11,6 +11,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * already non-null in the database.
  */
 public abstract class AbstractUpdateTable<E extends SequencedRow> extends AbstractTable<E> {
+    private boolean override = true;
+
+    public AbstractUpdateTable<E> setOverride(boolean override) {
+        this.override = override;
+        return this;
+    }
+    
     protected void buildSqlConflictResolution(String keyNames, Field[] fields, StringBuilder builder) {
         builder.append(" ON CONFLICT (");
         builder.append(keyNames);
@@ -24,28 +31,32 @@ public abstract class AbstractUpdateTable<E extends SequencedRow> extends Abstra
                     builder.append(", ");
                 }
                 first = false;
-                builder.append(name);
-                builder.append(" = CASE WHEN ");
-                builder.append(tableName);
-                builder.append(".seq_num < EXCLUDED.seq_num THEN ");
-                builder.append("COALESCE(");
-                builder.append("EXCLUDED.");
-                builder.append(name);
-                builder.append(", ");
-                builder.append(tableName);
-                builder.append(".");
-                builder.append(name);
-                builder.append(")");
-                builder.append(" ELSE ");
-                builder.append("COALESCE(");
-                builder.append(tableName);
-                builder.append(".");
-                builder.append(name);
-                builder.append(", ");
-                builder.append("EXCLUDED.");
-                builder.append(name);
-                builder.append(")");
-                builder.append("END");
+                if (name.equals("seq_num")) {
+                    builder.append(name);
+                    builder.append(" = ");
+                    builder.append("EXCLUDED.");
+                    builder.append(name);
+                } else if (override) {
+                    builder.append(name);
+                    builder.append(" = COALESCE(");
+                    builder.append("EXCLUDED.");
+                    builder.append(name);
+                    builder.append(", ");
+                    builder.append(tableName);
+                    builder.append(".");
+                    builder.append(name);
+                    builder.append(")");
+                } else {
+                    builder.append(name);
+                    builder.append(" = COALESCE(");
+                    builder.append(tableName);
+                    builder.append(".");
+                    builder.append(name);
+                    builder.append(", ");
+                    builder.append("EXCLUDED.");
+                    builder.append(name);
+                    builder.append(")");
+                }
             }
         }
     }

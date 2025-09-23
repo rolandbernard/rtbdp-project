@@ -38,6 +38,9 @@ public class Subscription {
      */
     public boolean applicableTo(Table table) {
         if (table.maxLimit != null && (limit == null || limit > table.maxLimit)) {
+            if (filters == null) {
+                return false;
+            }
             long estimate = 0;
             for (TableRowFilter filter : filters) {
                 Long est = filter.estimateCardinality();

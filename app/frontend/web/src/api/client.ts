@@ -3,7 +3,9 @@ import { auditTime, filter, map, retry } from "rxjs/operators";
 import { useMemo, useRef, useSyncExternalStore } from "react";
 import { groupKey, sort } from "./util";
 
-type Filter<T> = T[] | { start?: T; end?: T };
+type Filter<T> =
+    | T[]
+    | { start?: T; end?: T; substr?: T extends string ? T : undefined };
 type RowFilter<R> = { [P in keyof R]?: Filter<R[P]> };
 type Filters<R> = RowFilter<R>[];
 type Row<R> = R & { seq_num: number };
@@ -51,6 +53,12 @@ export class Table<R> {
                 if (filter.end && filter.end <= row[key]) {
                     return false;
                 }
+                if (
+                    filter.substr &&
+                    !(row[key] as string).includes(filter.substr)
+                ) {
+                    return false;
+                }
             }
         }
         return true;
@@ -94,23 +102,24 @@ export class Table<R> {
     }
 
     where<C extends keyof R>(column: C, options: R[C][]): Table<R>;
-    where<C extends keyof R>(column: C, start?: R[C], end?: R[C]): Table<R>;
-    where<C extends keyof R>(column: C, start?: R[C] | R[C][], end?: R[C]) {
+    where<C extends keyof R>(
+        column: C,
+        range: { start?: R[C]; end?: R[C] }
+    ): Table<R>;
+    where<C extends keyof R>(column: C, filter: Filter<R[C]>) {
         let new_filters = this.filters;
         let new_deps = this.deps;
         if (!new_filters) {
             new_filters = [{}];
         }
         const last = new_filters?.splice(-1)![0];
-        if (Array.isArray(start)) {
-            new_filters = [...new_filters, { ...last, [column]: start }];
-            new_deps = [...new_deps, ...start];
+        if (Array.isArray(filter)) {
+            new_filters = [...new_filters, { ...last, [column]: filter }];
+            new_deps = [...new_deps, ...filter];
         } else {
-            new_filters = [
-                ...new_filters,
-                { ...last, [column]: { start, end } },
-            ];
-            new_deps = [...new_deps, start, end];
+            new_filters = [...new_filters, { ...last, [column]: filter }];
+            const { start, end, substr } = filter;
+            new_deps = [...new_deps, start, end, substr];
         }
         const new_table = new Table(this.name, this.keys);
         new_table.filters = new_filters;
