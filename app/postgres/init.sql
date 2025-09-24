@@ -5,6 +5,9 @@
 -- We use TimescaleDB for easier handling of partitioned tables and automatic
 -- retention period.
 CREATE EXTENSION timescaledb;
+-- Use the trigram index to speed up `LIKE` queries. Will be used on username and
+-- reponame.
+CREATE EXTENSION pg_trgm;
 
 CREATE TYPE event_kind AS ENUM (
     'all', 'push', 'watch', 'create_repo', 'create_branch', 'create_tag',
@@ -58,6 +61,8 @@ CREATE TABLE users (
     PRIMARY KEY (id)
 );
 
+CREATE INDEX ON users USING GIN (LOWER(username) gin_trgm_ops);
+
 CREATE TABLE repos (
     id BIGINT NOT NULL,
     reponame TEXT,
@@ -77,6 +82,9 @@ CREATE TABLE repos (
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (id)
 );
+
+CREATE INDEX ON repos USING GIN (LOWER(reponame) gin_trgm_ops);
+CREATE INDEX ON repos USING GIN (LOWER(fullname) gin_trgm_ops);
 
 -- =====================
 -- Per-kind event counts

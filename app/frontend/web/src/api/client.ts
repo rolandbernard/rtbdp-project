@@ -55,7 +55,7 @@ export class Table<R> {
                 }
                 if (
                     filter.substr &&
-                    !(row[key] as string).includes(filter.substr)
+                    !(row[key] as string).toLowerCase().includes(filter.substr)
                 ) {
                     return false;
                 }

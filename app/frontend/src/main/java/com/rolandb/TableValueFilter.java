@@ -86,8 +86,9 @@ public interface TableValueFilter<T> {
                     if (start != null || end != null) {
                         builder.append(" AND ");
                     }
+                    builder.append("LOWER(");
                     builder.append(name);
-                    builder.append(" LIKE ");
+                    builder.append(") LIKE ");
                     builder.append(escapeString("%" + escapeLikeString(substr.toString()) + "%"));
                 }
                 builder.append(")");
