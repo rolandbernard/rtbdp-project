@@ -33,7 +33,7 @@ import io.reactivex.rxjava3.subjects.PublishSubject;
  */
 public class Table {
     public static enum FieldKind {
-        NORMAL, INDEXED, SORTED
+        NORMAL, INDEXED, KEY, SORTED_KEY
     }
 
     public static class Field {
@@ -48,7 +48,11 @@ public class Table {
         }
 
         public boolean canFilter() {
-            return kind == FieldKind.INDEXED || kind == FieldKind.SORTED;
+            return kind == FieldKind.INDEXED || kind == FieldKind.KEY || kind == FieldKind.SORTED_KEY;
+        }
+
+        public boolean isKey() {
+            return kind == FieldKind.KEY || kind == FieldKind.SORTED_KEY;
         }
     };
 
@@ -157,12 +161,12 @@ public class Table {
      * @return The SQL order expression.
      */
     public String asSqlQueryOrder() {
-        if (fields.stream().anyMatch(f -> f.kind == FieldKind.SORTED)) {
+        if (fields.stream().anyMatch(f -> f.kind == FieldKind.SORTED_KEY)) {
             StringBuilder builder = new StringBuilder();
             builder.append(" ORDER BY ");
             boolean first = true;
             for (Field field : fields) {
-                if (field.kind == FieldKind.SORTED) {
+                if (field.kind == FieldKind.SORTED_KEY) {
                     if (!first) {
                         builder.append(", ");
                     }
