@@ -3,7 +3,7 @@ package com.rolandb.tables;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.rolandb.AbstractUpdateTable;
-import com.rolandb.SequencedRow;
+import com.rolandb.AbstractUpdateTable.UpdateSeqRow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.RepoUpdateEvent> {
-    public static class RepoUpdateEvent extends SequencedRow {
+    public static class RepoUpdateEvent extends UpdateSeqRow {
         @TableEventKey
         @JsonProperty("id")
         public final long id;

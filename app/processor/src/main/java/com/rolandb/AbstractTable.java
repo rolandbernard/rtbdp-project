@@ -248,6 +248,14 @@ public abstract class AbstractTable<E extends SequencedRow> {
         builder.append(".seq_num < EXCLUDED.seq_num");
     }
 
+    protected void buildSqlExtraFields(Class<E> output, StringBuilder builder) {
+        // To be implemented in a subclass.
+    }
+
+    protected void buildSqlExtraValues(Class<E> output, StringBuilder builder) {
+        // To be implemented in a subclass.
+    }
+
     protected String buildJdbcSinkStatement(Class<E> output) {
         StringBuilder builder = new StringBuilder();
         builder.append("INSERT INTO ");
@@ -263,6 +271,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
             first = false;
             builder.append(prop == null ? field.getName() : prop.value());
         }
+        buildSqlExtraFields(output, builder);
         builder.append(") VALUES (");
         first = true;
         for (int i = 0; i < fields.length; i++) {
@@ -272,6 +281,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
             first = false;
             builder.append("?");
         }
+        buildSqlExtraValues(output, builder);
         builder.append(")");
         // If there is a conflict, we only want to update the non-key values.
         StringBuilder keyNames = new StringBuilder();
