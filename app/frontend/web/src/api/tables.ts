@@ -1,4 +1,4 @@
-import { Table } from "./client";
+import { Table, UpdateTable } from "./client";
 
 export const event_kinds = {
     all: "All",
@@ -37,16 +37,18 @@ export const events = new Table<{
     details: string;
 }>("events", ["created_at", "id"]);
 
-export const users = new Table<{
+export const users = new UpdateTable<{
     id: number;
+}, {
     username: string;
     avatar_url: string;
     html_url: string;
     user_type: string;
 }>("users", ["id"]);
 
-export const repos = new Table<{
+export const repos = new UpdateTable<{
     id: number;
+}, {
     reponame: string;
     fullname: string;
     owner_id: number;

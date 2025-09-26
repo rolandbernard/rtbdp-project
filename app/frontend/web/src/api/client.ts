@@ -34,7 +34,7 @@ export class Table<R> {
     limited?: number;
     deps: unknown[] = [];
 
-    constructor(name: string, keys: (keyof R)[]) {
+    constructor(name: string, keys: typeof this.keys) {
         this.name = name;
         this.keys = keys;
     }
@@ -79,6 +79,14 @@ export class Table<R> {
 
     acceptsMessage(message: ServerMessage<R>) {
         return message.table == this.name && this.acceptsRow(message.row);
+    }
+
+    mergeRows(newRow: Row<R>, oldRow?: Row<R>) {
+        if (!oldRow || newRow.seq_num > oldRow.seq_num) {
+            return newRow;
+        } else {
+            return oldRow;
+        }
     }
 
     applyLimiting(view: Map<string, Row<R>>) {
@@ -151,6 +159,33 @@ export class Table<R> {
     }
 }
 
+type UpdateRow<R> = R & { [P in keyof R as `${string & P}_seq_num`]: number };
+
+export class UpdateTable<K, R> extends Table<K & UpdateRow<R>> {
+    mergeRows(newRow: Row<K & UpdateRow<R>>, oldRow?: Row<K & UpdateRow<R>>) {
+        const merged: Record<string, unknown> = { ...oldRow };
+        for (const key in newRow) {
+            if (!key.endsWith("_seq_num")) {
+                const seqKey = key + "_seq_num";
+                const newRowAny = newRow as Record<string, unknown>;
+                const oldRowAny = oldRow as Record<string, unknown>;
+                if (newRowAny[seqKey]) {
+                    if (
+                        (newRowAny[seqKey] as number) >
+                        (oldRowAny[seqKey] as number)
+                    ) {
+                        merged[key] = newRowAny[key];
+                        merged[seqKey] = newRowAny[seqKey];
+                    }
+                } else {
+                    merged[key] = newRowAny[key];
+                }
+            }
+        }
+        return merged as Row<K & UpdateRow<R>>;
+    }
+}
+
 export function useTable<R>(table: Table<R>): Row<R>[] | undefined;
 export function useTable<R, T>(
     table: Table<R>,
@@ -189,10 +224,11 @@ export function useTable<R, T>(
             .pipe(
                 retry({ delay: 1000 }),
                 map(message => {
-                    const row = message.row as Row<R>;
-                    const rowKey = groupKey(row, table.keys);
+                    const newRow = message.row as Row<R>;
+                    const rowKey = groupKey(newRow, table.keys);
                     const oldRow = view.get(rowKey);
-                    if (!oldRow || oldRow.seq_num < row.seq_num) {
+                    const row = table.mergeRows(newRow, oldRow);
+                    if (row !== oldRow) {
                         view.set(rowKey, row);
                         return true;
                     } else {
