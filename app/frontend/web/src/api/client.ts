@@ -3,9 +3,14 @@ import { auditTime, filter, map, retry } from "rxjs/operators";
 import { useMemo, useRef, useSyncExternalStore } from "react";
 import { groupKey, sort } from "./util";
 
-type Filter<T> =
-    | T[]
-    | { start?: T; end?: T; substr?: T extends string ? T : undefined };
+type InFilter<T> = T[];
+type RangeFilter<T> = {
+    start?: T;
+    end?: T;
+    substr?: T extends string ? T : undefined;
+};
+
+type Filter<T> = InFilter<T> | RangeFilter<T>;
 type RowFilter<R> = { [P in keyof R]?: Filter<R[P]> };
 type Filters<R> = RowFilter<R>[];
 type Row<R> = R & { seq_num: number };
@@ -55,7 +60,12 @@ export class Table<R> {
                 }
                 if (
                     filter.substr &&
-                    !(row[key] as string).toLowerCase().includes(filter.substr)
+                    !(
+                        row[key] &&
+                        (row[key] as string)
+                            .toLowerCase()
+                            .includes(filter.substr)
+                    )
                 ) {
                     return false;
                 }
@@ -109,11 +119,12 @@ export class Table<R> {
         }
     }
 
-    where<C extends keyof R>(column: C, options: R[C][]): Table<R>;
-    where<C extends keyof R>(
-        column: C,
-        range: { start?: R[C]; end?: R[C] }
-    ): Table<R>;
+    newInstance() {
+        return new Table(this.name, this.keys);
+    }
+
+    where<C extends keyof R>(column: C, options: InFilter<R[C]>): Table<R>;
+    where<C extends keyof R>(column: C, range: RangeFilter<R[C]>): Table<R>;
     where<C extends keyof R>(column: C, filter: Filter<R[C]>) {
         let new_filters = this.filters;
         let new_deps = this.deps;
@@ -129,7 +140,7 @@ export class Table<R> {
             const { start, end, substr } = filter;
             new_deps = [...new_deps, start, end, substr];
         }
-        const new_table = new Table(this.name, this.keys);
+        const new_table = this.newInstance();
         new_table.filters = new_filters;
         new_table.limited = this.limited;
         new_table.deps = new_deps;
@@ -137,7 +148,7 @@ export class Table<R> {
     }
 
     limit(limit: number) {
-        const new_table = new Table(this.name, this.keys);
+        const new_table = this.newInstance();
         new_table.filters = this.filters;
         new_table.limited = limit;
         new_table.deps = this.deps;
@@ -151,7 +162,7 @@ export class Table<R> {
         } else {
             new_filters = [...new_filters, {}];
         }
-        const new_table = new Table(this.name, this.keys);
+        const new_table = this.newInstance();
         new_table.filters = new_filters;
         new_table.limited = this.limited;
         new_table.deps = this.deps;
@@ -162,27 +173,35 @@ export class Table<R> {
 type UpdateRow<R> = R & { [P in keyof R as `${string & P}_seq_num`]: number };
 
 export class UpdateTable<K, R> extends Table<K & UpdateRow<R>> {
+    newInstance() {
+        return new UpdateTable(this.name, this.keys);
+    }
+
     mergeRows(newRow: Row<K & UpdateRow<R>>, oldRow?: Row<K & UpdateRow<R>>) {
-        const merged: Record<string, unknown> = { ...oldRow };
-        for (const key in newRow) {
-            if (!key.endsWith("_seq_num")) {
-                const seqKey = key + "_seq_num";
-                const newRowAny = newRow as Record<string, unknown>;
-                const oldRowAny = oldRow as Record<string, unknown>;
-                if (newRowAny[seqKey]) {
-                    if (
-                        (newRowAny[seqKey] as number) >
-                        (oldRowAny[seqKey] as number)
-                    ) {
+        if (oldRow) {
+            const merged: Record<string, unknown> = { ...oldRow };
+            for (const key in newRow) {
+                if (!key.endsWith("_seq_num")) {
+                    const seqKey = key + "_seq_num";
+                    const newRowAny = newRow as Record<string, unknown>;
+                    const oldRowAny = oldRow as Record<string, unknown>;
+                    if (newRowAny[seqKey] != null) {
+                        if (
+                            (newRowAny[seqKey] as number) >
+                            (oldRowAny[seqKey] as number)
+                        ) {
+                            merged[key] = newRowAny[key];
+                            merged[seqKey] = newRowAny[seqKey];
+                        }
+                    } else {
                         merged[key] = newRowAny[key];
-                        merged[seqKey] = newRowAny[seqKey];
                     }
-                } else {
-                    merged[key] = newRowAny[key];
                 }
             }
+            return merged as Row<K & UpdateRow<R>>;
+        } else {
+            return newRow;
         }
-        return merged as Row<K & UpdateRow<R>>;
     }
 }
 
@@ -239,15 +258,20 @@ export function useTable<R, T>(
                 auditTime(50)
             );
         let snapshot: T;
+        const buildSnapshot = () => {
+            const values = table.applyLimiting(view);
+            if (transform) {
+                snapshot = transform(values);
+            } else {
+                snapshot = values as T;
+            }
+        };
+        // Initial build of snapshot reusing rows that we already know about.
+        buildSnapshot();
         return [
             (onChange: () => void) => {
                 const subscription = events.subscribe(() => {
-                    const values = table.applyLimiting(view);
-                    if (transform) {
-                        snapshot = transform(values);
-                    } else {
-                        snapshot = values as T;
-                    }
+                    buildSnapshot();
                     onChange();
                 });
                 return () => subscription.unsubscribe();

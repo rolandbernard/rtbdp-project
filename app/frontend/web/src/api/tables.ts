@@ -37,31 +37,37 @@ export const events = new Table<{
     details: string;
 }>("events", ["created_at", "id"]);
 
-export const users = new UpdateTable<{
-    id: number;
-}, {
-    username: string;
-    avatar_url: string;
-    html_url: string;
-    user_type: string;
-}>("users", ["id"]);
+export const users = new UpdateTable<
+    {
+        id: number;
+    },
+    {
+        username?: string;
+        avatar_url?: string;
+        html_url?: string;
+        user_type?: string;
+    }
+>("users", ["id"]);
 
-export const repos = new UpdateTable<{
-    id: number;
-}, {
-    reponame: string;
-    fullname: string;
-    owner_id: number;
-    html_url: string;
-    homepage: string;
-    descr: string;
-    topics: string;
-    lang: string;
-    license: string;
-    fork_count: number;
-    issue_count: number;
-    star_count: number;
-}>("repos", ["id"]);
+export const repos = new UpdateTable<
+    {
+        id: number;
+    },
+    {
+        reponame?: string;
+        fullname?: string;
+        owner_id?: number;
+        html_url?: string;
+        homepage?: string;
+        descr?: string;
+        topics?: string;
+        lang?: string;
+        license?: string;
+        fork_count?: number;
+        issue_count?: number;
+        star_count?: number;
+    }
+>("repos", ["id"]);
 
 export const countsLive = new Table<{
     window_size: WindowSize;
@@ -72,7 +78,7 @@ export const countsLive = new Table<{
 export const countsRanking = new Table<{
     window_size: WindowSize;
     row_number: number;
-    kind: EventKind;
+    kind?: EventKind;
     rank: number;
 }>("counts_ranking", ["window_size", "row_number"]);
 

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 
 export function sortedKey<T, C>(
     fn: ((a: T) => C)[],
@@ -41,4 +42,15 @@ export function groupBy<R>(table: R[], ...keys: (keyof R)[]): R[][] {
     return Object.values(
         Object.groupBy(table, row => groupKey(row, keys))
     ) as R[][];
+}
+
+export function useDebounce<T>(value: T, millis: number) {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebounced(value);
+        }, millis);
+        return () => clearTimeout(timeout);
+    }, [value, millis]);
+    return debounced;
 }
