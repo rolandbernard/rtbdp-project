@@ -43,7 +43,7 @@ public class Subscription {
             }
             long estimate = 0;
             for (TableRowFilter filter : filters) {
-                Long est = filter.estimateCardinality();
+                Long est = filter.estimateCardinality(table);
                 if (est == null) {
                     return false;
                 }

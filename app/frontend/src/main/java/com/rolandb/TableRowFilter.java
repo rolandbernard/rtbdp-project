@@ -47,13 +47,23 @@ public class TableRowFilter {
      * 
      * @return The estimated cardinality
      */
-    public Long estimateCardinality() {
+    public Long estimateCardinality(Table table) {
         if (filters.isEmpty()) {
             return null;
         } else {
+            Map<String, Field> fields = table.fields.stream()
+                    .collect(Collectors.toMap(e -> e.name, e -> e));
             long est = 0;
             for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
-                est = Long.max(est, filter.getValue().estimateCardinality());
+                Field field = fields.get(filter.getKey());
+                if (field == null) {
+                    return null;
+                }
+                Long child = filter.getValue().estimateCardinality(field);
+                if (child == null) {
+                    return null;
+                }
+                est = Long.min(est, child);
             }
             return est;
         }

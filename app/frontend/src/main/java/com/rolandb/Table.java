@@ -40,11 +40,17 @@ public class Table {
         public final String name;
         public final FieldKind kind;
         public final Class<?> type;
+        public final Long cardinality;
 
-        public Field(String name, FieldKind kind, Class<?> type) {
+        public Field(String name, FieldKind kind, Class<?> type, Long cardinality) {
             this.name = name;
             this.kind = kind;
             this.type = type;
+            this.cardinality = cardinality;
+        }
+
+        public Field(String name, Class<?> type) {
+            this(name, FieldKind.NORMAL, type, null);
         }
 
         public boolean canFilter() {

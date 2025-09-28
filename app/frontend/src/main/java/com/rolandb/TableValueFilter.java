@@ -114,9 +114,9 @@ public interface TableValueFilter<T> {
         }
 
         @Override
-        public Long estimateCardinality() {
-            if (start instanceof Long && end instanceof Long) {
-                return Long.max(0, (Long) end - (Long) start);
+        public Long estimateCardinality(Field field) {
+            if (field.cardinality != null && start instanceof Long && end instanceof Long) {
+                return Long.max(0, (Long) end - (Long) start) * field.cardinality;
             } else {
                 return null;
             }
@@ -177,8 +177,12 @@ public interface TableValueFilter<T> {
         }
 
         @Override
-        public Long estimateCardinality() {
-            return (long) options.size();
+        public Long estimateCardinality(Field field) {
+            if (field.cardinality != null) {
+                return (long) options.size() * field.cardinality;
+            } else {
+                return null;
+            }
         }
     }
 
@@ -230,7 +234,7 @@ public interface TableValueFilter<T> {
      * 
      * @return The estimated cardinality
      */
-    public abstract Long estimateCardinality();
+    public abstract Long estimateCardinality(Field field);
 
     /**
      * Escape a string for use in an SQL query.

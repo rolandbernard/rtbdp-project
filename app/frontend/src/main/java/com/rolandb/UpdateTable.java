@@ -14,7 +14,7 @@ public class UpdateTable extends Table {
         expanded.addAll(fields);
         for (Field f : fields) {
             if (!f.isKey() && !f.name.equals("seq_num")) {
-                expanded.add(new Field(f.name + "_seq_num", FieldKind.NORMAL, Long.class));
+                expanded.add(new Field(f.name + "_seq_num", Long.class));
             }
         }
         return expanded;

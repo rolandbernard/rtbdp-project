@@ -167,52 +167,52 @@ public class SocketApiServer extends WebSocketServer {
     @Override
     public void start() {
         addTable(new Table("events", 500L, List.of(
-                new Field("created_at", FieldKind.SORTED_KEY, String.class),
-                new Field("id", FieldKind.SORTED_KEY, Long.class),
-                new Field("kind", FieldKind.INDEXED, String.class),
-                new Field("repo_id", FieldKind.INDEXED, Long.class),
-                new Field("user_id", FieldKind.INDEXED, Long.class),
-                new Field("details", FieldKind.NORMAL, String.class),
-                new Field("seq_num", FieldKind.NORMAL, Long.class))));
+                new Field("created_at", FieldKind.SORTED_KEY, String.class, 50L),
+                new Field("id", FieldKind.SORTED_KEY, Long.class, 1L),
+                new Field("kind", FieldKind.INDEXED, String.class, null),
+                new Field("repo_id", FieldKind.INDEXED, Long.class, null),
+                new Field("user_id", FieldKind.INDEXED, Long.class, null),
+                new Field("details", String.class),
+                new Field("seq_num", Long.class))));
         addTable(new UpdateTable("users", 500L, List.of(
-                new Field("id", FieldKind.KEY, Long.class),
-                new Field("username", FieldKind.INDEXED, String.class),
-                new Field("avatar_url", FieldKind.NORMAL, String.class),
-                new Field("html_url", FieldKind.NORMAL, String.class),
-                new Field("user_type", FieldKind.NORMAL, String.class),
-                new Field("seq_num", FieldKind.NORMAL, Long.class))));
+                new Field("id", FieldKind.KEY, Long.class, 1L),
+                new Field("username", FieldKind.INDEXED, String.class, 1L),
+                new Field("avatar_url", String.class),
+                new Field("html_url", String.class),
+                new Field("user_type", String.class),
+                new Field("seq_num", Long.class))));
         addTable(new UpdateTable("repos", 500L, List.of(
-                new Field("id", FieldKind.KEY, Long.class),
-                new Field("reponame", FieldKind.INDEXED, String.class),
-                new Field("fullname", FieldKind.INDEXED, String.class),
-                new Field("owner_id", FieldKind.NORMAL, Long.class),
-                new Field("html_url", FieldKind.NORMAL, String.class),
-                new Field("homepage", FieldKind.NORMAL, String.class),
-                new Field("descr", FieldKind.NORMAL, String.class),
-                new Field("topics", FieldKind.NORMAL, String.class),
-                new Field("lang", FieldKind.NORMAL, String.class),
-                new Field("license", FieldKind.NORMAL, String.class),
-                new Field("fork_count", FieldKind.NORMAL, Long.class),
-                new Field("issue_count", FieldKind.NORMAL, Long.class),
-                new Field("star_count", FieldKind.NORMAL, Long.class),
-                new Field("seq_num", FieldKind.NORMAL, Long.class))));
+                new Field("id", FieldKind.KEY, Long.class, 1L),
+                new Field("reponame", FieldKind.INDEXED, String.class, 100L),
+                new Field("fullname", FieldKind.INDEXED, String.class, 1L),
+                new Field("owner_id", Long.class),
+                new Field("html_url", String.class),
+                new Field("homepage", String.class),
+                new Field("descr", String.class),
+                new Field("topics", String.class),
+                new Field("lang", String.class),
+                new Field("license", String.class),
+                new Field("fork_count", Long.class),
+                new Field("issue_count", Long.class),
+                new Field("star_count", Long.class),
+                new Field("seq_num", Long.class))));
         addTable(new Table("counts_live", null, List.of(
-                new Field("window_size", FieldKind.KEY, String.class),
-                new Field("kind", FieldKind.KEY, String.class),
-                new Field("num_events", FieldKind.NORMAL, Long.class),
-                new Field("seq_num", FieldKind.NORMAL, Long.class))));
+                new Field("window_size", FieldKind.KEY, String.class, 16L),
+                new Field("kind", FieldKind.KEY, String.class, 4L),
+                new Field("num_events", Long.class),
+                new Field("seq_num", Long.class))));
         addTable(new Table("counts_ranking", null, List.of(
-                new Field("window_size", FieldKind.KEY, String.class),
-                new Field("row_number", FieldKind.KEY, Long.class),
-                new Field("kind", FieldKind.NORMAL, String.class),
-                new Field("rank", FieldKind.NORMAL, Long.class),
-                new Field("seq_num", FieldKind.NORMAL, Long.class))));
+                new Field("window_size", FieldKind.KEY, String.class, 16L),
+                new Field("row_number", FieldKind.KEY, Long.class, 4L),
+                new Field("kind", String.class),
+                new Field("rank", Long.class),
+                new Field("seq_num", Long.class))));
         addTable(new Table("counts_history", 5_000L, List.of(
-                new Field("kind", FieldKind.KEY, String.class),
-                new Field("ts_start", FieldKind.SORTED_KEY, String.class),
-                new Field("ts_end", FieldKind.SORTED_KEY, String.class),
-                new Field("num_events", FieldKind.NORMAL, Long.class),
-                new Field("seq_num", FieldKind.NORMAL, Long.class))));
+                new Field("kind", FieldKind.KEY, String.class, null),
+                new Field("ts_start", FieldKind.SORTED_KEY, String.class, 16L),
+                new Field("ts_end", FieldKind.SORTED_KEY, String.class, 16L),
+                new Field("num_events", Long.class),
+                new Field("seq_num", Long.class))));
         setReuseAddr(true);
         super.start();
     }
