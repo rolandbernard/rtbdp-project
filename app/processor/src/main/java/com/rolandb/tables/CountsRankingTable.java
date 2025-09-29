@@ -46,6 +46,7 @@ public class CountsRankingTable extends AbstractTable<CountsRankingTable.CountsR
                                     return new CountsRank(k, WindowSize.fromString(w), row, rank);
                                 },
                                 GithubEventType.class, Long.class))
+                .setParallelism(4)
                 .returns(CountsRank.class)
                 .name("Event Count Rankings");
     }

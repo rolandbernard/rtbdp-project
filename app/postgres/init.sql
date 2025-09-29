@@ -149,7 +149,34 @@ SELECT create_hypertable('counts_history', by_range('ts_start', INTERVAL '7 day'
 -- Per-repository event counts
 -- ===========================
 
--- TODO
+CREATE TABLE repos_live (
+    window_size window_size NOT NULL,
+    repo_id BIGINT NOT NULL,
+    num_events BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (window_size, repo_id)
+);
+
+CREATE TABLE repos_ranking (
+    window_size window_size NOT NULL,
+    row_number INT NOT NULL,
+    repo_id BIGINT,
+    rank INT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (window_size, row_number)
+);
+
+CREATE TABLE repos_history (
+    repo_id BIGINT NOT NULL,
+    ts_start TIMESTAMP NOT NULL,
+    ts_end TIMESTAMP NOT NULL,
+    num_events BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (repo_id, ts_start, ts_end)
+);
+
+-- We partition by hour
+SELECT create_hypertable('repos_history', by_range('ts_start', INTERVAL '1 hour'));
 
 -- =============================
 -- Trending repository detection

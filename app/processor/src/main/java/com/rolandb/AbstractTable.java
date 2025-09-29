@@ -33,6 +33,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.rolandb.tables.CountsLiveTable.EventCounts;
 import com.rolandb.tables.CountsLiveTable.WindowSize;
+import com.rolandb.tables.ReposLiveTable.RepoEventCounts;
 
 /**
  * This class contains the basic logic for writing a computed table to both a
@@ -182,8 +183,16 @@ public abstract class AbstractTable<E extends SequencedRow> {
                             WatermarkStrategy
                                     .<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
                                     .withTimestampAssigner((event, timestamp) -> event.createdAt.toEpochMilli()))
-                    .name("Event Stream")
-                    // Add in an additional "fake" event with kind "all".
+                    .name("Event Stream");
+        });
+    }
+
+    protected DataStream<GithubEvent> getEventsWithAllStream() {
+        return getStream("eventsWithAll", () -> {
+            return getEventStream()
+                    // Add in an additional "fake" event with kind "all". This is
+                    // so we conveniently compute also the aggregate count over all
+                    // event kinds.
                     .<GithubEvent>flatMap((event, out) -> {
                         out.collect(event);
                         out.collect(new GithubEvent(
@@ -196,7 +205,13 @@ public abstract class AbstractTable<E extends SequencedRow> {
 
     protected KeyedStream<GithubEvent, String> getEventsByTypeStream() {
         return getStream("eventsByType", () -> {
-            return getEventStream().keyBy(event -> event.eventType.toString());
+            return getEventsWithAllStream().keyBy(event -> event.eventType.toString());
+        });
+    }
+
+    protected KeyedStream<GithubEvent, Long> getEventsByRepoStream() {
+        return getStream("eventsByRepo", () -> {
+            return getEventStream().keyBy(event -> event.repoId);
         });
     }
 
@@ -218,6 +233,23 @@ public abstract class AbstractTable<E extends SequencedRow> {
                             }))
                     .returns(EventCounts.class)
                     .name("Live Event Counts");
+        });
+    }
+
+    protected DataStream<RepoEventCounts> getLivePreRepoCounts() {
+        return getStream("reposLive", () -> {
+            return getEventsByRepoStream()
+                    .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
+                            List.of(
+                                    WindowSize.MINUTES_5,
+                                    WindowSize.HOURS_1,
+                                    WindowSize.HOURS_6,
+                                    WindowSize.HOURS_24),
+                            (windowStart, windowEnd, key, winSpec, count) -> {
+                                return new RepoEventCounts(key, winSpec, count);
+                            }))
+                    .returns(RepoEventCounts.class)
+                    .name("Live per Repo Counts");
         });
     }
 

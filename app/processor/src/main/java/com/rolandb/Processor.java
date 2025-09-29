@@ -30,6 +30,9 @@ import com.rolandb.tables.CountsHistoryTable;
 import com.rolandb.tables.CountsLiveTable;
 import com.rolandb.tables.CountsRankingTable;
 import com.rolandb.tables.GithubEventsTable;
+import com.rolandb.tables.ReposHistoryTable;
+import com.rolandb.tables.ReposLiveTable;
+import com.rolandb.tables.ReposRankingTable;
 import com.rolandb.tables.RepositoriesTable;
 import com.rolandb.tables.UsersTable;
 
@@ -141,7 +144,8 @@ public class Processor {
                                         .toEpochMilli()),
                         "Kafka Source")
                 // We can not use more parallelism for the Kafka source than we have partitions,
-                // because for some reason it messes up the watermarks. In the sense that subtasks
+                // because for some reason it messes up the watermarks. In the sense that
+                // subtasks
                 // that don't get any events seems to hold back the watermarks.
                 .setParallelism(KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic));
         // Setup parameters for table builder.
@@ -165,6 +169,9 @@ public class Processor {
         builder.build("counts_history", CountsHistoryTable.class);
         builder.build("counts_live", CountsLiveTable.class);
         builder.build("counts_ranking", CountsRankingTable.class);
+        builder.build("repos_history", ReposHistoryTable.class);
+        builder.build("repos_live", ReposLiveTable.class);
+        builder.build("repos_ranking", ReposRankingTable.class);
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
         env.execute("GitHub Event Analysis");
