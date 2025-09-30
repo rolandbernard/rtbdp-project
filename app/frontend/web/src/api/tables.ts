@@ -1,4 +1,4 @@
-import { Table, UpdateTable } from "./client";
+import { RankingTable, Table, UpdateTable } from "./client";
 
 export const event_kinds = {
     all: "All",
@@ -75,12 +75,12 @@ export const countsLive = new Table<{
     num_events: number;
 }>("counts_live", ["window_size", "kind"]);
 
-export const countsRanking = new Table<{
+export const countsRanking = new RankingTable<{
     window_size: WindowSize;
     row_number: number;
     kind?: EventKind;
     rank: number;
-}>("counts_ranking", ["window_size", "row_number"]);
+}>("counts_ranking", ["window_size", "row_number"], ["kind"]);
 
 export const countsHistory = new Table<{
     kind: EventKind;
@@ -88,3 +88,23 @@ export const countsHistory = new Table<{
     ts_end: string;
     num_events: number;
 }>("counts_live", ["kind", "ts_start", "ts_end"]);
+
+export const reposLive = new Table<{
+    window_size: WindowSize;
+    repo_id: number;
+    num_events: number;
+}>("counts_live", ["window_size", "repo_id"]);
+
+export const reposRanking = new RankingTable<{
+    window_size: WindowSize;
+    row_number: number;
+    repo_id?: EventKind;
+    rank: number;
+}>("counts_ranking", ["window_size", "row_number"], ["repo_id"]);
+
+export const reposHistory = new Table<{
+    repo_id: number;
+    ts_start: string;
+    ts_end: string;
+    num_events: number;
+}>("counts_live", ["repo_id", "ts_start", "ts_end"]);

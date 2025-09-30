@@ -119,6 +119,12 @@ export class Table<R> {
         }
     }
 
+    isValidView(_view: Map<string, Row<R>>) {
+        // To be overridden in a subclass so that some tables can have extra
+        // constraints that must hold before an event can be emitted.
+        return true;
+    }
+
     newInstance() {
         return new Table(this.name, this.keys);
     }
@@ -205,6 +211,40 @@ export class UpdateTable<K, R> extends Table<K & UpdateRow<R>> {
     }
 }
 
+export class RankingTable<R> extends Table<R> {
+    rankedKey: (keyof R)[];
+
+    constructor(name: string, keys: (keyof R)[], rankedKey: (keyof R)[]) {
+        super(name, keys);
+        this.rankedKey = rankedKey;
+    }
+
+    newInstance() {
+        return new RankingTable(this.name, this.keys, this.rankedKey);
+    }
+
+    isValidView(view: Map<string, Row<R>>) {
+        // In a ranking table, the ranked keys should appear at most once in the
+        // ranking. There can be duplicates for a short period of time, while the
+        // ranking has not yet been updated fully.
+        const seen = new Set<string>();
+        for (const [key, row] of [...view.entries()]) {
+            if (this.rankedKey.some(k => row[k] == null)) {
+                // If the ranking key is `null`, then this row has been removed
+                // from the ranking. We should also remove if from our local view.
+                view.delete(key);
+            } else {
+                const key = groupKey(row, this.rankedKey);
+                if (seen.has(key)) {
+                    return false;
+                }
+                seen.add(key);
+            }
+        }
+        return true;
+    }
+}
+
 export function useTable<R>(table: Table<R>): Row<R>[] | undefined;
 export function useTable<R, T>(
     table: Table<R>,
@@ -254,16 +294,18 @@ export function useTable<R, T>(
                         return false;
                     }
                 }),
-                filter(e => e),
+                filter(e => e && table.isValidView(view)),
                 auditTime(50)
             );
         let snapshot: T;
         const buildSnapshot = () => {
-            const values = table.applyLimiting(view);
-            if (transform) {
-                snapshot = transform(values);
-            } else {
-                snapshot = values as T;
+            if (table.isValidView(view)) {
+                const values = table.applyLimiting(view);
+                if (transform) {
+                    snapshot = transform(values);
+                } else {
+                    snapshot = values as T;
+                }
             }
         };
         // Initial build of snapshot reusing rows that we already know about.
