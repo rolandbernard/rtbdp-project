@@ -44,6 +44,9 @@ public class Producer {
                 .setDefault(4).help("# partitions for Kafka topic");
         parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
                 .setDefault(1).help("replication factor for Kafka topic");
+        // This is the default retention period for Kafka.
+        parser.addArgument("--retention-ms").metavar("MILLIS").type(Long.class)
+                .setDefault(1000L * 60L * 60L * 24L * 7L).help("retention time for the Kafka topics");
         parser.addArgument("--dry-run").action(Arguments.storeTrue()).help("send events to stdout instead of Kafka");
         parser.addArgument("--url").metavar("URL")
                 .setDefault("http://localhost:8889").help("GitHub API URL to poll from");
@@ -67,6 +70,7 @@ public class Producer {
         String topic = cmd.getString("topic");
         int numPartitions = cmd.getInt("num_partitions");
         int replicationFactor = cmd.getInt("replication_factor");
+        long retentionMs = cmd.getInt("retention_ms");
         String url = cmd.getString("url");
         String accessToken = cmd.getString("gh_token");
         boolean dryRun = cmd.getBoolean("dry_run");
@@ -79,7 +83,7 @@ public class Producer {
         KafkaProducer<String, String> kafkaProducer;
         if (!dryRun) {
             // Create & check topic.
-            KafkaUtil.setupTopic(topic, bootstrapServers, numPartitions, replicationFactor);
+            KafkaUtil.setupTopic(topic, bootstrapServers, numPartitions, replicationFactor, retentionMs);
             // Create producer.
             Properties props = new Properties();
             props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);

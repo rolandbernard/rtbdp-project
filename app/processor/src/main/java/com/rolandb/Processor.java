@@ -64,9 +64,14 @@ public class Processor {
         parser.addArgument("--ui-port").metavar("PORT").type(Integer.class).setDefault(8081)
                 .help("enables Flink UI at specified port when running standalone (mini-cluster mode)");
         parser.addArgument("--num-partitions").metavar("PARTITIONS").type(Integer.class)
-                .setDefault(4).help("# partitions for Kafka topic");
+                .setDefault(4).help("# partitions for Kafka topics");
         parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
-                .setDefault(1).help("replication factor for Kafka topic");
+                .setDefault(1).help("replication factor for Kafka topics");
+        // The default retention for these topics is significantly lower than the default
+        // 7 days of Kafka. This is because these topics are mainly only for live updates
+        // in the frontend, and the persistent data is in the PostgreSQL DB.
+        parser.addArgument("--retention-ms").metavar("MILLIS").type(Long.class)
+                .setDefault(1000L * 60L * 15L).help("retention time for the Kafka topics");
         parser.addArgument("--rewind").action(Arguments.storeTrue())
                 .help("whether to (re)process input events from the beginning");
         parser.addArgument("--dry-run").action(Arguments.storeTrue())
@@ -88,6 +93,7 @@ public class Processor {
         int uiPort = cmd.getInt("ui_port");
         int numPartitions = cmd.getInt("num_partitions");
         int replicationFactor = cmd.getInt("replication_factor");
+        long retentionMs = cmd.getInt("retention_ms");
         boolean rewind = cmd.getBoolean("rewind");
         boolean dryRun = cmd.getBoolean("dry_run");
         // Await input Kafka topic.
@@ -161,7 +167,8 @@ public class Processor {
                 .setBootstrapServers(bootstrapServers)
                 .setDryRun(dryRun)
                 .setNumPartitions(numPartitions)
-                .setReplicationFactor(replicationFactor);
+                .setReplicationFactor(replicationFactor)
+                .setRetentionMs(retentionMs);
         // Actually setup table computations.
         builder.build("events", GithubEventsTable.class);
         builder.build("users", UsersTable.class);

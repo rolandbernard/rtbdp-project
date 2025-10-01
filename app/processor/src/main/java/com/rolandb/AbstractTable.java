@@ -62,6 +62,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
         private boolean dryRun = false;
         private int numPartitions = 1;
         private int replicationFactor = 1;
+        private long retentionMs = 604800000;
         private boolean toKafka = true;
 
         public TableBuilder setEnv(StreamExecutionEnvironment env) {
@@ -104,6 +105,11 @@ public abstract class AbstractTable<E extends SequencedRow> {
             return this;
         }
 
+        public TableBuilder setRetentionMs(long retentionMs) {
+            this.retentionMs = retentionMs;
+            return this;
+        }
+
         public <E extends SequencedRow, T extends AbstractTable<E>> T get(String tableName, Class<T> clazz) {
             T instance;
             try {
@@ -120,6 +126,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
             instance.dryRun = this.dryRun;
             instance.numPartitions = this.numPartitions;
             instance.replicationFactor = this.replicationFactor;
+            instance.retentionMs = this.retentionMs;
             instance.toKafka = this.toKafka;
             instance.tableName = tableName;
             return instance;
@@ -141,6 +148,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
     protected boolean dryRun = false;
     protected int numPartitions = 1;
     protected int replicationFactor = 1;
+    protected long retentionMs = 604800000;
     protected boolean toKafka = true;
 
     @SuppressWarnings("unchecked")
@@ -401,7 +409,6 @@ public abstract class AbstractTable<E extends SequencedRow> {
         if (dryRun) {
             rawStream.print().setParallelism(1);
         } else {
-            KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor);
             DataStream<E> committedStream = rawStream
                     .keyBy(row -> "dummyKey")
                     .process(buildJdbcSinkAndContinue())
@@ -411,6 +418,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                     // key by a dummy, so there is no parallelism anyway.
                     .setParallelism(1);
             if (toKafka) {
+                KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor, retentionMs);
                 committedStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
             }
         }

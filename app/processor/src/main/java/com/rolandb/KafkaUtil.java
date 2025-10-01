@@ -6,11 +6,13 @@ import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.config.TopicConfig;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -38,11 +40,14 @@ public class KafkaUtil {
      *            The desired number of partitions
      * @param replicationFactor
      *            The desired replication factor
+     * @param retentionMs
+     *            The desired retention time for teh topic in milliseconds
      * @return true, if the topic was created, false if it already exists
      * @throws ExecutionException
      * @throws InterruptedException
      */
-    public static boolean setupTopic(String topic, String bootstrapServers, int numPartitions, int replicationFactor)
+    public static boolean setupTopic(
+            String topic, String bootstrapServers, int numPartitions, int replicationFactor, long retentionMs)
             throws ExecutionException, InterruptedException {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -51,6 +56,7 @@ public class KafkaUtil {
         try {
             // Try creating the specified topic
             NewTopic t = new NewTopic(topic, numPartitions, (short) replicationFactor);
+            t.configs(Map.of(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(retentionMs)));
             CreateTopicsResult result = client.createTopics(Arrays.asList(t));
             result.all().get();
             created = true;
