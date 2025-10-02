@@ -46,6 +46,12 @@
             <version>${flink.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-test-utils</artifactId>
+            <version>${flink.version}</version>
+            <scope>test</scope>
+        </dependency>
         <!-- Apache Flink RocksDB State Backend -->
         <dependency>
             <groupId>org.apache.flink</groupId>

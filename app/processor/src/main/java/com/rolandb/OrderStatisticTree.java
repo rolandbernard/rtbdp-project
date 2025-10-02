@@ -3,6 +3,7 @@ package com.rolandb;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * This implements an order statistic tree with support for querying elements at
@@ -23,7 +24,11 @@ public class OrderStatisticTree<T extends Comparable<T>> {
         }
 
         private Node<T> start() {
-            return path.get(path.size() - 1);
+            if (path.isEmpty()) {
+                return null;
+            } else {
+                return path.get(path.size() - 1);
+            }
         }
 
         @Override
@@ -34,6 +39,9 @@ public class OrderStatisticTree<T extends Comparable<T>> {
         @Override
         public T next() {
             Node<T> start = start();
+            if (start == null || start == end) {
+                throw new NoSuchElementException("Iterator is empty");
+            }
             T value = start.key;
             if (start.right != null) {
                 // We can go right and then all the way to the left.
