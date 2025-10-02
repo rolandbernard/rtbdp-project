@@ -164,7 +164,7 @@ public class DummyData {
                 throw new IllegalStateException(e);
             }
         }
-        
+
         /**
          * Modify all timestamps such that they are moved forward or backwards in
          * time to lie within one hour before the given target timestamp. This is for
@@ -179,7 +179,7 @@ public class DummyData {
         private static List<JsonNode> modifyTimestamps(List<JsonNode> original, Instant target) {
             long perHour = Duration.ofHours(1).toMillis();
             for (JsonNode event : original) {
-                Instant ts = Instant.parse(event.get("created_at").asText());
+                Instant ts = Instant.parse(event.at("/created_at").asText());
                 if (!ts.isBefore(target)) {
                     long diff = (ts.toEpochMilli() - target.toEpochMilli() + perHour) / perHour;
                     ts = ts.minus(Duration.ofHours(diff));
@@ -217,8 +217,8 @@ public class DummyData {
                 throw new IllegalStateException(e);
             }
             events.sort((a, b) -> {
-                Instant ta = Instant.parse(a.get("created_at").asText());
-                Instant tb = Instant.parse(b.get("created_at").asText());
+                Instant ta = Instant.parse(a.at("/created_at").asText());
+                Instant tb = Instant.parse(b.at("/created_at").asText());
                 return ta.compareTo(tb);
             });
             modifyTimestamps(events, last);
@@ -230,7 +230,7 @@ public class DummyData {
             while (low < high) {
                 int m = (low + high) / 2;
                 JsonNode event = events.get(m);
-                Instant eventTime = Instant.parse(event.get("created_at").asText());
+                Instant eventTime = Instant.parse(event.at("/created_at").asText());
                 if (eventTime.isAfter(time)) {
                     high = m;
                 } else {

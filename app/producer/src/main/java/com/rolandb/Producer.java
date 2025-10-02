@@ -70,7 +70,7 @@ public class Producer {
         String topic = cmd.getString("topic");
         int numPartitions = cmd.getInt("num_partitions");
         int replicationFactor = cmd.getInt("replication_factor");
-        long retentionMs = cmd.getInt("retention_ms");
+        long retentionMs = cmd.getLong("retention_ms");
         String url = cmd.getString("url");
         String accessToken = cmd.getString("gh_token");
         boolean dryRun = cmd.getBoolean("dry_run");

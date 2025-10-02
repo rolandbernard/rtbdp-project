@@ -41,13 +41,13 @@ public class GithubEvent extends SequencedRow {
     @JsonCreator
     public GithubEvent(JsonNode rawEvent) {
         // Steal the sequence number from the raw event.
-        seqNum = rawEvent.get("seq_num").asLong();
-        switch (rawEvent.get("type").asText()) {
+        seqNum = rawEvent.at("/seq_num").asLong();
+        switch (rawEvent.at("/type").asText()) {
             case "CommitCommentEvent":
                 eventType = GithubEventType.COMMIT_COMMENT;
                 break;
             case "CreateEvent":
-                switch (rawEvent.get("payload").get("ref_type").asText()) {
+                switch (rawEvent.at("/payload/ref_type").asText()) {
                     case "branch":
                         eventType = GithubEventType.CREATE_BRANCH;
                         break;
@@ -69,8 +69,8 @@ public class GithubEvent extends SequencedRow {
                 eventType = GithubEventType.WIKI;
                 break;
             case "IssueCommentEvent":
-                if (rawEvent.get("payload").get("action").asText().equals("created")) {
-                    if (rawEvent.get("payload").get("issue").has("pull_request")) {
+                if (rawEvent.at("/payload/action").asText().equals("created")) {
+                    if (rawEvent.at("/payload/issue").has("pull_request")) {
                         eventType = GithubEventType.PULL_COMMENT;
                     } else {
                         eventType = GithubEventType.ISSUE_COMMENT;
@@ -80,7 +80,7 @@ public class GithubEvent extends SequencedRow {
                 }
                 break;
             case "IssuesEvent":
-                switch (rawEvent.get("payload").get("action").asText()) {
+                switch (rawEvent.at("/payload/action").asText()) {
                     case "opened":
                     case "reopened":
                         eventType = GithubEventType.ISSUE_OPEN;
@@ -94,7 +94,7 @@ public class GithubEvent extends SequencedRow {
                 }
                 break;
             case "PullRequestEvent":
-                switch (rawEvent.get("payload").get("action").asText()) {
+                switch (rawEvent.at("/payload/action").asText()) {
                     case "opened":
                     case "reopened":
                         eventType = GithubEventType.PULL_OPEN;
@@ -108,7 +108,7 @@ public class GithubEvent extends SequencedRow {
                 }
                 break;
             case "PullRequestReviewCommentEvent":
-                if (rawEvent.get("payload").get("action").asText().equals("created")) {
+                if (rawEvent.at("/payload/action").asText().equals("created")) {
                     eventType = GithubEventType.PULL_COMMENT;
                 } else {
                     eventType = GithubEventType.OTHER;
@@ -124,8 +124,8 @@ public class GithubEvent extends SequencedRow {
                 eventType = GithubEventType.OTHER;
                 break;
         }
-        createdAt = Instant.parse(rawEvent.get("created_at").asText());
-        userId = rawEvent.get("actor").get("id").asLong();
-        repoId = rawEvent.get("repo").get("id").asLong();
+        createdAt = Instant.parse(rawEvent.at("/created_at").asText());
+        userId = rawEvent.at("/actor/id").asLong();
+        repoId = rawEvent.at("/repo/id").asLong();
     }
 }

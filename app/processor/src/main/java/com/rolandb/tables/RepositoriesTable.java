@@ -67,8 +67,8 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
         }
 
         private static void readFromRepoObject(JsonNode rawRepo, List<RepoUpdateEvent> events) {
-            if (rawRepo != null && rawRepo.isObject() && rawRepo.has("id")) {
-                long id = rawRepo.get("id").asLong();
+            if (rawRepo.isObject() && rawRepo.has("id")) {
+                long id = rawRepo.at("/id").asLong();
                 String reponame = null;
                 String fullname = null;
                 Long ownerId = null;
@@ -84,76 +84,76 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
                 Long issueCount = null;
                 Long starCount = null;
                 if (rawRepo.has("name")) {
-                    reponame = rawRepo.get("name").asText();
+                    reponame = rawRepo.at("/name").asText();
                     if (reponame.contains("/")) {
                         fullname = reponame;
                         reponame = reponame.substring(reponame.indexOf("/") + 1);
                     }
                 }
                 if (rawRepo.has("full_name")) {
-                    fullname = rawRepo.get("full_name").asText();
+                    fullname = rawRepo.at("/full_name").asText();
                 }
                 if (rawRepo.has("owner")) {
-                    ownerId = rawRepo.get("owner").get("id").asLong();
+                    ownerId = rawRepo.at("/owner/id").asLong();
                 }
-                if (rawRepo.has("html_url") && !rawRepo.get("html_url").isNull()) {
-                    htmlUrl = rawRepo.get("html_url").asText();
+                if (rawRepo.at("/html_url").isTextual()) {
+                    htmlUrl = rawRepo.at("/html_url").asText();
                     if (htmlUrl.isEmpty() || htmlUrl.equals("null")) {
                         htmlUrl = null;
                     }
                 }
-                if (rawRepo.has("description") && !rawRepo.get("description").isNull()) {
-                    description = rawRepo.get("description").asText();
+                if (rawRepo.at("/description").isTextual()) {
+                    description = rawRepo.at("/description").asText();
                     if (description.isEmpty() || description.equals("null")) {
                         description = null;
                     }
                 }
                 if (rawRepo.has("fork")) {
-                    isFork = rawRepo.get("fork").asBoolean();
+                    isFork = rawRepo.at("/fork").asBoolean();
                 }
-                if (rawRepo.has("homepage") && !rawRepo.get("homepage").isNull()) {
-                    homepage = rawRepo.get("homepage").asText();
+                if (rawRepo.at("/homepage").isTextual()) {
+                    homepage = rawRepo.at("/homepage").asText();
                     if (homepage.isEmpty() || homepage.equals("null")) {
                         homepage = null;
                     }
                 }
                 if (rawRepo.has("stargazers_count")) {
-                    starCount = rawRepo.get("stargazers_count").asLong();
+                    starCount = rawRepo.at("/stargazers_count").asLong();
                 }
                 if (rawRepo.has("watchers_count")) {
-                    starCount = rawRepo.get("watchers_count").asLong();
+                    starCount = rawRepo.at("/watchers_count").asLong();
                 }
-                if (rawRepo.has("language") && !rawRepo.get("language").isNull()) {
-                    lang = rawRepo.get("language").asText();
+                if (rawRepo.at("/language").isTextual()) {
+                    lang = rawRepo.at("/language").asText();
                     if (lang.isEmpty() || lang.equals("null")) {
                         lang = null;
                     }
                 }
                 if (rawRepo.has("forks_count")) {
-                    forkCount = rawRepo.get("forks_count").asLong();
+                    forkCount = rawRepo.at("/forks_count").asLong();
                 }
                 if (rawRepo.has("archived")) {
-                    isArchive = rawRepo.get("archived").asBoolean();
+                    isArchive = rawRepo.at("/archived").asBoolean();
                 }
                 if (rawRepo.has("open_issues_count")) {
-                    issueCount = rawRepo.get("open_issues_count").asLong();
+                    issueCount = rawRepo.at("/open_issues_count").asLong();
                 }
-                JsonNode rawLicense = rawRepo.get("license");
-                if (rawLicense != null && rawLicense.isObject()) {
-                    license = rawLicense.get("name").asText();
+                JsonNode rawLicense = rawRepo.at("/license");
+                if (rawLicense.isObject()) {
+                    license = rawLicense.at("/name").asText();
                 }
-                JsonNode rawTopics = rawRepo.get("topics");
-                if (rawTopics != null && rawTopics.isArray()) {
+                JsonNode rawTopics = rawRepo.at("/topics");
+                if (rawTopics.isArray()) {
                     topics = rawTopics.valueStream().map(e -> e.asText()).collect(Collectors.joining(" "));
                 }
                 if (rawRepo.has("forks")) {
-                    forkCount = rawRepo.get("forks").asLong();
+                    forkCount = rawRepo.at("/forks").asLong();
                 }
                 if (rawRepo.has("open_issues")) {
-                    issueCount = rawRepo.get("open_issues").asLong();
+                    issueCount = rawRepo.at("/open_issues").asLong();
                 }
                 if (rawRepo.has("watchers")) {
-                    starCount = rawRepo.get("watchers").asLong();
+                    starCount = rawRepo.at("/watchers").asLong();
                 }
                 events.add(new RepoUpdateEvent(
                         id, reponame, fullname, ownerId, htmlUrl, homepage,
@@ -163,15 +163,15 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
         }
 
         private static void readFromBranchObject(JsonNode rawHead, List<RepoUpdateEvent> events) {
-            if (rawHead != null) {
-                readFromRepoObject(rawHead.get("repo"), events);
+            if (rawHead.isObject()) {
+                readFromRepoObject(rawHead.at("/repo"), events);
             }
         }
 
         private static void readFromIssueObject(JsonNode rawIssue, List<RepoUpdateEvent> events) {
-            if (rawIssue != null) {
-                readFromBranchObject(rawIssue.get("head"), events);
-                readFromBranchObject(rawIssue.get("base"), events);
+            if (rawIssue.isObject()) {
+                readFromBranchObject(rawIssue.at("/head"), events);
+                readFromBranchObject(rawIssue.at("/base"), events);
             }
         }
 
@@ -186,12 +186,12 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
          */
         public static List<RepoUpdateEvent> readFromRawEvent(JsonNode rawEvent) {
             List<RepoUpdateEvent> events = new ArrayList<>();
-            readFromRepoObject(rawEvent.get("repo"), events);
-            JsonNode payload = rawEvent.get("payload");
-            if (payload != null) {
-                readFromIssueObject(payload.get("issue"), events);
-                readFromIssueObject(payload.get("pull_request"), events);
-                readFromRepoObject(payload.get("forkee"), events);
+            readFromRepoObject(rawEvent.at("/repo"), events);
+            JsonNode payload = rawEvent.at("/payload");
+            if (payload.isObject()) {
+                readFromIssueObject(payload.at("/issue"), events);
+                readFromIssueObject(payload.at("/pull_request"), events);
+                readFromRepoObject(payload.at("/forkee"), events);
             }
             return events;
         }
@@ -201,7 +201,7 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
     protected DataStream<RepoUpdateEvent> computeTable() {
         return getRawEventStream()
                 .<RepoUpdateEvent>flatMap((rawEvent, out) -> {
-                    long seqNum = rawEvent.get("seq_num").asLong();
+                    long seqNum = rawEvent.at("/seq_num").asLong();
                     for (RepoUpdateEvent event : RepoUpdateEvent.readFromRawEvent(rawEvent)) {
                         event.seqNum = seqNum;
                         out.collect(event);

@@ -67,8 +67,10 @@ public class Processor {
                 .setDefault(4).help("# partitions for Kafka topics");
         parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
                 .setDefault(1).help("replication factor for Kafka topics");
-        // The default retention for these topics is significantly lower than the default
-        // 7 days of Kafka. This is because these topics are mainly only for live updates
+        // The default retention for these topics is significantly lower than the
+        // default
+        // 7 days of Kafka. This is because these topics are mainly only for live
+        // updates
         // in the frontend, and the persistent data is in the PostgreSQL DB.
         parser.addArgument("--retention-ms").metavar("MILLIS").type(Long.class)
                 .setDefault(1000L * 60L * 15L).help("retention time for the Kafka topics");
@@ -93,7 +95,7 @@ public class Processor {
         int uiPort = cmd.getInt("ui_port");
         int numPartitions = cmd.getInt("num_partitions");
         int replicationFactor = cmd.getInt("replication_factor");
-        long retentionMs = cmd.getInt("retention_ms");
+        long retentionMs = cmd.getLong("retention_ms");
         boolean rewind = cmd.getBoolean("rewind");
         boolean dryRun = cmd.getBoolean("dry_run");
         // Await input Kafka topic.
@@ -146,7 +148,7 @@ public class Processor {
                         WatermarkStrategy
                                 .<JsonNode>forBoundedOutOfOrderness(Duration.ofSeconds(10))
                                 .withTimestampAssigner((event, timestamp) -> Instant
-                                        .parse(event.get("created_at").asText())
+                                        .parse(event.at("/created_at").asText())
                                         .toEpochMilli()),
                         "Kafka Source")
                 // We can not use more parallelism for the Kafka source than we have partitions,

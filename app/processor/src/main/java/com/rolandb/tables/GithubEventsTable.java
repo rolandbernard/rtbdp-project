@@ -55,20 +55,20 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
         @JsonCreator
         public DetailedGithubEvent(JsonNode rawEvent) {
             GithubEvent event = new GithubEvent(rawEvent);
-            id = Long.valueOf(rawEvent.get("id").asText());
+            id = Long.valueOf(rawEvent.at("/id").asText());
             createdAt = event.createdAt;
             eventType = event.eventType;
             repoId = event.repoId;
             userId = event.userId;
             seqNum = event.seqNum;
             StringBuilder builder = new StringBuilder();
-            String username = rawEvent.get("actor").get("login").asText();
-            String reponame = rawEvent.get("repo").get("name").asText();
+            String username = rawEvent.at("/actor/login").asText();
+            String reponame = rawEvent.at("/repo/name").asText();
             switch (eventType) {
                 case COMMIT_COMMENT: {
-                    String commentUrl = rawEvent.get("payload").get("comment").get("html_url").asText();
-                    String commitId = rawEvent.get("payload").get("comment").get("commit_id").asText();
-                    JsonNode content = rawEvent.get("payload").get("comment").get("body");
+                    String commentUrl = rawEvent.at("/payload/comment/html_url").asText();
+                    String commitId = rawEvent.at("/payload/comment/commit_id").asText();
+                    JsonNode content = rawEvent.at("/payload/comment/body");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -80,7 +80,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("}{");
                     builder.append(commentUrl.substring(0, commentUrl.indexOf("#")));
                     builder.append("}>.\n");
-                    if (content != null && !content.isNull()) {
+                    if (content.isTextual()) {
                         builder.append("<quote{");
                         builder.append(content.asText());
                         builder.append("}>");
@@ -88,8 +88,8 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case CREATE_BRANCH: {
-                    String branchName = rawEvent.get("payload").get("ref").asText();
-                    JsonNode description = rawEvent.get("payload").get("description");
+                    String branchName = rawEvent.at("/payload/ref").asText();
+                    JsonNode description = rawEvent.at("/payload/description");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -101,7 +101,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("}{");
                     builder.append(repoId);
                     builder.append("}>.");
-                    if (description != null && !description.isNull()) {
+                    if (description.isTextual()) {
                         builder.append("<quote{");
                         builder.append(description.asText());
                         builder.append("}>");
@@ -109,7 +109,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case CREATE_REPO: {
-                    JsonNode description = rawEvent.get("payload").get("description");
+                    JsonNode description = rawEvent.at("/payload/description");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -119,7 +119,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("}{");
                     builder.append(repoId);
                     builder.append("}>.");
-                    if (description != null && !description.isNull()) {
+                    if (description.isTextual()) {
                         builder.append("<quote{");
                         builder.append(description.asText());
                         builder.append("}>");
@@ -127,8 +127,8 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case CREATE_TAG: {
-                    String tagName = rawEvent.get("payload").get("ref").asText();
-                    JsonNode description = rawEvent.get("payload").get("description");
+                    String tagName = rawEvent.at("/payload/ref").asText();
+                    JsonNode description = rawEvent.at("/payload/description");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -140,7 +140,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("}{");
                     builder.append(repoId);
                     builder.append("}>.");
-                    if (description != null && !description.isNull()) {
+                    if (description.isTextual()) {
                         builder.append("<quote{");
                         builder.append(description.asText());
                         builder.append("}>");
@@ -148,8 +148,8 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case FORK: {
-                    String forkeeName = rawEvent.get("payload").get("forkee").get("full_name").asText();
-                    long forkeeId = rawEvent.get("payload").get("forkee").get("id").asLong();
+                    String forkeeName = rawEvent.at("/payload/forkee/full_name").asText();
+                    long forkeeId = rawEvent.at("/payload/forkee/id").asLong();
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -166,8 +166,8 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case ISSUE_CLOSE: {
-                    String issueUrl = rawEvent.get("payload").get("issue").get("html_url").asText();
-                    String title = rawEvent.get("payload").get("issue").get("title").asText();
+                    String issueUrl = rawEvent.at("/payload/issue/html_url").asText();
+                    String title = rawEvent.at("/payload/issue/title").asText();
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -185,9 +185,9 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case ISSUE_COMMENT: {
-                    String issueUrl = rawEvent.get("payload").get("issue").get("html_url").asText();
-                    String commentUrl = rawEvent.get("payload").get("comment").get("html_url").asText();
-                    JsonNode content = rawEvent.get("payload").get("comment").get("body");
+                    String issueUrl = rawEvent.at("/payload/issue/html_url").asText();
+                    String commentUrl = rawEvent.at("/payload/comment/html_url").asText();
+                    JsonNode content = rawEvent.at("/payload/comment/body");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -201,7 +201,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("}{");
                     builder.append(repoId);
                     builder.append("}>.");
-                    if (content != null && !content.isNull()) {
+                    if (content.isTextual()) {
                         builder.append("<quote{");
                         builder.append(content.asText());
                         builder.append("}>");
@@ -209,9 +209,9 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case ISSUE_OPEN: {
-                    String issueUrl = rawEvent.get("payload").get("issue").get("html_url").asText();
-                    String title = rawEvent.get("payload").get("issue").get("title").asText();
-                    JsonNode content = rawEvent.get("payload").get("issue").get("body");
+                    String issueUrl = rawEvent.at("/payload/issue/html_url").asText();
+                    String title = rawEvent.at("/payload/issue/title").asText();
+                    JsonNode content = rawEvent.at("/payload/issue/body");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -225,7 +225,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("}>.");
                     builder.append("<quote{");
                     builder.append(title);
-                    if (content != null && !content.isNull()) {
+                    if (content.isTextual()) {
                         builder.append("\n\n");
                         builder.append(content.asText());
                     }
@@ -233,11 +233,11 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case PULL_CLOSE: {
-                    JsonNode pullRequest = rawEvent.get("payload").get("pull_request");
+                    JsonNode pullRequest = rawEvent.at("/payload/pull_request");
                     String issueUrl = pullRequest.has("html_url")
-                            ? pullRequest.get("html_url").asText()
-                            : apiToHtmlUrl(pullRequest.get("url").asText());
-                    String title = pullRequest.has("title") ? pullRequest.get("title").asText() : "";
+                            ? pullRequest.at("/html_url").asText()
+                            : apiToHtmlUrl(pullRequest.at("/url").asText());
+                    String title = pullRequest.at("/title").asText();
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -256,15 +256,15 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                 }
                 case PULL_COMMENT: {
                     String issueUrl;
-                    if (rawEvent.get("payload").has("issue")) {
-                        issueUrl = rawEvent.get("payload").get("issue").get("html_url").asText();
+                    if (rawEvent.at("/payload").has("issue")) {
+                        issueUrl = rawEvent.at("/payload/issue/html_url").asText();
                     } else {
-                        JsonNode pullRequest = rawEvent.get("payload").get("pull_request");
-                        issueUrl = pullRequest.has("html_url") ? pullRequest.get("html_url").asText()
-                                : apiToHtmlUrl(pullRequest.get("url").asText());
+                        JsonNode pullRequest = rawEvent.at("/payload/pull_request");
+                        issueUrl = pullRequest.has("html_url") ? pullRequest.at("/html_url").asText()
+                                : apiToHtmlUrl(pullRequest.at("/url").asText());
                     }
-                    String commentUrl = rawEvent.get("payload").get("comment").get("html_url").asText();
-                    JsonNode content = rawEvent.get("payload").get("comment").get("body");
+                    String commentUrl = rawEvent.at("/payload/comment/html_url").asText();
+                    JsonNode content = rawEvent.at("/payload/comment/body");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -278,7 +278,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("}{");
                     builder.append(repoId);
                     builder.append("}>.");
-                    if (content != null && !content.isNull()) {
+                    if (content.isTextual()) {
                         builder.append("<quote{");
                         builder.append(content.asText());
                         builder.append("}>");
@@ -286,12 +286,12 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case PULL_OPEN: {
-                    JsonNode pullRequest = rawEvent.get("payload").get("pull_request");
+                    JsonNode pullRequest = rawEvent.at("/payload/pull_request");
                     String issueUrl = pullRequest.has("html_url")
-                            ? pullRequest.get("html_url").asText()
-                            : apiToHtmlUrl(pullRequest.get("url").asText());
-                    String title = pullRequest.has("title") ? pullRequest.get("title").asText() : "";
-                    JsonNode content = pullRequest.get("body");
+                            ? pullRequest.at("/html_url").asText()
+                            : apiToHtmlUrl(pullRequest.at("/url").asText());
+                    String title = pullRequest.at("/title").asText();
+                    JsonNode content = pullRequest.at("/body");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
@@ -305,7 +305,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append("}>.");
                     builder.append("<quote{");
                     builder.append(title);
-                    if (content != null && !content.isNull()) {
+                    if (content.isTextual()) {
                         builder.append("\n\n");
                         builder.append(content.asText());
                     }
@@ -313,10 +313,8 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 case PUSH: {
-                    String branchName = rawEvent.get("payload").get("ref").asText();
-                    long numCommits = rawEvent.get("payload").has("size")
-                            ? rawEvent.get("payload").get("size").asLong()
-                            : 0;
+                    String branchName = rawEvent.at("/payload/ref").asText();
+                    long numCommits = rawEvent.at("/payload/size").asLong();
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");

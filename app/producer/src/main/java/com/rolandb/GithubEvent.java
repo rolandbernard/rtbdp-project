@@ -29,7 +29,7 @@ public class GithubEvent {
     @JsonCreator
     public GithubEvent(JsonNode rawEvent) {
         this.rawEvent = rawEvent;
-        id = rawEvent.get("id").asText();
+        id = rawEvent.at("/id").asText();
     }
 
     /**
