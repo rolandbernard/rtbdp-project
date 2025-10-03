@@ -21,10 +21,8 @@ public class OrderStatisticTreeTests {
     void testAddAndSize() {
         OrderStatisticTree<Integer> tree = new OrderStatisticTree<>();
         assertEquals(0, tree.size());
-
         tree.add(10);
         assertEquals(1, tree.size());
-
         tree.add(20);
         tree.add(5);
         assertEquals(3, tree.size());

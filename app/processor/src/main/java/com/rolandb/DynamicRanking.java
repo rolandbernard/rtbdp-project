@@ -186,21 +186,30 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
         }
     }
 
-    @Override
-    public void onTimer(long timestamp, OnTimerContext ctx, Collector<R> out) throws Exception {
-        // Find all pending changes before the flush timestamp.
+    private Map<I, Tuple<Long, V>> extractChangesToFlush(long timestamp) throws Exception {
         Map<I, Tuple<Long, V>> changes = new HashMap<>();
+        List<Tuple<Long, I>> toRemove = new ArrayList<>();
         for (Entry<Tuple<Long, I>, V> entry : pendingChanges.entries()) {
             I key = entry.getKey().value;
             Long time = entry.getKey().key;
             if (time <= timestamp) {
-                pendingChanges.remove(entry.getKey());
+                toRemove.add(entry.getKey());
                 Tuple<Long, V> old = changes.get(key);
                 if (old == null || old.key < time) {
                     changes.put(key, new Tuple<>(time, entry.getValue()));
                 }
             }
         }
+        for (Tuple<Long, I> t : toRemove) {
+            pendingChanges.remove(t);
+        }
+        return changes;
+    }
+
+    @Override
+    public void onTimer(long timestamp, OnTimerContext ctx, Collector<R> out) throws Exception {
+        // Find all pending changes before the flush timestamp.
+        Map<I, Tuple<Long, V>> changes = extractChangesToFlush(timestamp);
         // Figure out old values from the persistent state, and also update it.
         List<Tuple<I, V>> toAdd = new ArrayList<>();
         List<Tuple<I, V>> toRemove = new ArrayList<>();
@@ -261,6 +270,17 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                 }
                 lastRow = row + (offset > lastOffset ? 1 : 0);
                 lastOffset = offset;
+            }
+            // Move down the rows from the last one two the end of the ranking if there
+            // was some residual offset.
+            if (lastOffset != 0 && lastRow != ranking.size()) {
+                Iterator<Tuple<I, V>> it = ranking.indexIterator(lastRow);
+                for (int rown = lastRow; rown < ranking.size(); rown++) {
+                    assert it.hasNext();
+                    Tuple<I, V> moved = it.next();
+                    int rank = -(ranking.indexOf(new Tuple<>(null, moved.value)) + 1);
+                    out.collect(resultFunction.apply(key, moved.key, moved.value, rown, rank, timestamp));
+                }
             }
             // Clear all row numbers that are no longer used. Rows can become
             // free when an element is removed due to the cutoff.
