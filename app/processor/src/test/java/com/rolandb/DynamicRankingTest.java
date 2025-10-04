@@ -34,23 +34,27 @@ public class DynamicRankingTest {
         Integer key;
         String id;
         Integer value;
-        int rowNumber;
-        int rank;
-        long timestamp;
+        Integer row, rank, maxRank;
+        Integer oldRow, oldRank, oldMaxRank;
 
-        public Result(Integer key, String id, Integer value, int rowNumber, int rank, long timestamp) {
+        public Result(
+                Integer key, String id, Integer value, Integer row, Integer rank, Integer maxRank,
+                Integer oldRow, Integer oldRank, Integer oldMaxRank) {
             this.key = key;
             this.id = id;
             this.value = value;
-            this.rowNumber = rowNumber;
+            this.row = row;
             this.rank = rank;
-            this.timestamp = timestamp;
+            this.maxRank = maxRank;
+            this.oldRow = oldRow;
+            this.oldRank = oldRank;
+            this.oldMaxRank = oldMaxRank;
         }
 
         @Override
         public String toString() {
-            return "Results(" + this.key + ", " + this.id + ", " + this.value + ", " + this.rowNumber + "," + this.rank
-                    + "," + this.timestamp + ")";
+            return "Results(" + this.key + ", " + this.id + ", " + this.value + ", " + this.row + "," + this.oldRow
+                    + ")";
         }
 
         @Override
@@ -60,8 +64,8 @@ public class DynamicRankingTest {
             }
             Result other = (Result) obj;
             return key.equals(other.key) && (id == null ? other.id == null : id.equals(other.id))
-                    && (value == null ? other.value == null : value.equals(other.value)) && rowNumber == other.rowNumber
-                    && rank == other.rank && timestamp == other.timestamp;
+                    && value == other.value && row == other.row && rank == other.rank && maxRank == other.maxRank
+                    && oldRow == other.oldRow && oldRank == other.oldRank && oldMaxRank == other.oldMaxRank;
         }
     }
 
@@ -71,8 +75,9 @@ public class DynamicRankingTest {
     @BeforeEach
     public void setup() throws Exception {
         operator = new DynamicRanking<>(
-                100, Duration.ofMillis(100), event -> event.id, event -> event.value,
-                (key, i, v, row_number, rank, ts) -> new Result(key, i, v, row_number, rank, ts),
+                0, event -> event.id, event -> event.value,
+                (e, k, i, v, row, rank, maxRank, oldRow, oldRank, oldMaxRank) -> new Result(k, i, v, row, rank, maxRank,
+                        oldRow, oldRank, oldMaxRank),
                 String.class, Integer.class);
         harness = ProcessFunctionTestHarnesses.forKeyedProcessFunction(
                 operator, event -> 1, TypeInformation.of(Integer.class));
@@ -85,12 +90,13 @@ public class DynamicRankingTest {
         harness.processWatermark(1000);
         List<Result> output = harness.extractOutputValues();
         Assertions.assertEquals(1, output.size());
-        Assertions.assertEquals(new Result(1, "idA", 150, 0, 0, 200), output.get(0));
+        Assertions.assertEquals(new Result(1, "idA", 150, 0, 0, 0, null, null, null), output.get(0));
     }
 
     @Test
     void testCutoffRemoval() throws Exception {
-        harness.processElement(new StreamRecord<>(new Event("idB", 50), 10));
+        harness.processElement(new StreamRecord<>(new Event("idB", 0), 10));
+        harness.processWatermark(1000);
         List<Result> output = harness.extractOutputValues();
         Assertions.assertEquals(0, output.size());
     }
@@ -169,8 +175,8 @@ public class DynamicRankingTest {
 
     @Test
     void testRandomRankingUpdate() throws Exception {
-        Random rand = new Random();
-        for (int i = 0; i < 100000; i++) {
+        Random rand = new Random(0);
+        for (int i = 0; i <= 100_000; i++) {
             harness.processElement(new StreamRecord<>(new Event("id" + rand.nextInt(16), rand.nextInt(200)), i));
             harness.processWatermark(i);
             if (i % 100 == 0) {
@@ -201,13 +207,53 @@ public class DynamicRankingTest {
 
     @Test
     void testRandomRankingUpdateCount() throws Exception {
-        Random rand = new Random();
+        Random rand = new Random(0);
         int[] counts = new int[16];
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i <= 100_000; i++) {
             int id = rand.nextInt(16);
             harness.processElement(new StreamRecord<>(new Event("id" + id, counts[id]++), i));
             harness.processWatermark(i);
             if (i % 100 == 0) {
+                Result[] output = new Result[16];
+                int len = 0;
+                for (Result r : harness.extractOutputValues()) {
+                    output[r.rowNumber] = r;
+                    if (r.rowNumber > len) {
+                        len = r.rowNumber + 1;
+                    }
+                }
+                Integer lastValue = Integer.MAX_VALUE;
+                long lastRank = 0;
+                for (int j = 0; j < len; j++) {
+                    assertNotNull(output[j]);
+                    if (lastValue == null) {
+                        assertNull(output[j].value);
+                    } else if (output[j].value != null) {
+                        assertTrue(lastValue >= output[j].value);
+                    }
+                    assertTrue(lastRank <= output[j].rank);
+                    lastRank = output[j].rank;
+                    lastValue = output[j].value;
+                }
+            }
+        }
+    }
+
+    @Test
+    void testRandomRankingUpdateCount2() throws Exception {
+        Random rand = new Random(0);
+        int[] counts = new int[16];
+        for (int i = 0; i <= 1_000; i++) {
+            int id = 31 - Integer.numberOfLeadingZeros(rand.nextInt(1 << 16));
+            if (id >= 0) {
+                harness.processElement(new StreamRecord<>(new Event("id" + id, counts[id]++), i * 50));
+            }
+            int id2 = 31 - Integer.numberOfLeadingZeros(rand.nextInt(1 << 16));
+            if (id2 >= 0) {
+                harness.processElement(new StreamRecord<>(new Event("id" + id2, counts[id2]--), i * 50));
+            }
+            harness.processWatermark(i * 50);
+            if (i % 2 == 0) {
                 Result[] output = new Result[16];
                 int len = 0;
                 for (Result r : harness.extractOutputValues()) {

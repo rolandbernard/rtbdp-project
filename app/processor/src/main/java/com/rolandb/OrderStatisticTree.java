@@ -110,7 +110,7 @@ public class OrderStatisticTree<T extends Comparable<T>> {
      *            The element to search for.
      * @return The index of the element or {@code -index - 1} if not found.
      */
-    public int indexOf(T key) {
+    public <N extends Comparable<T>> int indexOf(N key) {
         Node<T> node = root;
         int index = 0;
         while (node != null) {

@@ -80,7 +80,7 @@ public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSp
             // to the totals. In the onTimer for this we will add another timer.
             ctx.timerService().registerEventTimeTimer(bucketEnd);
         } else {
-            // Since this bucket has already been added to the different windows
+            // Since this bucket has already been added to the different windows,
             // add instead a timer for when it gets removed from the first window.
             for (WindowSpec spec : windows) {
                 long size = spec.sizeInMs() / slideMs;
@@ -89,8 +89,8 @@ public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSp
                     return;
                 }
             }
-            // I we get here, can remove now the bucket since there is no more
-            // any window total that needs it for updating. Note that for every
+            // If we get here, we can remove now the bucket since there is no more
+            // window totals that need it to be removed. Note that for every
             // bucket we go through all of the steps, before removing it completely.
             bucketCounts.remove(bucketEnd);
         }

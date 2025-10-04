@@ -1,49 +1,51 @@
 package com.rolandb.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.rolandb.AbstractTable;
+import com.rolandb.AbstractRankingTable;
 import com.rolandb.DynamicRanking;
 import com.rolandb.GithubEventType;
-import com.rolandb.SequencedRow;
+import com.rolandb.AbstractRankingTable.RankingSeqRow;
+import com.rolandb.tables.CountsLiveTable.EventCounts;
 import com.rolandb.tables.CountsLiveTable.WindowSize;
-
-import java.time.Duration;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
-public class CountsRankingTable extends AbstractTable<CountsRankingTable.CountsRank> {
-    public static class CountsRank extends SequencedRow {
-        @JsonProperty("kind")
-        public final GithubEventType eventType;
+public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.CountsRank> {
+    public static class CountsRank extends RankingSeqRow {
         @TableEventKey
         @JsonProperty("window_size")
         public final WindowSize windowSize;
-        @TableEventKey
-        @JsonProperty("row_number")
-        public final int rowNumber;
-        @JsonProperty("rank")
-        public final int rank;
+        @JsonProperty("kind")
+        public final GithubEventType eventType;
+        @JsonProperty("num_events")
+        public final Long numEvents;
 
-        public CountsRank(GithubEventType eventType, WindowSize windowSize, int rowNumber, int rank) {
-            this.eventType = eventType;
+        public CountsRank(
+                WindowSize windowSize, GithubEventType eventType, Long numEvents, Integer rowNumber, Integer rank,
+                Integer maxRank, Integer oldRow, Integer oldRank, Integer oldMaxRank) {
+            super(rowNumber, rank, maxRank, oldRow, oldRank, oldMaxRank);
             this.windowSize = windowSize;
-            this.rowNumber = rowNumber;
-            this.rank = rank;
+            this.eventType = eventType;
+            this.numEvents = numEvents;
         }
     }
 
     @Override
     protected DataStream<CountsRank> computeTable() {
-        return getLiveEventCounts()
+        return this.<DataStream<EventCounts>>getStream("counts_live")
                 .keyBy(e -> e.windowSize.toString())
                 .process(
                         new DynamicRanking<>(
-                                0L, Duration.ofSeconds(1), e -> e.eventType, e -> e.numEvents,
-                                (w, k, v, row, rank, ts) -> {
+                                0L, e -> e.eventType, e -> e.numEvents,
+                                (e, w, k, v, row, rank, maxRank, oldRow, oldRank, oldMaxRank) -> {
                                     // We output a new ranking at discrete timestamps, and only
                                     // output once per timestamp. This means the timestamp could
                                     // be used as a sequence number.
-                                    return new CountsRank(k, WindowSize.fromString(w), row, rank);
+                                    CountsRank event = new CountsRank(
+                                            WindowSize.fromString(w), k, v, row, rank, maxRank,
+                                            oldRow, oldRank, oldMaxRank);
+                                    event.seqNum = e.seqNum;
+                                    return event;
                                 },
                                 GithubEventType.class, Long.class))
                 .setParallelism(4)

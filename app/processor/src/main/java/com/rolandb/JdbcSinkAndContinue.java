@@ -92,7 +92,7 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
                 long timestamp = Instant.now().toEpochMilli() * 1000;
                 Long lastSeq = sequenceNumber.value();
                 if (lastSeq == null || lastSeq < timestamp) {
-                    // Use at least the current timestamp as teh next sequence number.
+                    // Use at least the current timestamp as the next sequence number.
                     // This ensures that in case of a crash, the new events will
                     // override the old events, avoiding issues where sequence numbers
                     // are assigned in a different order for the retry.

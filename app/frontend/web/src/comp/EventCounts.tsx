@@ -1,19 +1,22 @@
+import { useMemo } from "react";
 import { useTable } from "../api/client";
 import { countsLive } from "../api/tables";
 import { groupBy, sort } from "../api/util";
 
 export default function EventCounts() {
-    const result =
-        useTable(countsLive, o =>
+    const rawResult = useTable(countsLive);
+    const result = useMemo(
+        () =>
             sort(
-                groupBy(o, "kind").map(rs =>
+                groupBy(rawResult, "kind").map(rs =>
                     sort(rs, [
                         e => ["5m", "1h", "6h", "24h"].indexOf(e.window_size),
                     ])
                 ),
                 [e => -e[0]!.num_events]
-            )
-        ) ?? [];
+            ),
+        [rawResult]
+    );
     return (
         <table className="mx-3">
             <thead>

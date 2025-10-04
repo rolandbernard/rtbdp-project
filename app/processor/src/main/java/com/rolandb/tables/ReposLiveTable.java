@@ -2,8 +2,12 @@ package com.rolandb.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rolandb.AbstractTable;
+import com.rolandb.MultiSlidingBuckets;
 import com.rolandb.SequencedRow;
 import com.rolandb.tables.CountsLiveTable.WindowSize;
+
+import java.time.Duration;
+import java.util.List;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
@@ -27,7 +31,18 @@ public class ReposLiveTable extends AbstractTable<ReposLiveTable.RepoEventCounts
 
     @Override
     protected DataStream<RepoEventCounts> computeTable() {
-        return getLivePreRepoCounts();
+        return getEventsByRepoStream()
+                .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
+                        List.of(
+                                WindowSize.MINUTES_5,
+                                WindowSize.HOURS_1,
+                                WindowSize.HOURS_6,
+                                WindowSize.HOURS_24),
+                        (windowStart, windowEnd, key, winSpec, count) -> {
+                            return new RepoEventCounts(key, winSpec, count);
+                        }))
+                .returns(RepoEventCounts.class)
+                .name("Live per Repo Counts");
     }
 
     @Override

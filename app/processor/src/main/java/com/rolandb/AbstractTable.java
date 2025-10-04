@@ -12,7 +12,6 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -31,9 +30,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.rolandb.tables.CountsLiveTable.EventCounts;
-import com.rolandb.tables.CountsLiveTable.WindowSize;
-import com.rolandb.tables.ReposLiveTable.RepoEventCounts;
 
 /**
  * This class contains the basic logic for writing a computed table to both a
@@ -63,7 +59,6 @@ public abstract class AbstractTable<E extends SequencedRow> {
         private int numPartitions = 1;
         private int replicationFactor = 1;
         private long retentionMs = 604800000;
-        private boolean toKafka = true;
 
         public TableBuilder setEnv(StreamExecutionEnvironment env) {
             this.env = env;
@@ -87,11 +82,6 @@ public abstract class AbstractTable<E extends SequencedRow> {
 
         public TableBuilder setDryRun(boolean dryRun) {
             this.dryRun = dryRun;
-            return this;
-        }
-
-        public TableBuilder setToKafka(boolean toKafka) {
-            this.toKafka = toKafka;
             return this;
         }
 
@@ -127,7 +117,6 @@ public abstract class AbstractTable<E extends SequencedRow> {
             instance.numPartitions = this.numPartitions;
             instance.replicationFactor = this.replicationFactor;
             instance.retentionMs = this.retentionMs;
-            instance.toKafka = this.toKafka;
             instance.tableName = tableName;
             return instance;
         }
@@ -149,7 +138,6 @@ public abstract class AbstractTable<E extends SequencedRow> {
     protected int numPartitions = 1;
     protected int replicationFactor = 1;
     protected long retentionMs = 604800000;
-    protected boolean toKafka = true;
 
     @SuppressWarnings("unchecked")
     protected <T> T getStream(String name) {
@@ -220,44 +208,6 @@ public abstract class AbstractTable<E extends SequencedRow> {
     protected KeyedStream<GithubEvent, Long> getEventsByRepoStream() {
         return getStream("eventsByRepo", () -> {
             return getEventStream().keyBy(event -> event.repoId);
-        });
-    }
-
-    protected DataStream<EventCounts> getLiveEventCounts() {
-        return getStream("eventsLive", () -> {
-            return getEventsByTypeStream()
-                    .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
-                            List.of(
-                                    WindowSize.MINUTES_5,
-                                    WindowSize.HOURS_1,
-                                    WindowSize.HOURS_6,
-                                    WindowSize.HOURS_24),
-                            (windowStart, windowEnd, key, winSpec, count) -> {
-                                // The combination of windowStart and count could act as
-                                // a sequence number, since we always want to override
-                                // older windowStart with newer onces, and always want
-                                // the latest (highest) count for that window.
-                                return new EventCounts(GithubEventType.fromString(key), winSpec, count);
-                            }))
-                    .returns(EventCounts.class)
-                    .name("Live Event Counts");
-        });
-    }
-
-    protected DataStream<RepoEventCounts> getLivePreRepoCounts() {
-        return getStream("reposLive", () -> {
-            return getEventsByRepoStream()
-                    .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
-                            List.of(
-                                    WindowSize.MINUTES_5,
-                                    WindowSize.HOURS_1,
-                                    WindowSize.HOURS_6,
-                                    WindowSize.HOURS_24),
-                            (windowStart, windowEnd, key, winSpec, count) -> {
-                                return new RepoEventCounts(key, winSpec, count);
-                            }))
-                    .returns(RepoEventCounts.class)
-                    .name("Live per Repo Counts");
         });
     }
 
@@ -402,6 +352,22 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .build();
     }
 
+    protected DataStream<E> sinkToPostgres(DataStream<E> stream) {
+        return stream
+                .keyBy(row -> "dummyKey")
+                .process(buildJdbcSinkAndContinue())
+                .returns(getOutputType())
+                .name("PostgreSQL Sink")
+                // One writer per-table/topic should be sufficient. Also, we
+                // key by a dummy, so there is no parallelism anyway.
+                .setParallelism(1);
+    }
+
+    protected void sinkToKafka(DataStream<E> stream) throws ExecutionException, InterruptedException {
+        KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor, retentionMs);
+        stream.sinkTo(buildKafkaSink()).name("Kafka Sink");
+    }
+
     public void build() throws ExecutionException, InterruptedException {
         // We partition here by key so that all rows for the same key are
         // handled by the same subtask, ensuring timestamps are monotonic.
@@ -409,18 +375,9 @@ public abstract class AbstractTable<E extends SequencedRow> {
         if (dryRun) {
             rawStream.print().setParallelism(1);
         } else {
-            DataStream<E> committedStream = rawStream
-                    .keyBy(row -> "dummyKey")
-                    .process(buildJdbcSinkAndContinue())
-                    .returns(getOutputType())
-                    .name("PostgreSQL Sink")
-                    // One writer per-table/topic should be sufficient. Also, we
-                    // key by a dummy, so there is no parallelism anyway.
-                    .setParallelism(1);
-            if (toKafka) {
-                KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor, retentionMs);
-                committedStream.sinkTo(buildKafkaSink()).name("Kafka Sink");
-            }
+            DataStream<E> committedStream = sinkToPostgres(rawStream);
+            streams.put(tableName, committedStream);
+            sinkToKafka(committedStream);
         }
     }
 }

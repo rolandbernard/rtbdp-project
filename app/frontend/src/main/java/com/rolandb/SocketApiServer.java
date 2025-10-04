@@ -289,6 +289,26 @@ public class SocketApiServer extends WebSocketServer {
         }
     }
 
+    /**
+     * Send a replay completion event for the given table and replay id to the given
+     * WebSocket. These events are useful for the client to know when a replay has
+     * completed.
+     *
+     * @param socket
+     *            The socket to send to.
+     * @param table
+     *            The table to send a row for.
+     * @param id
+     *            The id of the replay that was finished.
+     */
+    private void sendReplayComplete(WebSocket socket, String table, long id) {
+        try {
+            socket.send(objectMapper.writeValueAsString(Map.of("table", table, "replayed", Long.valueOf(id))));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize replay completion", e);
+        }
+    }
+
     @Override
     public void onMessage(WebSocket socket, String messageString) {
         try {
@@ -317,6 +337,9 @@ public class SocketApiServer extends WebSocketServer {
                             .subscribeOn(rxScheduler)
                             .doOnError(error -> {
                                 LOGGER.error("Error in table replay", error);
+                            })
+                            .doOnComplete(() -> {
+                                sendReplayComplete(socket, table.name, replay.id);
                             })
                             .subscribe(row -> {
                                 sendRow(socket, table.name, row);

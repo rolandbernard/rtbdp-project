@@ -116,14 +116,23 @@ CREATE TABLE counts_live (
     PRIMARY KEY (window_size, kind)
 );
 
-CREATE TABLE counts_ranking (
-    window_size window_size NOT NULL,
-    row_number INT NOT NULL,
-    kind event_kind,
-    rank INT NOT NULL,
-    seq_num BIGINT NOT NULL,
-    PRIMARY KEY (window_size, row_number)
-);
+-- This index helps slightly with the performance of the ranking view.
+CREATE INDEX ON counts_live(window_size, num_events DESC, kind ASC);
+
+-- This is a virtual view that also contains row numbers and ranks. Unfortunately,
+-- PostgreSQL does not currently have any index structures to make this more efficient.
+-- Since it is only used for initializing the view in the client, this is fine for now.
+CREATE VIEW counts_ranking AS
+SELECT window_size, kind, num_events,
+        MAX(seq_num) OVER (PARTITION BY window_size) as seq_num,
+        ROW_NUMBER() OVER (
+            PARTITION BY window_size ORDER BY num_events DESC, kind ASC
+        ) - 1 AS row_number,
+        RANK() OVER (
+            PARTITION BY window_size ORDER BY num_events DESC
+        ) - 1 AS rank
+    FROM counts_live
+    WHERE num_events > 0;
 
 CREATE TABLE counts_history (
     kind event_kind NOT NULL,
@@ -157,14 +166,21 @@ CREATE TABLE repos_live (
     PRIMARY KEY (window_size, repo_id)
 );
 
-CREATE TABLE repos_ranking (
-    window_size window_size NOT NULL,
-    row_number INT NOT NULL,
-    repo_id BIGINT,
-    rank INT NOT NULL,
-    seq_num BIGINT NOT NULL,
-    PRIMARY KEY (window_size, row_number)
-);
+-- This index helps slightly with the performance of the ranking view.
+CREATE INDEX ON repos_live(window_size, num_events DESC, repo_id ASC);
+
+-- This is a virtual view that also contains row numbers and ranks.
+CREATE VIEW repos_ranking AS
+SELECT window_size, repo_id, num_events,
+        MAX(seq_num) OVER (PARTITION BY window_size) as seq_num,
+        ROW_NUMBER() OVER (
+            PARTITION BY window_size ORDER BY num_events DESC, repo_id ASC
+        ) - 1 AS row_number,
+        RANK() OVER (
+            PARTITION BY window_size ORDER BY num_events DESC
+        ) - 1 AS rank
+    FROM repos_live
+    WHERE num_events > 0;
 
 CREATE TABLE repos_history (
     repo_id BIGINT NOT NULL,

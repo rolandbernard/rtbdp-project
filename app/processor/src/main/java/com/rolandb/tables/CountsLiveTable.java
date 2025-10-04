@@ -4,10 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.rolandb.AbstractTable;
 import com.rolandb.GithubEventType;
+import com.rolandb.MultiSlidingBuckets;
 import com.rolandb.SequencedRow;
 import com.rolandb.MultiSlidingBuckets.WindowSpec;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
@@ -66,7 +68,22 @@ public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> 
 
     @Override
     protected DataStream<EventCounts> computeTable() {
-        return getLiveEventCounts();
+        return getEventsByTypeStream()
+                .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
+                        List.of(
+                                WindowSize.MINUTES_5,
+                                WindowSize.HOURS_1,
+                                WindowSize.HOURS_6,
+                                WindowSize.HOURS_24),
+                        (windowStart, windowEnd, key, winSpec, count) -> {
+                            // The combination of windowStart and count could act as
+                            // a sequence number, since we always want to override
+                            // older windowStart with newer onces, and always want
+                            // the latest (highest) count for that window.
+                            return new EventCounts(GithubEventType.fromString(key), winSpec, count);
+                        }))
+                .returns(EventCounts.class)
+                .name("Live Event Counts");
     }
 
     @Override

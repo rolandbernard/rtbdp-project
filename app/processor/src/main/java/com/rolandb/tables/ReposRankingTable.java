@@ -1,45 +1,47 @@
 package com.rolandb.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.rolandb.AbstractTable;
+import com.rolandb.AbstractRankingTable;
+import com.rolandb.AbstractRankingTable.RankingSeqRow;
 import com.rolandb.DynamicRanking;
-import com.rolandb.SequencedRow;
 import com.rolandb.tables.CountsLiveTable.WindowSize;
-
-import java.time.Duration;
+import com.rolandb.tables.ReposLiveTable.RepoEventCounts;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
-public class ReposRankingTable extends AbstractTable<ReposRankingTable.RepoCountsRank> {
-    public static class RepoCountsRank extends SequencedRow {
-        @JsonProperty("repo_id")
-        public final long repoId;
+public class ReposRankingTable extends AbstractRankingTable<ReposRankingTable.RepoCountsRank> {
+    public static class RepoCountsRank extends RankingSeqRow {
         @TableEventKey
         @JsonProperty("window_size")
         public final WindowSize windowSize;
-        @TableEventKey
-        @JsonProperty("row_number")
-        public final int rowNumber;
-        @JsonProperty("rank")
-        public final int rank;
+        @JsonProperty("repo_id")
+        public final long repoId;
+        @JsonProperty("num_events")
+        public final Long numEvents;
 
-        public RepoCountsRank(long repoId, WindowSize windowSize, int rowNumber, int rank) {
-            this.repoId = repoId;
+        public RepoCountsRank(
+                WindowSize windowSize, long repoId, Long numEvents, Integer rowNumber, Integer rank,
+                Integer maxRank, Integer oldRow, Integer oldRank, Integer oldMaxRank) {
+            super(rowNumber, rank, maxRank, oldRow, oldRank, oldMaxRank);
             this.windowSize = windowSize;
-            this.rowNumber = rowNumber;
-            this.rank = rank;
+            this.repoId = repoId;
+            this.numEvents = numEvents;
         }
     }
 
     @Override
     protected DataStream<RepoCountsRank> computeTable() {
-        return getLivePreRepoCounts()
+        return this.<DataStream<RepoEventCounts>>getStream("repos_live")
                 .keyBy(e -> e.windowSize.toString())
                 .process(
                         new DynamicRanking<>(
-                                0L, Duration.ofSeconds(1), e -> e.repoId, e -> e.numEvents,
-                                (w, k, v, row, rank, ts) -> {
-                                    return new RepoCountsRank(k, WindowSize.fromString(w), row, rank);
+                                0L, e -> e.repoId, e -> e.numEvents,
+                                (e, w, k, v, row, rank, maxRank, oldRow, oldRank, oldMaxRank) -> {
+                                    RepoCountsRank event = new RepoCountsRank(
+                                            WindowSize.fromString(w), k, v, row, rank, maxRank,
+                                            oldRow, oldRank, oldMaxRank);
+                                    event.seqNum = e.seqNum;
+                                    return event;
                                 },
                                 Long.class, Long.class))
                 .setParallelism(4)

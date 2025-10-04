@@ -1,4 +1,4 @@
-import { webSocket } from "rxjs/webSocket";
+import { webSocket, WebSocketSubject } from "rxjs/webSocket";
 import { auditTime, filter, map, retry } from "rxjs/operators";
 import { useMemo, useRef, useSyncExternalStore } from "react";
 import { groupKey, sort } from "./util";
@@ -15,10 +15,16 @@ type RowFilter<R> = { [P in keyof R]?: Filter<R[P]> };
 type Filters<R> = RowFilter<R>[];
 type Row<R> = R & { seq_num: number };
 
-type ServerMessage<R> = {
+type RowMessage<R> = {
     table: string;
     row: Row<R>;
 };
+type ReplayMessage = {
+    table: string;
+    replayed: number;
+};
+
+type ServerMessage<R> = ReplayMessage | RowMessage<R>;
 
 // The complete API runs over this WebSocket.
 const socketConnection = webSocket<ServerMessage<unknown>>(
@@ -87,7 +93,7 @@ export class Table<R> {
         }
     }
 
-    acceptsMessage(message: ServerMessage<R>) {
+    acceptsMessage(message: RowMessage<R>) {
         return message.table == this.name && this.acceptsRow(message.row);
     }
 
@@ -245,17 +251,7 @@ export class RankingTable<R> extends Table<R> {
     }
 }
 
-export function useTable<R>(table: Table<R>): Row<R>[] | undefined;
-export function useTable<R, T>(
-    table: Table<R>,
-    transform: (o: Row<R>[]) => T,
-    deps?: unknown[]
-): T | undefined;
-export function useTable<R, T>(
-    table: Table<R>,
-    transform?: (o: Row<R>[]) => T,
-    deps: unknown[] = []
-): T | undefined {
+export function useTable<R>(table: Table<R>): Row<R>[] {
     const viewRef = useRef(new Map<string, Row<R>>());
     const [subscribe, snapshot] = useMemo(() => {
         const view = viewRef.current;
@@ -271,25 +267,32 @@ export function useTable<R, T>(
             filters: table.filters,
             limit: table.limited,
         };
-        const events = socketConnection
+        const events = (socketConnection as WebSocketSubject<ServerMessage<R>>)
             .multiplex(
                 () => ({
                     subscribe: [subscription],
                     replay: [subscription],
                 }),
                 () => ({ unsubscribe: [subscriptionId] }),
-                message => table.acceptsMessage(message as ServerMessage<R>)
+                message =>
+                    "row" in message
+                        ? table.acceptsMessage(message)
+                        : message.replayed == subscriptionId
             )
             .pipe(
                 retry({ delay: 1000 }),
                 map(message => {
-                    const newRow = message.row as Row<R>;
-                    const rowKey = groupKey(newRow, table.keys);
-                    const oldRow = view.get(rowKey);
-                    const row = table.mergeRows(newRow, oldRow);
-                    if (row !== oldRow) {
-                        view.set(rowKey, row);
-                        return true;
+                    if ("row" in message) {
+                        const newRow = message.row;
+                        const rowKey = groupKey(newRow, table.keys);
+                        const oldRow = view.get(rowKey);
+                        const row = table.mergeRows(newRow, oldRow);
+                        if (row !== oldRow) {
+                            view.set(rowKey, row);
+                            return true;
+                        } else {
+                            return false;
+                        }
                     } else {
                         return false;
                     }
@@ -297,15 +300,10 @@ export function useTable<R, T>(
                 filter(e => e && table.isValidView(view)),
                 auditTime(50)
             );
-        let snapshot: T;
+        let snapshot: Row<R>[] = [];
         const buildSnapshot = () => {
             if (table.isValidView(view)) {
-                const values = table.applyLimiting(view);
-                if (transform) {
-                    snapshot = transform(values);
-                } else {
-                    snapshot = values as T;
-                }
+                snapshot = table.applyLimiting(view);
             }
         };
         // Initial build of snapshot reusing rows that we already know about.
@@ -322,6 +320,6 @@ export function useTable<R, T>(
         ];
         // Must be dynamic, since it is based on the filter we apply.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [...table.deps, ...deps]);
+    }, [...table.deps]);
     return useSyncExternalStore(subscribe, snapshot);
 }
