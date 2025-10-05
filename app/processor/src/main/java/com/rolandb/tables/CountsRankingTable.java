@@ -12,6 +12,9 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 
 public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.CountsRank> {
     public static class CountsRank extends RankingSeqRow {
+        // We put only the window size as the key, so that we put all for the same
+        // ranking into the same Kafka partition, ensuring in-order delivery to the
+        // frontend client.
         @TableEventKey
         @JsonProperty("window_size")
         public final WindowSize windowSize;
@@ -38,12 +41,12 @@ public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.
                         new DynamicRanking<>(
                                 0L, e -> e.eventType, e -> e.numEvents,
                                 (e, w, k, v, row, rank, maxRank, oldRow, oldRank, oldMaxRank) -> {
-                                    // We output a new ranking at discrete timestamps, and only
-                                    // output once per timestamp. This means the timestamp could
-                                    // be used as a sequence number.
                                     CountsRank event = new CountsRank(
                                             WindowSize.fromString(w), k, v, row, rank, maxRank,
                                             oldRow, oldRank, oldMaxRank);
+                                    // We should use these as sequence numbers, so that the client
+                                    // can compare the once from the PostgreSQL view to know whether
+                                    // these are already accounted for.
                                     event.seqNum = e.seqNum;
                                     return event;
                                 },

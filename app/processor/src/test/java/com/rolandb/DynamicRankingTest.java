@@ -5,9 +5,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -30,7 +30,7 @@ public class DynamicRankingTest {
         }
     }
 
-    static class Result {
+    static class Result implements Cloneable {
         Integer key;
         String id;
         Integer value;
@@ -53,7 +53,8 @@ public class DynamicRankingTest {
 
         @Override
         public String toString() {
-            return "Results(" + this.key + ", " + this.id + ", " + this.value + ", " + this.row + "," + this.oldRow
+            return "Results(" + this.key + ", " + this.id + ", " + this.value + ", " + this.oldRow + "->" + this.row
+                    + ", " + this.oldRank + "->" + this.rank + ", " + this.oldMaxRank + "->" + this.maxRank
                     + ")";
         }
 
@@ -63,9 +64,95 @@ public class DynamicRankingTest {
                 return false;
             }
             Result other = (Result) obj;
-            return key.equals(other.key) && (id == null ? other.id == null : id.equals(other.id))
-                    && value == other.value && row == other.row && rank == other.rank && maxRank == other.maxRank
-                    && oldRow == other.oldRow && oldRank == other.oldRank && oldMaxRank == other.oldMaxRank;
+            return key.equals(other.key) && Objects.equals(id, other.id)
+                    && Objects.equals(value, other.value) && Objects.equals(row, other.row)
+                    && Objects.equals(rank, other.rank) && Objects.equals(maxRank, other.maxRank)
+                    && Objects.equals(oldRow, other.oldRow) && Objects.equals(oldRank, other.oldRank)
+                    && Objects.equals(oldMaxRank, other.oldMaxRank);
+        }
+
+        @Override
+        public Result clone() {
+            return new Result(key, id, value, row, rank, maxRank, oldRow, oldRank, oldMaxRank);
+        }
+    }
+
+    private static void updateRanking(Result[] ranking, Result event) {
+        if (event.oldRow != null) {
+            // Remove from old row.
+            for (int i = event.oldMaxRank; i < ranking.length; i++) {
+                if (ranking[i] != null) {
+                    ranking[i].rank -= 1;
+                }
+            }
+            for (int i = event.oldRank; i < ranking.length; i++) {
+                if (ranking[i] != null) {
+                    ranking[i].maxRank -= 1;
+                }
+            }
+            for (int i = event.oldRow + 1; i < ranking.length; i++) {
+                if (ranking[i] != null) {
+                    ranking[i].row -= 1;
+                }
+            }
+            System.arraycopy(ranking, event.oldRow + 1, ranking, event.oldRow, ranking.length - event.oldRow - 1);
+            ranking[ranking.length - 1] = null;
+        }
+        if (event.row != null) {
+            // Insert at new row.
+            System.arraycopy(ranking, event.row, ranking, event.row + 1, ranking.length - event.row - 1);
+            ranking[event.row] = event.clone();
+            for (int i = event.maxRank; i < ranking.length; i++) {
+                if (ranking[i] != null) {
+                    ranking[i].rank += 1;
+                }
+            }
+            for (int i = event.rank; i < ranking.length; i++) {
+                if (ranking[i] != null && i != event.row) {
+                    ranking[i].maxRank += 1;
+                }
+            }
+            for (int i = event.row + 1; i < ranking.length; i++) {
+                if (ranking[i] != null) {
+                    ranking[i].row += 1;
+                }
+            }
+        }
+    }
+
+    private static Result[] reconstructRanking(List<Result> events, int maxN) {
+        Result[] ranking = new Result[maxN];
+        for (Result event : events) {
+            updateRanking(ranking, event);
+        }
+        return ranking;
+    }
+
+    private static void sanityCheckRanking(Result[] ranking) {
+        int len = 0;
+        for (int i = 0; i < ranking.length; i++) {
+            if (ranking[i] != null) {
+                len = i + 1;
+            }
+        }
+        Integer lastValue = Integer.MAX_VALUE;
+        long lastRank = -1;
+        for (int j = 0; j < len; j++) {
+            assertNotNull(ranking[j]);
+            assertEquals(j, (int) ranking[j].row);
+            assertTrue(ranking[j].rank <= ranking[j].row);
+            assertTrue(ranking[j].row < ranking[j].maxRank);
+            if (lastValue == null) {
+                assertNull(ranking[j].value);
+            } else if (ranking[j].value != null) {
+                assertTrue(lastValue >= ranking[j].value);
+            }
+            assertTrue(lastRank <= ranking[j].rank);
+            if (lastRank == ranking[j].rank) {
+                assertEquals(lastValue, ranking[j].value);
+            }
+            lastRank = ranking[j].rank;
+            lastValue = ranking[j].value;
         }
     }
 
@@ -87,16 +174,14 @@ public class DynamicRankingTest {
     @Test
     void testBasicProcessAndFlush() throws Exception {
         harness.processElement(new StreamRecord<>(new Event("idA", 150), 110));
-        harness.processWatermark(1000);
         List<Result> output = harness.extractOutputValues();
         Assertions.assertEquals(1, output.size());
-        Assertions.assertEquals(new Result(1, "idA", 150, 0, 0, 0, null, null, null), output.get(0));
+        Assertions.assertEquals(new Result(1, "idA", 150, 0, 0, 1, null, null, null), output.get(0));
     }
 
     @Test
     void testCutoffRemoval() throws Exception {
         harness.processElement(new StreamRecord<>(new Event("idB", 0), 10));
-        harness.processWatermark(1000);
         List<Result> output = harness.extractOutputValues();
         Assertions.assertEquals(0, output.size());
     }
@@ -104,32 +189,27 @@ public class DynamicRankingTest {
     @Test
     void testRankingUpdate() throws Exception {
         harness.processElement(new StreamRecord<>(new Event("idA", 150), 10));
-        harness.processWatermark(110);
         List<Result> output1 = harness.extractOutputValues();
         Assertions.assertEquals(1, output1.size());
-        Assertions.assertEquals(new Result(1, "idA", 150, 0, 0, 100), output1.get(0));
+        Assertions.assertEquals(new Result(1, "idA", 150, 0, 0, 1, null, null, null), output1.get(0));
         harness.processElement(new StreamRecord<>(new Event("idB", 200), 150));
-        harness.processWatermark(210);
         List<Result> output2 = harness.extractOutputValues();
-        Assertions.assertEquals(3, output2.size());
-        Assertions.assertTrue(output2.contains(new Result(1, "idB", 200, 0, 0, 200)));
-        Assertions.assertTrue(output2.contains(new Result(1, "idA", 150, 1, 1, 200)));
+        Assertions.assertEquals(2, output2.size());
+        Assertions.assertTrue(output2.contains(new Result(1, "idB", 200, 0, 0, 1, null, null, null)));
     }
 
     @Test
     void testValueUpdateAndReRanking() throws Exception {
         harness.processElement(new StreamRecord<>(new Event("idA", 150), 50));
-        harness.processWatermark(100);
         List<Result> output1 = harness.extractOutputValues();
         Assertions.assertEquals(1, output1.size());
-        Assertions.assertEquals(new Result(1, "idA", 150, 0, 0, 100), output1.get(0));
+        Assertions.assertEquals(new Result(1, "idA", 150, 0, 0, 1, null, null, null), output1.get(0));
         harness.processElement(new StreamRecord<>(new Event("idB", 200), 110));
         harness.processElement(new StreamRecord<>(new Event("idA", 250), 150));
-        harness.processWatermark(200);
         List<Result> output2 = harness.extractOutputValues();
         Assertions.assertEquals(3, output2.size());
-        Assertions.assertTrue(output2.contains(new Result(1, "idA", 250, 0, 0, 200L)));
-        Assertions.assertTrue(output2.contains(new Result(1, "idB", 200, 1, 1, 200L)));
+        Assertions.assertTrue(output2.contains(new Result(1, "idB", 200, 0, 0, 1, null, null, null)));
+        Assertions.assertTrue(output2.contains(new Result(1, "idA", 250, 0, 0, 1, 1, 1, 2)));
     }
 
     @Test
@@ -137,15 +217,13 @@ public class DynamicRankingTest {
         for (int i = 0; i < 10; i++) {
             harness.processElement(new StreamRecord<>(new Event("id" + i, 150 + i), 50));
         }
-        harness.processWatermark(100);
         List<Result> output = harness.extractOutputValues();
         Assertions.assertEquals(10, output.size());
         output.sort(Comparator.comparingInt(e -> -e.value));
-        long lastRank = 0;
         for (int i = 0; i < output.size(); i++) {
-            assertEquals(i, output.get(i).rowNumber);
-            assertTrue(lastRank <= output.get(i).rank);
-            lastRank = output.get(i).rank;
+            assertEquals(0, (int) output.get(i).row);
+            assertEquals(0, (int) output.get(i).rank);
+            assertEquals(1, (int) output.get(i).maxRank);
         }
     }
 
@@ -154,22 +232,28 @@ public class DynamicRankingTest {
         for (int i = 0; i < 10; i++) {
             harness.processElement(new StreamRecord<>(new Event("id" + i, 150 + i), 50));
         }
-        harness.processWatermark(100);
         Assertions.assertEquals(10, harness.extractOutputValues().size());
         for (int i = 9; i >= 0; i--) {
             harness.processElement(new StreamRecord<>(new Event("id" + i, 150 - i), 150));
         }
-        harness.processWatermark(200);
-        Result[] output = new Result[10];
-        for (Result r : harness.extractOutputValues()) {
-            output[r.rowNumber] = r;
-        }
-        long lastRank = 0;
+        Result[] output = reconstructRanking(harness.extractOutputValues(), 10);
+        sanityCheckRanking(output);
         for (int i = 0; i < output.length; i++) {
-            assertNotNull(output[i]);
             assertEquals(150 - i, (int) output[i].value);
-            assertTrue(lastRank <= output[i].rank);
-            lastRank = output[i].rank;
+        }
+    }
+
+    @Test
+    void testRandomRankingUpdate0() throws Exception {
+        Random rand = new Random(0);
+        int lastN = 0;
+        Result[] output = new Result[16];
+        for (int i = 0; i <= 1_000; i++) {
+            harness.processElement(new StreamRecord<>(new Event("id" + rand.nextInt(16), rand.nextInt(200)), i));
+            List<Result> events = harness.extractOutputValues();
+            events.stream().skip(lastN).forEach(event -> updateRanking(output, event));
+            lastN = events.size();
+            sanityCheckRanking(output);
         }
     }
 
@@ -178,29 +262,9 @@ public class DynamicRankingTest {
         Random rand = new Random(0);
         for (int i = 0; i <= 100_000; i++) {
             harness.processElement(new StreamRecord<>(new Event("id" + rand.nextInt(16), rand.nextInt(200)), i));
-            harness.processWatermark(i);
             if (i % 100 == 0) {
-                Result[] output = new Result[16];
-                int len = 0;
-                for (Result r : harness.extractOutputValues()) {
-                    output[r.rowNumber] = r;
-                    if (r.rowNumber > len) {
-                        len = r.rowNumber + 1;
-                    }
-                }
-                Integer lastValue = Integer.MAX_VALUE;
-                long lastRank = 0;
-                for (int j = 0; j < len; j++) {
-                    assertNotNull(output[j]);
-                    if (lastValue == null) {
-                        assertNull(output[j].value);
-                    } else if (output[j].value != null) {
-                        assertTrue(lastValue >= output[j].value);
-                    }
-                    assertTrue(lastRank <= output[j].rank);
-                    lastRank = output[j].rank;
-                    lastValue = output[j].value;
-                }
+                Result[] output = reconstructRanking(harness.extractOutputValues(), 16);
+                sanityCheckRanking(output);
             }
         }
     }
@@ -212,29 +276,9 @@ public class DynamicRankingTest {
         for (int i = 0; i <= 100_000; i++) {
             int id = rand.nextInt(16);
             harness.processElement(new StreamRecord<>(new Event("id" + id, counts[id]++), i));
-            harness.processWatermark(i);
             if (i % 100 == 0) {
-                Result[] output = new Result[16];
-                int len = 0;
-                for (Result r : harness.extractOutputValues()) {
-                    output[r.rowNumber] = r;
-                    if (r.rowNumber > len) {
-                        len = r.rowNumber + 1;
-                    }
-                }
-                Integer lastValue = Integer.MAX_VALUE;
-                long lastRank = 0;
-                for (int j = 0; j < len; j++) {
-                    assertNotNull(output[j]);
-                    if (lastValue == null) {
-                        assertNull(output[j].value);
-                    } else if (output[j].value != null) {
-                        assertTrue(lastValue >= output[j].value);
-                    }
-                    assertTrue(lastRank <= output[j].rank);
-                    lastRank = output[j].rank;
-                    lastValue = output[j].value;
-                }
+                Result[] output = reconstructRanking(harness.extractOutputValues(), 16);
+                sanityCheckRanking(output);
             }
         }
     }
@@ -252,29 +296,9 @@ public class DynamicRankingTest {
             if (id2 >= 0) {
                 harness.processElement(new StreamRecord<>(new Event("id" + id2, counts[id2]--), i * 50));
             }
-            harness.processWatermark(i * 50);
             if (i % 2 == 0) {
-                Result[] output = new Result[16];
-                int len = 0;
-                for (Result r : harness.extractOutputValues()) {
-                    output[r.rowNumber] = r;
-                    if (r.rowNumber > len) {
-                        len = r.rowNumber + 1;
-                    }
-                }
-                Integer lastValue = Integer.MAX_VALUE;
-                long lastRank = 0;
-                for (int j = 0; j < len; j++) {
-                    assertNotNull(output[j]);
-                    if (lastValue == null) {
-                        assertNull(output[j].value);
-                    } else if (output[j].value != null) {
-                        assertTrue(lastValue >= output[j].value);
-                    }
-                    assertTrue(lastRank <= output[j].rank);
-                    lastRank = output[j].rank;
-                    lastValue = output[j].value;
-                }
+                Result[] output = reconstructRanking(harness.extractOutputValues(), 16);
+                sanityCheckRanking(output);
             }
         }
     }

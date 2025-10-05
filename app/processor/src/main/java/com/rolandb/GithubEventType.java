@@ -13,7 +13,7 @@ public enum GithubEventType {
     // postgres database.
     ALL("all"), PUSH("push"), WATCH("watch"), CREATE_REPO("create_repo"), CREATE_BRANCH("create_branch"),
     CREATE_TAG("create_tag"), FORK("fork"), WIKI("wiki"), ISSUE_OPEN("issue_open"), ISSUE_CLOSE("issue_close"),
-    PULL_OPEN("pull_open"), PULL_CLOSE("pull_close"), COMMIT_COMMENT("commit_comment"),
+    PULL_OPEN("pull_open"), PULL_CLOSE("pull_close"), COMMIT_COMMENT("commit_comment"), 
     ISSUE_COMMENT("issue_comment"), PULL_COMMENT("pull_comment"), OTHER("other");
 
     private final String name;

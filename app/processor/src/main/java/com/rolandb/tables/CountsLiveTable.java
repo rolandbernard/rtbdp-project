@@ -17,8 +17,8 @@ public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> 
     public static enum WindowSize implements WindowSpec {
         // The below should be in sync with the ones in the frontend and in
         // postgres database.
-        MINUTES_5("5m", Duration.ofMinutes(5)), HOURS_1("1h", Duration.ofHours(1)), HOURS_6("6h",
-                Duration.ofHours(6)), HOURS_24("24h", Duration.ofHours(24));
+        MINUTES_5("5m", Duration.ofMinutes(5)), HOURS_1("1h", Duration.ofHours(1)),
+        HOURS_6("6h", Duration.ofHours(6)), HOURS_24("24h", Duration.ofHours(24));
 
         private final String name;
         private final long sizeMs;

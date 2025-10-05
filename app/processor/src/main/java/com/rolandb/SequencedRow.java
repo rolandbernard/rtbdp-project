@@ -41,7 +41,7 @@ public class SequencedRow {
 
     @Override
     public String toString() {
-        return this + " @ " + seqNum;
+        return getClass().getName() + " @ " + seqNum;
     }
 
     public static boolean hasKeyIn(Class<?> clazz) {

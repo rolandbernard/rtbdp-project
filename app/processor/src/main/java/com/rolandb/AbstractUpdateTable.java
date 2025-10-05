@@ -12,9 +12,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This is a variation of the table builder that will gradually update a single
- * row by overwriting values in the database only for non-null fields in the
- * event. There exists also the option to only update values that are not
- * already non-null in the database.
+ * row by overwriting values in the database on a per-field level. This means
+ * that we have a sequence number for every single field, allowing for updates
+ * to arrive out-of-order at the client, and still be combined correctly.
  */
 public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSeqRow> extends AbstractTable<E> {
     public static abstract class UpdateSeqRow extends SequencedRow {

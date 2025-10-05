@@ -189,6 +189,8 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                     int oldRow = ranking.indexOf(new Tuple<>(key, oldValue));
                     int oldMinRank = -(ranking.indexOf(KeylessTuple.minFor(oldValue)) + 1);
                     int oldMaxRank = -(ranking.indexOf(KeylessTuple.maxFor(oldValue)) + 1);
+                    assert oldRow >= 0 && oldMinRank >= 0 && oldMaxRank >= 0;
+                    assert oldRow >= oldMinRank && oldMaxRank > oldRow;
                     ranking.remove(new Tuple<>(key, oldValue));
                     out.collect(resultFunction.apply(
                             event, globalKey, key, value, null, null, null, oldRow, oldMinRank, oldMaxRank));
@@ -201,6 +203,8 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                     int newRow = ranking.indexOf(new Tuple<>(key, value));
                     int newMinRank = -(ranking.indexOf(KeylessTuple.minFor(value)) + 1);
                     int newMaxRank = -(ranking.indexOf(KeylessTuple.maxFor(value)) + 1);
+                    assert newRow >= 0 && newMinRank >= 0 && newMaxRank >= 0;
+                    assert newRow >= newMinRank && newMaxRank > newRow;
                     out.collect(resultFunction.apply(
                             event, globalKey, key, value, newRow, newMinRank, newMaxRank, null, null, null));
                 } else {
@@ -208,11 +212,15 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
                     int oldRow = ranking.indexOf(new Tuple<>(key, oldValue));
                     int oldMinRank = -(ranking.indexOf(KeylessTuple.minFor(oldValue)) + 1);
                     int oldMaxRank = -(ranking.indexOf(KeylessTuple.maxFor(oldValue)) + 1);
+                    assert oldRow >= 0 && oldMinRank >= 0 && oldMaxRank >= 0;
+                    assert oldRow >= oldMinRank && oldMaxRank > oldRow;
                     ranking.remove(new Tuple<>(key, oldValue));
                     ranking.add(new Tuple<>(key, value));
                     int newRow = ranking.indexOf(new Tuple<>(key, value));
                     int newMinRank = -(ranking.indexOf(KeylessTuple.minFor(value)) + 1);
                     int newMaxRank = -(ranking.indexOf(KeylessTuple.maxFor(value)) + 1);
+                    assert newRow >= 0 && newMinRank >= 0 && newMaxRank >= 0;
+                    assert newRow >= newMinRank && newMaxRank > newRow;
                     out.collect(resultFunction.apply(
                             event, globalKey, key, value, newRow, newMinRank, newMaxRank,
                             oldRow, oldMinRank, oldMaxRank));
