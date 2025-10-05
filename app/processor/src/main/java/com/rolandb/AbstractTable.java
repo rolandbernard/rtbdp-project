@@ -376,7 +376,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
             rawStream.print().setParallelism(1);
         } else {
             DataStream<E> committedStream = sinkToPostgres(rawStream);
-            streams.put(tableName, committedStream);
+            streams.put("[table]" + tableName, committedStream);
             sinkToKafka(committedStream);
         }
     }

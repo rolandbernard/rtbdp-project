@@ -35,7 +35,7 @@ public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.
 
     @Override
     protected DataStream<CountsRank> computeTable() {
-        return this.<DataStream<EventCounts>>getStream("counts_live")
+        return this.<DataStream<EventCounts>>getStream("[table]counts_live")
                 .keyBy(e -> e.windowSize.toString())
                 .process(
                         new DynamicRanking<>(

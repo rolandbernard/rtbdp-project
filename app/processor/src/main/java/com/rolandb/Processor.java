@@ -172,7 +172,7 @@ public class Processor {
                 .setReplicationFactor(replicationFactor)
                 .setRetentionMs(retentionMs);
         // Actually setup table computations.
-        // builder.build("events", GithubEventsTable.class);
+        builder.build("events", GithubEventsTable.class);
         builder.build("users", UsersTable.class);
         builder.build("repos", RepositoriesTable.class);
         builder.build("counts_history", CountsHistoryTable.class);

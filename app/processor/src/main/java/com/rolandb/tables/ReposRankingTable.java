@@ -31,7 +31,7 @@ public class ReposRankingTable extends AbstractRankingTable<ReposRankingTable.Re
 
     @Override
     protected DataStream<RepoCountsRank> computeTable() {
-        return this.<DataStream<RepoEventCounts>>getStream("repos_live")
+        return this.<DataStream<RepoEventCounts>>getStream("[table]repos_live")
                 .keyBy(e -> e.windowSize.toString())
                 .process(
                         new DynamicRanking<>(
