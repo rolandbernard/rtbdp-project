@@ -41,16 +41,26 @@ public class Table {
         public final FieldKind kind;
         public final Class<?> type;
         public final Long cardinality;
+        public final boolean inReplay;
 
-        public Field(String name, FieldKind kind, Class<?> type, Long cardinality) {
+        public Field(String name, FieldKind kind, Class<?> type, Long cardinality, boolean inReplay) {
             this.name = name;
             this.kind = kind;
             this.type = type;
             this.cardinality = cardinality;
+            this.inReplay = inReplay;
+        }
+
+        public Field(String name, FieldKind kind, Class<?> type, Long cardinality) {
+            this(name, kind, type, cardinality, true);
         }
 
         public Field(String name, Class<?> type) {
-            this(name, FieldKind.NORMAL, type, null);
+            this(name, FieldKind.NORMAL, type, null, true);
+        }
+
+        public Field(String name, Class<?> type, boolean inReplay) {
+            this(name, FieldKind.NORMAL, type, null, inReplay);
         }
 
         public boolean canFilter() {
@@ -149,11 +159,13 @@ public class Table {
         builder.append("SELECT ");
         boolean first = true;
         for (Field field : fields) {
-            if (!first) {
-                builder.append(", ");
+            if (field.inReplay) {
+                if (!first) {
+                    builder.append(", ");
+                }
+                first = false;
+                builder.append(field.name);
             }
-            first = false;
-            builder.append(field.name);
         }
         builder.append(" FROM ");
         builder.append(name);
@@ -220,18 +232,20 @@ public class Table {
                             while (rs.next() && !emitter.isDisposed()) {
                                 Map<String, Object> row = new HashMap<>();
                                 for (Field field : fields) {
-                                    Object value = rs.getObject(field.name);
-                                    if (value == null || value.getClass() == field.type) {
-                                        row.put(field.name, value);
-                                    } else if (value instanceof Integer && field.type == Long.class) {
-                                        row.put(field.name, Long.valueOf((int) value));
-                                    } else if (value instanceof Float && field.type == Double.class) {
-                                        row.put(field.name, Double.valueOf((float) value));
-                                    } else if (value instanceof Timestamp && field.type == String.class) {
-                                        row.put(field.name, ((Timestamp) value).toInstant().toString());
-                                    } else {
-                                        throw new IllegalArgumentException("Unsupported conversion from "
-                                                + value.getClass() + " to " + field.type);
+                                    if (field.inReplay) {
+                                        Object value = rs.getObject(field.name);
+                                        if (value == null || value.getClass() == field.type) {
+                                            row.put(field.name, value);
+                                        } else if (value instanceof Integer && field.type == Long.class) {
+                                            row.put(field.name, Long.valueOf((int) value));
+                                        } else if (value instanceof Float && field.type == Double.class) {
+                                            row.put(field.name, Double.valueOf((float) value));
+                                        } else if (value instanceof Timestamp && field.type == String.class) {
+                                            row.put(field.name, ((Timestamp) value).toInstant().toString());
+                                        } else {
+                                            throw new IllegalArgumentException("Unsupported conversion from "
+                                                    + value.getClass() + " to " + field.type);
+                                        }
                                     }
                                 }
                                 emitter.onNext(row);

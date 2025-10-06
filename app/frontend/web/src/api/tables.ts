@@ -1,6 +1,6 @@
 import { RankingTable, Table, UpdateTable } from "./client";
 
-export const event_kinds = {
+export const EVENT_KINDS = {
     all: "All",
     push: "Push",
     watch: "Watch",
@@ -18,15 +18,15 @@ export const event_kinds = {
     pull_comment: "Comment on Pull Request",
     other: "Other",
 };
-type EventKind = keyof typeof event_kinds;
+type EventKind = keyof typeof EVENT_KINDS;
 
-export const window_sizes = {
+export const WINDOW_SIZES = {
     "5m": 60 * 5,
     "1h": 60 * 60,
     "6h": 60 * 60 * 6,
     "24h": 60 * 60 * 24,
 };
-type WindowSize = keyof typeof window_sizes;
+type WindowSize = keyof typeof WINDOW_SIZES;
 
 export const events = new Table<{
     created_at: string;
@@ -77,10 +77,9 @@ export const countsLive = new Table<{
 
 export const countsRanking = new RankingTable<{
     window_size: WindowSize;
-    row_number: number;
-    kind?: EventKind;
-    rank: number;
-}>("counts_ranking", ["window_size", "row_number"], ["kind"]);
+    kind: EventKind;
+    num_events: number;
+}>("counts_ranking", ["window_size", "kind"]).rankingsBy(["window_size"]);
 
 export const countsHistory = new Table<{
     kind: EventKind;
@@ -93,18 +92,17 @@ export const reposLive = new Table<{
     window_size: WindowSize;
     repo_id: number;
     num_events: number;
-}>("counts_live", ["window_size", "repo_id"]);
+}>("repos_live", ["window_size", "repo_id"]);
 
 export const reposRanking = new RankingTable<{
     window_size: WindowSize;
-    row_number: number;
-    repo_id?: EventKind;
-    rank: number;
-}>("counts_ranking", ["window_size", "row_number"], ["repo_id"]);
+    repo_id: number;
+    num_events: number;
+}>("repos_ranking", ["window_size", "repo_id"]).rankingsBy(["window_size"]);
 
 export const reposHistory = new Table<{
     repo_id: number;
     ts_start: string;
     ts_end: string;
     num_events: number;
-}>("counts_live", ["repo_id", "ts_start", "ts_end"]);
+}>("repos_live", ["repo_id", "ts_start", "ts_end"]);

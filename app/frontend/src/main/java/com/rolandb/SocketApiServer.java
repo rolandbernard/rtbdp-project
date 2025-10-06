@@ -166,7 +166,7 @@ public class SocketApiServer extends WebSocketServer {
 
     @Override
     public void start() {
-        addTable(new Table("events", 500L, List.of(
+        addTable(new Table("events", 1_000L, List.of(
                 new Field("created_at", FieldKind.SORTED_KEY, String.class, 50L),
                 new Field("id", FieldKind.SORTED_KEY, Long.class, 1L),
                 new Field("kind", FieldKind.INDEXED, String.class, null),
@@ -174,14 +174,14 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("user_id", FieldKind.INDEXED, Long.class, null),
                 new Field("details", String.class),
                 new Field("seq_num", Long.class))));
-        addTable(new UpdateTable("users", 500L, List.of(
+        addTable(new UpdateTable("users", 1_000L, List.of(
                 new Field("id", FieldKind.KEY, Long.class, 1L),
                 new Field("username", FieldKind.INDEXED, String.class, 1L),
                 new Field("avatar_url", String.class),
                 new Field("html_url", String.class),
                 new Field("user_type", String.class),
                 new Field("seq_num", Long.class))));
-        addTable(new UpdateTable("repos", 500L, List.of(
+        addTable(new UpdateTable("repos", 1_000L, List.of(
                 new Field("id", FieldKind.KEY, Long.class, 1L),
                 new Field("reponame", FieldKind.INDEXED, String.class, 100L),
                 new Field("fullname", FieldKind.INDEXED, String.class, 1L),
@@ -201,11 +201,10 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("kind", FieldKind.KEY, String.class, 4L),
                 new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
-        addTable(new Table("counts_ranking", null, List.of(
+        addTable(new RankingTable("counts_ranking", null, 4L, List.of(
                 new Field("window_size", FieldKind.KEY, String.class, 16L),
-                new Field("row_number", FieldKind.KEY, Long.class, 4L),
-                new Field("kind", String.class),
-                new Field("rank", Long.class),
+                new Field("kind", FieldKind.KEY, String.class, 4L),
+                new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
         addTable(new Table("counts_history", 5_000L, List.of(
                 new Field("kind", FieldKind.KEY, String.class, null),
@@ -213,16 +212,15 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("ts_end", FieldKind.SORTED_KEY, String.class, 16L),
                 new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
-        addTable(new Table("repos_live", 500L, List.of(
+        addTable(new Table("repos_live", 1_000L, List.of(
                 new Field("window_size", FieldKind.KEY, String.class, null),
                 new Field("repo_id", FieldKind.KEY, Long.class, 4L),
                 new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
-        addTable(new Table("repos_ranking", 500L, List.of(
+        addTable(new RankingTable("repos_ranking", 1_000L, 4L, List.of(
                 new Field("window_size", FieldKind.KEY, String.class, null),
-                new Field("row_number", FieldKind.KEY, Long.class, 4L),
-                new Field("repo_id", Long.class),
-                new Field("rank", Long.class),
+                new Field("repo_id", FieldKind.KEY, Long.class, 4L),
+                new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
         addTable(new Table("repos_history", 5_000L, List.of(
                 new Field("repo_id", FieldKind.KEY, Long.class, 5_000L),
@@ -317,7 +315,7 @@ public class SocketApiServer extends WebSocketServer {
             ClientState state = socket.getAttachment();
             for (Subscription subscription : message.subscribe) {
                 Table table = tables.get(subscription.tableName);
-                if (table != null && subscription.applicableTo(table)) {
+                if (table != null && subscription.applicableTo(table, false)) {
                     state.subscribe(subscription, table, row -> {
                         sendRow(socket, table.name, row);
                     });
@@ -332,7 +330,7 @@ public class SocketApiServer extends WebSocketServer {
             }
             for (Subscription replay : message.replay) {
                 Table table = tables.get(replay.tableName);
-                if (table != null && replay.applicableTo(table)) {
+                if (table != null && replay.applicableTo(table, true)) {
                     table.getReplayObservable(replay, connections)
                             .subscribeOn(rxScheduler)
                             .doOnError(error -> {

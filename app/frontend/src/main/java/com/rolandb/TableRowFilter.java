@@ -27,9 +27,9 @@ public class TableRowFilter {
      * @return {@code true} if the filter can be used with the table, {@code false}
      *         otherwise.
      */
-    public boolean applicableTo(Table table) {
+    public boolean applicableTo(Table table, boolean inReplay) {
         Map<String, Field> keys = table.fields.stream()
-                .filter(e -> e.canFilter())
+                .filter(e -> !inReplay || (e.canFilter() && e.inReplay))
                 .collect(Collectors.toMap(e -> e.name, e -> e));
         for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
             Field field = keys.get(filter.getKey());
@@ -60,10 +60,9 @@ public class TableRowFilter {
                     return null;
                 }
                 Long child = filter.getValue().estimateCardinality(field);
-                if (child == null) {
-                    return null;
+                if (child != null) {
+                    est = Long.min(est, child);
                 }
-                est = Long.min(est, child);
             }
             return est;
         }

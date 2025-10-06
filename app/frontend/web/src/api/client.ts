@@ -13,7 +13,7 @@ type RangeFilter<T> = {
 type Filter<T> = InFilter<T> | RangeFilter<T>;
 type RowFilter<R> = { [P in keyof R]?: Filter<R[P]> };
 type Filters<R> = RowFilter<R>[];
-type Row<R> = R & { seq_num: number };
+export type Row<R> = R & { seq_num: number };
 
 type RowMessage<R> = {
     table: string;
@@ -26,10 +26,22 @@ type ReplayMessage = {
 
 type ServerMessage<R> = ReplayMessage | RowMessage<R>;
 
+type Subscription<R> = {
+    id: number;
+    table: string;
+    filters?: Filters<R>;
+    limit?: number;
+};
+type ClientMessage<R> = {
+    subscribe?: Subscription<R>[];
+    replay?: Subscription<R>[];
+    unsubscribe?: number[];
+};
+
 // The complete API runs over this WebSocket.
-const socketConnection = webSocket<ServerMessage<unknown>>(
-    "ws://localhost:8887"
-);
+const socketConnection = webSocket<
+    ServerMessage<unknown> | ClientMessage<unknown>
+>("ws://localhost:8887");
 socketConnection.pipe(retry({ delay: 1000 })).subscribe(() => {
     // Not sure why we need this, but otherwise the multiplex below does not
     // seem to connect correctly. I assume there is some issue with the socket
@@ -38,63 +50,125 @@ socketConnection.pipe(retry({ delay: 1000 })).subscribe(() => {
 // Subscriptions each get a unique id that can be used to unsubscribe them again.
 let nextSubscriptionId = 0;
 
+function acceptsRowWithOne<R>(row: Row<R>, filters: RowFilter<R>) {
+    for (const key in filters) {
+        const filter = filters[key]!;
+        if (Array.isArray(filter)) {
+            if (!filter.includes(row[key])) {
+                return false;
+            }
+        } else {
+            if (filter.start && filter.start > row[key]) {
+                return false;
+            }
+            if (filter.end && filter.end <= row[key]) {
+                return false;
+            }
+            if (
+                filter.substr &&
+                !(
+                    row[key] &&
+                    (row[key] as string).toLowerCase().includes(filter.substr)
+                )
+            ) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function acceptsRowWith<R>(row: Row<R>, filters?: RowFilter<R>[]) {
+    if (!filters) {
+        return true;
+    } else {
+        for (const filter of filters) {
+            if (acceptsRowWithOne(row, filter)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 export class Table<R> {
     name: string;
     keys: (keyof R)[];
     filters?: Filters<R>;
     limited?: number;
-    deps: unknown[] = [];
+    deps: unknown[];
 
-    constructor(name: string, keys: typeof this.keys) {
+    constructor(
+        name: string,
+        keys: typeof this.keys,
+        filters?: typeof this.filters,
+        limited?: typeof this.limited,
+        deps?: typeof this.deps
+    ) {
         this.name = name;
         this.keys = keys;
+        this.filters = filters;
+        this.limited = limited;
+        this.deps = deps ?? [];
     }
 
-    acceptsRowWith(row: Row<R>, filters: RowFilter<R>) {
-        for (const key in filters) {
-            const filter = filters[key]!;
-            if (Array.isArray(filter)) {
-                if (!filter.includes(row[key])) {
-                    return false;
-                }
-            } else {
-                if (filter.start && filter.start > row[key]) {
-                    return false;
-                }
-                if (filter.end && filter.end <= row[key]) {
-                    return false;
-                }
-                if (
-                    filter.substr &&
-                    !(
-                        row[key] &&
-                        (row[key] as string)
-                            .toLowerCase()
-                            .includes(filter.substr)
-                    )
-                ) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    acceptsRow(row: Row<R>) {
-        if (!this.filters) {
-            return true;
-        } else {
-            for (const filter of this.filters) {
-                if (this.acceptsRowWith(row, filter)) {
-                    return true;
-                }
-            }
-            return false;
-        }
+    clone(): this {
+        return new Table(
+            this.name,
+            this.keys,
+            this.filters,
+            this.limited,
+            this.deps
+        ) as this;
     }
 
     acceptsMessage(message: RowMessage<R>) {
-        return message.table == this.name && this.acceptsRow(message.row);
+        return (
+            message.table == this.name &&
+            acceptsRowWith(message.row, this.filters)
+        );
+    }
+
+    where<C extends keyof R>(column: C, options: InFilter<R[C]>): this;
+    where<C extends keyof R>(column: C, range: RangeFilter<R[C]>): this;
+    where<C extends keyof R>(column: C, filter: Filter<R[C]>) {
+        let newFilters = this.filters;
+        let newDeps = this.deps;
+        if (!newFilters) {
+            newFilters = [{}];
+        }
+        const last = newFilters?.splice(-1)![0];
+        if (Array.isArray(filter)) {
+            newFilters = [...newFilters, { ...last, [column]: filter }];
+            newDeps = [...newDeps, ...filter];
+        } else {
+            newFilters = [...newFilters, { ...last, [column]: filter }];
+            const { start, end, substr } = filter;
+            newDeps = [...newDeps, start, end, substr];
+        }
+        const newTable = this.clone();
+        newTable.filters = newFilters;
+        newTable.deps = newDeps;
+        return newTable;
+    }
+
+    limit(limit: number) {
+        const newTable = this.clone();
+        newTable.limited = limit;
+        newTable.deps = [...this.deps, limit];
+        return newTable;
+    }
+
+    or() {
+        let newFilters = this.filters;
+        if (!newFilters) {
+            newFilters = [{}];
+        } else {
+            newFilters = [...newFilters, {}];
+        }
+        const newTable = this.clone();
+        newTable.filters = newFilters;
+        return newTable;
     }
 
     mergeRows(newRow: Row<R>, oldRow?: Row<R>) {
@@ -105,7 +179,16 @@ export class Table<R> {
         }
     }
 
-    applyLimiting(view: Map<string, Row<R>>) {
+    filterView(view: Map<string, Row<R>>) {
+        for (const [key, row] of [...view.entries()]) {
+            if (!acceptsRowWith(row, this.filters)) {
+                view.delete(key);
+            }
+        }
+    }
+
+    extractFromView(view: Map<string, Row<R>>) {
+        this.filterView(view);
         if (this.limited && view.size > this.limited) {
             const sorted = sort(
                 [...view.entries()],
@@ -125,68 +208,64 @@ export class Table<R> {
         }
     }
 
-    isValidView(_view: Map<string, Row<R>>) {
-        // To be overridden in a subclass so that some tables can have extra
-        // constraints that must hold before an event can be emitted.
-        return true;
-    }
-
-    newInstance() {
-        return new Table(this.name, this.keys);
-    }
-
-    where<C extends keyof R>(column: C, options: InFilter<R[C]>): Table<R>;
-    where<C extends keyof R>(column: C, range: RangeFilter<R[C]>): Table<R>;
-    where<C extends keyof R>(column: C, filter: Filter<R[C]>) {
-        let new_filters = this.filters;
-        let new_deps = this.deps;
-        if (!new_filters) {
-            new_filters = [{}];
-        }
-        const last = new_filters?.splice(-1)![0];
-        if (Array.isArray(filter)) {
-            new_filters = [...new_filters, { ...last, [column]: filter }];
-            new_deps = [...new_deps, ...filter];
+    mergeIntoView(view: Map<string, Row<R>>, newRow: Row<R>) {
+        const rowKey = groupKey(newRow, this.keys);
+        const oldRow = view.get(rowKey);
+        const row = this.mergeRows(newRow, oldRow);
+        if (row !== oldRow) {
+            view.set(rowKey, row);
+            return true;
         } else {
-            new_filters = [...new_filters, { ...last, [column]: filter }];
-            const { start, end, substr } = filter;
-            new_deps = [...new_deps, start, end, substr];
+            return false;
         }
-        const new_table = this.newInstance();
-        new_table.filters = new_filters;
-        new_table.limited = this.limited;
-        new_table.deps = new_deps;
-        return new_table;
     }
 
-    limit(limit: number) {
-        const new_table = this.newInstance();
-        new_table.filters = this.filters;
-        new_table.limited = limit;
-        new_table.deps = this.deps;
-        return new_table;
-    }
-
-    or() {
-        let new_filters = this.filters;
-        if (!new_filters) {
-            new_filters = [{}];
-        } else {
-            new_filters = [...new_filters, {}];
-        }
-        const new_table = this.newInstance();
-        new_table.filters = new_filters;
-        new_table.limited = this.limited;
-        new_table.deps = this.deps;
-        return new_table;
+    connect(view: Map<string, Row<R>>) {
+        const subscriptionId = nextSubscriptionId++;
+        const subscription = {
+            id: subscriptionId,
+            table: this.name,
+            filters: this.filters,
+            limit: this.limited,
+        };
+        return (socketConnection as WebSocketSubject<ServerMessage<R>>)
+            .multiplex(
+                () => ({
+                    subscribe: [subscription],
+                    replay: [subscription],
+                }),
+                () => ({ unsubscribe: [subscriptionId] }),
+                message =>
+                    "row" in message
+                        ? this.acceptsMessage(message)
+                        : message.replayed == subscriptionId
+            )
+            .pipe(
+                retry({ delay: 1000 }),
+                map(message => {
+                    if ("row" in message) {
+                        return this.mergeIntoView(view, message.row);
+                    } else {
+                        return false;
+                    }
+                }),
+                filter(e => e),
+                auditTime(50)
+            );
     }
 }
 
 type UpdateRow<R> = R & { [P in keyof R as `${string & P}_seq_num`]: number };
 
 export class UpdateTable<K, R> extends Table<K & UpdateRow<R>> {
-    newInstance() {
-        return new UpdateTable(this.name, this.keys);
+    clone(): this {
+        return new UpdateTable(
+            this.name,
+            this.keys,
+            this.filters,
+            this.limited,
+            this.deps
+        ) as this;
     }
 
     mergeRows(newRow: Row<K & UpdateRow<R>>, oldRow?: Row<K & UpdateRow<R>>) {
@@ -217,101 +296,255 @@ export class UpdateTable<K, R> extends Table<K & UpdateRow<R>> {
     }
 }
 
-export class RankingTable<R> extends Table<R> {
-    rankedKey: (keyof R)[];
+export type RankingRow<R> = R & { row_number: number; rank: number };
+type RankingUpdateRow<R> = R &
+    (
+        | {
+              row_number: number;
+              rank: number;
+              max_rank: number;
+          }
+        | {
+              row_number: null;
+              rank: null;
+              max_rank: null;
+          }
+    ) &
+    (
+        | {
+              old_row_number: number;
+              old_rank: number;
+              old_max_rank: number;
+          }
+        | {
+              old_row_number: null;
+              old_rank: null;
+              old_max_rank: null;
+          }
+    );
+type RankingMsgRow<R> = RankingRow<R> | RankingUpdateRow<R>;
 
-    constructor(name: string, keys: (keyof R)[], rankedKey: (keyof R)[]) {
-        super(name, keys);
-        this.rankedKey = rankedKey;
+export class RankingTable<R> extends Table<RankingRow<R>> {
+    rankingKeys: (keyof R)[] = [];
+    range?: [number, number];
+
+    clone(): this {
+        const table = new RankingTable(
+            this.name,
+            this.keys,
+            this.filters,
+            this.limited,
+            this.deps
+        ) as this;
+        table.range = this.range;
+        table.rankingKeys = this.rankingKeys;
+        return table;
     }
 
-    newInstance() {
-        return new RankingTable(this.name, this.keys, this.rankedKey);
+    // How are different rankings separated in the table.
+    rankingsBy(keys: (keyof R)[]) {
+        const newTable = this.clone();
+        newTable.rankingKeys = keys;
+        return newTable;
     }
 
-    isValidView(view: Map<string, Row<R>>) {
-        // In a ranking table, the ranked keys should appear at most once in the
-        // ranking. There can be duplicates for a short period of time, while the
-        // ranking has not yet been updated fully.
-        const seen = new Set<string>();
-        for (const [key, row] of [...view.entries()]) {
-            if (this.rankedKey.some(k => row[k] == null)) {
-                // If the ranking key is `null`, then this row has been removed
-                // from the ranking. We should also remove if from our local view.
-                view.delete(key);
-            } else {
-                const key = groupKey(row, this.rankedKey);
-                if (seen.has(key)) {
-                    return false;
-                }
-                seen.add(key);
-            }
+    desiredRows(start: number, end: number) {
+        const newTable = this.where("row_number", {
+            start: start - 50,
+            end: end + 50,
+        } as RangeFilter<RankingRow<R>["row_number"]>);
+        newTable.range = [start, end];
+        return newTable;
+    }
+
+    extractFromView(view: Map<string, Row<RankingRow<R>>>) {
+        if (this.range) {
+            return super
+                .extractFromView(view)
+                .filter(
+                    row =>
+                        row.row_number >= this.range![0] &&
+                        row.row_number < this.range![1]
+                );
+        } else {
+            return super.extractFromView(view);
         }
-        return true;
     }
-}
 
-export function useTable<R>(table: Table<R>): Row<R>[] {
-    const viewRef = useRef(new Map<string, Row<R>>());
-    const [subscribe, snapshot] = useMemo(() => {
-        const view = viewRef.current;
-        for (const [key, row] of [...view.entries()]) {
-            if (!table.acceptsRow(row)) {
-                view.delete(key);
-            }
-        }
+    connect(view: Map<string, Row<RankingRow<R>>>) {
+        const connection = socketConnection as WebSocketSubject<
+            ServerMessage<RankingMsgRow<R>>
+        >;
         const subscriptionId = nextSubscriptionId++;
+        const subscriptionFilter = this.filters?.map(f =>
+            Object.fromEntries(
+                Object.entries(f).filter(([name, _filter]) =>
+                    (this.rankingKeys as string[]).includes(name)
+                )
+            )
+        ) as RowFilter<Row<RankingUpdateRow<R>>>[] | undefined;
         const subscription = {
             id: subscriptionId,
-            table: table.name,
-            filters: table.filters,
-            limit: table.limited,
+            table: this.name,
+            filters: subscriptionFilter,
         };
-        const events = (socketConnection as WebSocketSubject<ServerMessage<R>>)
+        const replay = {
+            id: subscriptionId,
+            table: this.name,
+            filters: this.filters,
+            limit: this.limited,
+        };
+        let replaySeqNum: number | undefined = undefined;
+        let seenRange: [number, number] = this.range
+            ? [this.range[0] - 50, this.range[1] + 50]
+            : [0, 0];
+        const cachedUpdates: Row<RankingUpdateRow<R>>[] = [];
+        // Applies the update from the ranking update stream to the given range.
+        const applyUpdateToRange = (
+            [a, b]: [number, number],
+            update: Row<RankingUpdateRow<R>>
+        ): [number, number] => {
+            if (update.old_row_number !== null) {
+                if (a > update.old_row_number) {
+                    a -= 1;
+                }
+                if (b >= update.old_row_number) {
+                    b -= 1;
+                }
+            }
+            if (update.row_number !== null) {
+                if (a > update.row_number) {
+                    a += 1;
+                }
+                if (b >= update.row_number) {
+                    b += 1;
+                }
+            }
+            return [
+                // Bound by the range we actually look at. We delete those outside.
+                Math.max(a, this.range![0] - 50),
+                Math.min(b, this.range![1] + 50),
+            ];
+        };
+        // Applies the update from the ranking update stream to all rows in the view.
+        // This function will also delete all elements outside the range.
+        const applyUpdateToView = (update: Row<RankingUpdateRow<R>>) => {
+            const key = groupKey(update, this.keys);
+            if (update.old_row_number !== null) {
+                view.delete(key);
+                for (const row of view.values()) {
+                    if (row.row_number >= update.old_max_rank) {
+                        row.rank -= 1;
+                    }
+                    if (row.row_number > update.old_row_number) {
+                        row.row_number -= 1;
+                    }
+                }
+            }
+            if (update.row_number !== null) {
+                for (const row of view.values()) {
+                    if (row.row_number >= update.row_number) {
+                        row.row_number += 1;
+                    }
+                    if (row.row_number >= update.max_rank) {
+                        row.rank += 1;
+                    }
+                }
+                view.set(key, update as Row<RankingRow<R>>);
+            }
+            // this.filterView(view);
+        };
+        // Consumes an update, updates the range and view, and if required will issue
+        // new replay requests to the server to get the up-to-date information.
+        const applyUpdate = (update: Row<RankingUpdateRow<R>>) => {
+            if (update.seq_num > replaySeqNum!) {
+                if (seenRange) {
+                    seenRange = applyUpdateToRange(seenRange, update);
+                    if (
+                        seenRange[0] > this.range![0] ||
+                        seenRange[1] < this.range![1]
+                    ) {
+                        // Our initial elements no longer cover the desired range.
+                        // We have to request more elements by again replaying the
+                        // initial extended range.
+                        replaySeqNum = undefined;
+                        (
+                            socketConnection as WebSocketSubject<
+                                ClientMessage<RankingRow<R>>
+                            >
+                        ).next({
+                            replay: [replay],
+                        });
+                        seenRange = [this.range![0] - 50, this.range![1] + 50];
+                        return false;
+                    }
+                }
+                applyUpdateToView(update);
+                return true;
+            } else {
+                return false;
+            }
+        };
+        return connection
             .multiplex(
                 () => ({
                     subscribe: [subscription],
-                    replay: [subscription],
+                    replay: [replay],
                 }),
                 () => ({ unsubscribe: [subscriptionId] }),
                 message =>
-                    "row" in message
-                        ? table.acceptsMessage(message)
-                        : message.replayed == subscriptionId
+                    message.table == this.name &&
+                    ("row" in message
+                        ? "old_row_number" in message.row
+                            ? acceptsRowWith(message.row, subscriptionFilter)
+                            : acceptsRowWith(message.row, this.filters)
+                        : message.replayed == subscriptionId)
             )
             .pipe(
                 retry({ delay: 1000 }),
                 map(message => {
                     if ("row" in message) {
-                        const newRow = message.row;
-                        const rowKey = groupKey(newRow, table.keys);
-                        const oldRow = view.get(rowKey);
-                        const row = table.mergeRows(newRow, oldRow);
-                        if (row !== oldRow) {
-                            view.set(rowKey, row);
-                            return true;
+                        if ("old_row_number" in message.row) {
+                            const update = message.row;
+                            if (replaySeqNum) {
+                                return applyUpdate(update);
+                            } else {
+                                cachedUpdates.push(update);
+                                return false;
+                            }
                         } else {
-                            return false;
+                            view.set(groupKey(message.row, this.keys), message.row);
+                            return true;
                         }
                     } else {
-                        return false;
+                        replaySeqNum = [...view.values()]
+                            .map(r => r.seq_num)
+                            .reduce((a, b) => Math.max(a, b), 0);
+                        let some = false;
+                        for (const update of cachedUpdates) {
+                            some = applyUpdate(update) || some;
+                        }
+                        return some;
                     }
                 }),
-                filter(e => e && table.isValidView(view)),
+                filter(e => e),
                 auditTime(50)
             );
-        let snapshot: Row<R>[] = [];
-        const buildSnapshot = () => {
-            if (table.isValidView(view)) {
-                snapshot = table.applyLimiting(view);
-            }
-        };
+    }
+}
+
+export function useTable<R>(table: Table<R>): Row<R>[] {
+    // The view keeps rows from the table between different connections.
+    const viewRef = useRef(new Map<string, Row<R>>());
+    const [subscribe, snapshot] = useMemo(() => {
+        const view = viewRef.current;
+        const events = table.connect(view);
         // Initial build of snapshot reusing rows that we already know about.
-        buildSnapshot();
+        let snapshot = table.extractFromView(view);
         return [
             (onChange: () => void) => {
                 const subscription = events.subscribe(() => {
-                    buildSnapshot();
+                    snapshot = table.extractFromView(view);
                     onChange();
                 });
                 return () => subscription.unsubscribe();

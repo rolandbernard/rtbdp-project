@@ -36,8 +36,8 @@ public class Subscription {
      * @return {@code true} if the subscription can be used with the table,
      *         {@code false} otherwise.
      */
-    public boolean applicableTo(Table table) {
-        if (table.maxLimit != null && (limit == null || limit > table.maxLimit)) {
+    public boolean applicableTo(Table table, boolean inReplay) {
+        if (inReplay && table.maxLimit != null && (limit == null || limit > table.maxLimit)) {
             if (filters == null) {
                 return false;
             }
@@ -57,7 +57,7 @@ public class Subscription {
             return true;
         } else {
             for (TableRowFilter filter : filters) {
-                if (!filter.applicableTo(table)) {
+                if (!filter.applicableTo(table, inReplay)) {
                     return false;
                 }
             }

@@ -61,7 +61,7 @@ public interface TableValueFilter<T> {
                     builder.append(name);
                     builder.append(" >= ");
                     if (start instanceof Long) {
-                        builder.append(end.toString());
+                        builder.append(start.toString());
                     } else {
                         builder.append(escapeString(start.toString()));
                     }
