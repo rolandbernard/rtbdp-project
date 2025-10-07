@@ -110,7 +110,7 @@ public interface TableValueFilter<T> {
             if (substr != null && !(substr instanceof String)) {
                 return false;
             }
-            return field.canFilter();
+            return true;
         }
 
         @Override
@@ -137,13 +137,15 @@ public interface TableValueFilter<T> {
 
         @Override
         public boolean accept(T obj) {
-            return obj != null && options.contains(obj);
+            return options.contains(obj);
         }
 
         @Override
         public String asSqlQueryCondition(String name) {
             if (options.isEmpty()) {
                 return "FALSE";
+            } else if (options.size() == 1 && options.get(0) == null) {
+                return "(" + name + " IS NULL)";
             } else {
                 StringBuilder builder = new StringBuilder();
                 builder.append("(");
@@ -168,12 +170,15 @@ public interface TableValueFilter<T> {
 
         @Override
         public boolean applicableTo(Field field) {
+            if (options.size() == 1 && options.get(0) == null) {
+                return true;
+            }
             for (Object o : options) {
                 if (!field.type.isInstance(o)) {
                     return false;
                 }
             }
-            return field.canFilter();
+            return true;
         }
 
         @Override

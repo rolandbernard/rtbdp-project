@@ -368,6 +368,7 @@ public class DummyData {
      * @return A subset of the events.
      */
     public List<JsonNode> getEvents(Instant timestamp, int page, int perPage) {
+        LOGGER.info("Loading events for page {} ({} per page) at {}", page, perPage, timestamp);
         int len = page * perPage;
         List<JsonNode> allEvents = new ArrayList<>();
         synchronized (cached) {

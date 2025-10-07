@@ -1,8 +1,12 @@
 import RankingList from "./RankingList";
 import { reposRanking } from "../api/tables";
+import { useState } from "react";
 
 export default function RepoRanking() {
-    return (
+    const [start, setStart] = useState(0);
+    return (<>
+        <button className="ms-1 p-2 bg-gray-600 hover:cursor-pointer" onClick={_e => setStart(start - 10)}>&lt;</button>
+        <button className="ms-1 p-2 bg-gray-600 hover:cursor-pointer" onClick={_e => setStart(start + 10)}>&gt;</button>
         <table className="mx-3">
             <thead>
                 <tr>
@@ -14,8 +18,8 @@ export default function RepoRanking() {
             <tbody>
                 <RankingList
                     table={reposRanking.where("window_size", ["5m"])}
-                    from={50}
-                    to={60}
+                    from={start}
+                    to={start + 10}
                     rows={row => (
                         <tr key={row.repo_id}>
                             <td className="pt-1 px-3">{row.rank}</td>
@@ -25,6 +29,6 @@ export default function RepoRanking() {
                     )}
                 ></RankingList>
             </tbody>
-        </table>
+        </table></>
     );
 }

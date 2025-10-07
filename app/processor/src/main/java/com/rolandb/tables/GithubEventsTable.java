@@ -364,7 +364,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 default:
-                    builder.append("This is an unknown event type.");
+                    builder.append("This is an unknown event type. " + rawEvent.at("/type").asText());
                     break;
             }
             details = builder.toString();

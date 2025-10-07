@@ -292,6 +292,18 @@ public abstract class AbstractTable<E extends SequencedRow> {
         return builder.toString();
     }
 
+    private static String removeInvalidCodePoints(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length();) {
+            int cp = s.codePointAt(i);
+            if (cp != 0 && Character.isValidCodePoint(cp)) {
+                sb.appendCodePoint(cp);
+            }
+            i += Character.charCount(cp);
+        }
+        return sb.toString();
+    }
+
     protected static void jdbcSinkSetStatementValues(PreparedStatement statement, SequencedRow row)
             throws SQLException {
         int idx = 1;
@@ -300,6 +312,8 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 statement.setTimestamp(idx++, Timestamp.from((Instant) value));
             } else if (value instanceof Enum) {
                 statement.setObject(idx++, value.toString());
+            } else if (value instanceof String) {
+                statement.setObject(idx++, removeInvalidCodePoints((String) value));
             } else {
                 statement.setObject(idx++, value);
             }
