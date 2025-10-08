@@ -1,6 +1,6 @@
 {
-    "short_name": "gha",
-    "name": "gha | real-time GitHub events",
+    "short_name": "rtgh",
+    "name": "rtgh | real-time GitHub events",
     "icons": [
         {
             "src": "appicon-16x16.png",
