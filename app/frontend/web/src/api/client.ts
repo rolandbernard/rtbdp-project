@@ -411,6 +411,13 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
         return newFilters;
     }
 
+    inExtendedFilters(row: number) {
+        // Basically whenever a tracked row leaves this range, we might have missed
+        // events needed to correctly update it. For this reason, these rows should
+        // no longer be considered.
+        return !this.range || row < this.range[1] + MARGIN;
+    }
+
     connect(view: Map<string, Row<RankingRow<R>>>) {
         const subscriptionId = nextSubscriptionId++;
         const subscriptionFilter = this.filters?.map(f =>
@@ -468,33 +475,29 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
             if (update.old_row_number !== null) {
                 if (view.has(key)) {
                     const oldRow = view.get(key)!;
-                    if (oldRow.row_number != update.old_row_number) {
-                        console.warn(
-                            "found inconsistent row numbers",
-                            oldRow,
-                            update
-                        );
-                        return false;
-                    }
-                    if (oldRow.rank != update.old_rank) {
-                        console.warn(
-                            "found inconsistent ranks",
-                            oldRow,
-                            update
-                        );
-                        return false;
+                    if (this.inExtendedFilters(oldRow.row_number)) {
+                        if (oldRow.row_number != update.old_row_number) {
+                            console.warn("found inconsistent row numbers");
+                            return false;
+                        }
+                        if (oldRow.rank != update.old_rank) {
+                            console.warn("found inconsistent ranks");
+                            return false;
+                        }
                     }
                     view.delete(key);
                 }
                 for (const row of view.values()) {
-                    if (this.rankingKeys.every(k => row[k] == update[k])) {
+                    if (
+                        this.rankingKeys.every(k => row[k] == update[k]) &&
+                        this.inExtendedFilters(row.row_number)
+                    ) {
                         if (row.row_number >= update.old_max_rank) {
                             row.rank -= 1;
                         }
                         if (row.row_number == update.old_row_number) {
                             console.warn(
-                                "found row number that should have been removed",
-                                update
+                                "found row number that should have been removed"
                             );
                             return false;
                         }
@@ -506,7 +509,10 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
             }
             if (update.row_number !== null) {
                 for (const row of view.values()) {
-                    if (this.rankingKeys.every(k => row[k] == update[k])) {
+                    if (
+                        this.rankingKeys.every(k => row[k] == update[k]) &&
+                        this.inExtendedFilters(row.row_number)
+                    ) {
                         if (row.row_number >= update.row_number) {
                             row.row_number += 1;
                         }

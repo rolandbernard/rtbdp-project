@@ -3,11 +3,14 @@ package com.rolandb;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.state.StateTtlConfig;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -30,6 +33,8 @@ import java.util.List;
  */
 public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSpec>
         extends KeyedProcessFunction<K, E, R> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MultiSlidingBuckets.class);
+
     public static interface WindowSpec extends Serializable {
         public long sizeInMs();
     }
@@ -67,6 +72,15 @@ public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSp
         MapStateDescriptor<Long, Long> bucketDesc = new MapStateDescriptor<>("bucketCounts", Long.class, Long.class);
         ValueStateDescriptor<long[]> totalsDesc = new ValueStateDescriptor<>("windowTotals", long[].class);
         ValueStateDescriptor<Long> timerDesc = new ValueStateDescriptor<>("lastClosing", Long.class);
+        // As a failsafe, to avoid loosing some state and never cleaning it up, we just
+        // use a TTL that is double the duration of the longest window.
+        StateTtlConfig ttlConfig = StateTtlConfig.newBuilder(Duration.ofMillis(windows.getLast().sizeInMs() * 2))
+                .setUpdateType(StateTtlConfig.UpdateType.OnReadAndWrite)
+                .setStateVisibility(StateTtlConfig.StateVisibility.ReturnExpiredIfNotCleanedUp)
+                .build();
+        bucketDesc.enableTimeToLive(ttlConfig);
+        totalsDesc.enableTimeToLive(ttlConfig);
+        timerDesc.enableTimeToLive(ttlConfig);
         bucketCounts = getRuntimeContext().getMapState(bucketDesc);
         windowTotals = getRuntimeContext().getState(totalsDesc);
         lastTimer = getRuntimeContext().getState(timerDesc);
@@ -182,6 +196,11 @@ public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSp
             }
             if (addedCount != expiredCount) {
                 totals[i] += addedCount - expiredCount;
+                if (totals[i] < 0) {
+                    // This must be an error. We try to handle it somewhat gracefully.
+                    LOGGER.warn("Underflow in bucketed multi-sliding windows totals.");
+                    totals[i] = 0;
+                }
                 out.collect(function.apply(
                         Instant.ofEpochMilli(expiredBucketEnd),
                         Instant.ofEpochMilli(bucketEnd),
