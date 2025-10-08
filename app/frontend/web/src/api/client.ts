@@ -390,6 +390,27 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
         }
     }
 
+    extendSubscriptionFilters(filters?: RowFilter<Row<RankingUpdateRow<R>>>[]) {
+        if (!filters || !this.range) {
+            return filters;
+        }
+        const newFilters = [];
+        for (const filter of filters) {
+            // Only the elements above us in the ranking can affect the range.
+            // This means either the old or new row numbers must be above our
+            // range for the event to be of interest to us.
+            newFilters.push({
+                ...filter,
+                row_number: { end: this.range[1] + MARGIN },
+            });
+            newFilters.push({
+                ...filter,
+                old_row_number: { end: this.range[1] + MARGIN },
+            });
+        }
+        return newFilters;
+    }
+
     connect(view: Map<string, Row<RankingRow<R>>>) {
         const subscriptionId = nextSubscriptionId++;
         const subscriptionFilter = this.filters?.map(f =>
@@ -402,7 +423,7 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
         const subscription = {
             id: subscriptionId,
             table: this.name,
-            filters: subscriptionFilter,
+            filters: this.extendSubscriptionFilters(subscriptionFilter),
         };
         const replay = {
             id: subscriptionId,
@@ -427,10 +448,10 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
                 }
             }
             if (update.row_number !== null) {
-                if (a > update.row_number) {
+                if (a >= update.row_number) {
                     a += 1;
                 }
-                if (b >= update.row_number) {
+                if (b > update.row_number) {
                     b += 1;
                 }
             }
@@ -445,11 +466,37 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
         const applyUpdateToView = (update: Row<RankingUpdateRow<R>>) => {
             const key = groupKey(update, this.keys);
             if (update.old_row_number !== null) {
-                view.delete(key);
+                if (view.has(key)) {
+                    const oldRow = view.get(key)!;
+                    if (oldRow.row_number != update.old_row_number) {
+                        console.warn(
+                            "found inconsistent row numbers",
+                            oldRow,
+                            update
+                        );
+                        return false;
+                    }
+                    if (oldRow.rank != update.old_rank) {
+                        console.warn(
+                            "found inconsistent ranks",
+                            oldRow,
+                            update
+                        );
+                        return false;
+                    }
+                    view.delete(key);
+                }
                 for (const row of view.values()) {
                     if (this.rankingKeys.every(k => row[k] == update[k])) {
                         if (row.row_number >= update.old_max_rank) {
                             row.rank -= 1;
+                        }
+                        if (row.row_number == update.old_row_number) {
+                            console.warn(
+                                "found row number that should have been removed",
+                                update
+                            );
+                            return false;
                         }
                         if (row.row_number > update.old_row_number) {
                             row.row_number -= 1;
@@ -470,6 +517,16 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
                 }
                 view.set(key, update as Row<RankingRow<R>>);
             }
+            return true;
+        };
+        // Replay again to make sure the client view is correct.
+        const replayAgain = () => {
+            replaySeqNum = undefined;
+            bufferedUpdates.length = 0;
+            safeRanges.clear();
+            socketConnection.next({
+                replay: [replay],
+            });
         };
         // Consumes an update, updates the range and view, and if required will issue
         // new replay requests to the server to get the up-to-date information.
@@ -494,18 +551,17 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
                         // Our initial elements no longer cover the desired range.
                         // We have to request more elements by again replaying the
                         // initial extended range.
-                        replaySeqNum = undefined;
-                        bufferedUpdates.length = 0;
-                        safeRanges.clear();
-                        socketConnection.next({
-                            replay: [replay],
-                        });
+                        replayAgain();
                         return false;
                     } else {
                         safeRanges.set(rankingKey, newRange);
                     }
                 }
-                applyUpdateToView(update);
+                if (!applyUpdateToView(update)) {
+                    // Something went wrong. Better to rehydrate from a replay.
+                    replayAgain();
+                    return false;
+                }
                 return true;
             } else {
                 return false;
@@ -552,6 +608,8 @@ export class RankingTable<R> extends Table<RankingRow<R>> {
                         replaySeqNum = [...view.values()]
                             .map(r => r.seq_num)
                             .reduce((a, b) => Math.max(a, b), 1);
+                        // Filter the view to get rid of the old replays records.
+                        this.filterView(view);
                         let some = false;
                         for (const update of bufferedUpdates) {
                             some = applyUpdate(update) || some;
