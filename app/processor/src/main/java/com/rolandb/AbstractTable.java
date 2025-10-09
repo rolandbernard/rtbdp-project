@@ -211,6 +211,12 @@ public abstract class AbstractTable<E extends SequencedRow> {
         });
     }
 
+    protected KeyedStream<GithubEvent, Long> getEventsByUserStream() {
+        return getStream("eventsByUser", () -> {
+            return getEventStream().keyBy(event -> event.userId);
+        });
+    }
+
     protected abstract DataStream<E> computeTable();
 
     protected abstract Class<E> getOutputType();

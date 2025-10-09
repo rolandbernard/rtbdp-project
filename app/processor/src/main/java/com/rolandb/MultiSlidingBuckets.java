@@ -74,7 +74,8 @@ public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSp
         ValueStateDescriptor<Long> timerDesc = new ValueStateDescriptor<>("lastClosing", Long.class);
         // As a failsafe, to avoid loosing some state and never cleaning it up, we just
         // use a TTL that is double the duration of the longest window.
-        StateTtlConfig ttlConfig = StateTtlConfig.newBuilder(Duration.ofMillis(windows.getLast().sizeInMs() * 2))
+        Duration ttl = Duration.ofMillis(windows.get(windows.size() - 1).sizeInMs() * 2);
+        StateTtlConfig ttlConfig = StateTtlConfig.newBuilder(ttl)
                 .setUpdateType(StateTtlConfig.UpdateType.OnReadAndWrite)
                 .setStateVisibility(StateTtlConfig.StateVisibility.ReturnExpiredIfNotCleanedUp)
                 .build();

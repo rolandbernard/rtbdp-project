@@ -106,3 +106,22 @@ export const reposHistory = new Table<{
     ts_end: string;
     num_events: number;
 }>("repos_live", ["repo_id", "ts_start", "ts_end"]);
+
+export const usersLive = new Table<{
+    window_size: WindowSize;
+    user_id: number;
+    num_events: number;
+}>("users_live", ["window_size", "user_id"]);
+
+export const usersRanking = new RankingTable<{
+    window_size: WindowSize;
+    user_id: number;
+    num_events: number;
+}>("users_ranking", ["window_size", "user_id"]).rankingsBy(["window_size"]);
+
+export const usersHistory = new Table<{
+    user_id: number;
+    ts_start: string;
+    ts_end: string;
+    num_events: number;
+}>("users_live", ["user_id", "ts_start", "ts_end"]);

@@ -34,6 +34,9 @@ import com.rolandb.tables.ReposHistoryTable;
 import com.rolandb.tables.ReposLiveTable;
 import com.rolandb.tables.ReposRankingTable;
 import com.rolandb.tables.RepositoriesTable;
+import com.rolandb.tables.UsersHistoryTable;
+import com.rolandb.tables.UsersLiveTable;
+import com.rolandb.tables.UsersRankingTable;
 import com.rolandb.tables.UsersTable;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -68,10 +71,9 @@ public class Processor {
         parser.addArgument("--replication-factor").metavar("REPLICATION").type(Integer.class)
                 .setDefault(1).help("replication factor for Kafka topics");
         // The default retention for these topics is significantly lower than the
-        // default
-        // 7 days of Kafka. This is because these topics are mainly only for live
-        // updates
-        // in the frontend, and the persistent data is in the PostgreSQL DB.
+        // default 7 days of Kafka. This is because these topics are mainly only
+        // for live updates in the frontend, and the persistent data is in the
+        // PostgreSQL DB.
         parser.addArgument("--retention-ms").metavar("MILLIS").type(Long.class)
                 .setDefault(1000L * 60L * 15L).help("retention time for the Kafka topics");
         parser.addArgument("--rewind").action(Arguments.storeTrue())
@@ -153,8 +155,7 @@ public class Processor {
                         "Kafka Source")
                 // We can not use more parallelism for the Kafka source than we have partitions,
                 // because for some reason it messes up the watermarks. In the sense that
-                // subtasks
-                // that don't get any events seems to hold back the watermarks.
+                // subtasks that don't get any events seems to hold back the watermarks.
                 .setParallelism(KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic));
         // Setup parameters for table builder.
         TableBuilder builder = (new TableBuilder())
@@ -181,6 +182,9 @@ public class Processor {
         builder.build("repos_history", ReposHistoryTable.class);
         builder.build("repos_live", ReposLiveTable.class);
         builder.build("repos_ranking", ReposRankingTable.class);
+        builder.build("users_history", UsersHistoryTable.class);
+        builder.build("users_live", UsersLiveTable.class);
+        builder.build("users_ranking", UsersRankingTable.class);
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
         env.execute("GitHub Event Analysis");

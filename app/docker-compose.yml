@@ -22,7 +22,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: '1'
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: '1'
       KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: '1'
-      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: '60000' # check whether to delete log segments ever minute (default 5 minutes)
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: '60000' # check whether to delete log segments every minute (default 5 minutes)
       KAFKA_LOG4J_ROOT_LOGLEVEL: 'WARN' # optional, with next option reduces verboseness
       KAFKA_LOG4J_LOGGERS: "\
         kafka=WARN,\
@@ -39,7 +39,7 @@ services:
     depends_on:
       - broker
     environment:
-      KAFKA_CLUSTERS_0_NAME: 'github_analyzer' # name shown in UI (Kafka UI can display multiple clusters)
+      KAFKA_CLUSTERS_0_NAME: 'rtgh' # name shown in UI (Kafka UI can display multiple clusters)
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'broker:9092'
       LOGGING_LEVEL_ROOT: 'WARN' # optional, along with next option reduces verbosity
       LOGGING_LEVEL_COM_PROVECTUS: 'WARN'

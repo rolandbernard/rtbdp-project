@@ -152,7 +152,41 @@ SELECT create_hypertable('counts_history', by_range('ts_start', INTERVAL '7 day'
 -- Per-user event counts
 -- =====================
 
--- TODO
+CREATE TABLE users_live (
+    window_size window_size NOT NULL,
+    user_id BIGINT NOT NULL,
+    num_events BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (window_size, user_id)
+);
+
+-- This index helps slightly with the performance of the ranking view.
+CREATE INDEX ON users_live(window_size, num_events DESC, user_id ASC);
+
+-- This is a virtual view that also contains row numbers and ranks.
+CREATE VIEW users_ranking AS
+SELECT window_size, user_id, num_events,
+        MAX(seq_num) OVER (PARTITION BY window_size) as seq_num,
+        ROW_NUMBER() OVER (
+            PARTITION BY window_size ORDER BY num_events DESC, user_id ASC
+        ) - 1 AS row_number,
+        RANK() OVER (
+            PARTITION BY window_size ORDER BY num_events DESC
+        ) - 1 AS rank
+    FROM users_live
+    WHERE num_events > 0;
+
+CREATE TABLE users_history (
+    user_id BIGINT NOT NULL,
+    ts_start TIMESTAMP NOT NULL,
+    ts_end TIMESTAMP NOT NULL,
+    num_events BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (user_id, ts_start, ts_end)
+);
+
+-- We partition by hour because this is relatively high volume.
+SELECT create_hypertable('users_history', by_range('ts_start', INTERVAL '1 hour'));
 
 -- ===========================
 -- Per-repository event counts
@@ -191,7 +225,7 @@ CREATE TABLE repos_history (
     PRIMARY KEY (repo_id, ts_start, ts_end)
 );
 
--- We partition by hour
+-- We partition by hour because this is relatively high volume.
 SELECT create_hypertable('repos_history', by_range('ts_start', INTERVAL '1 hour'));
 
 -- =============================
