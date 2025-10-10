@@ -75,6 +75,15 @@ services:
       PGADMIN_DISABLE_POSTFIX: 'true'
       GUNICORN_ACCESS_LOGFILE: '/dev/null'
 
+  cloudflared:
+    image: 'cloudflare/cloudflared:latest'
+    container_name: '${COMPOSE_PROJECT_NAME:-rtgh}-cloudflared'
+    profiles:
+      - cloudflared
+    command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARED_TOKEN}"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # this is so the frontend can run outside docker
+
   # Project-developed Containers (API Dummy + Producer + Processor + Frontend)
   ghdummy:
     build: ghdummy

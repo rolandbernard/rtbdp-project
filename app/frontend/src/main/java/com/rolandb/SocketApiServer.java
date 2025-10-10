@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.java_websocket.WebSocket;
+import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
@@ -127,6 +128,7 @@ public class SocketApiServer extends WebSocketServer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketApiServer.class);
 
+    private final String secret;
     private final Properties kafkaProperties;
     private final DbConnectionPool connections;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -139,8 +141,10 @@ public class SocketApiServer extends WebSocketServer {
      * @param address
      *            The address to listen on.
      */
-    public SocketApiServer(InetSocketAddress address, String bootstrapServer, String groupId, String jdbcUrl) {
+    public SocketApiServer(
+            InetSocketAddress address, String bootstrapServer, String groupId, String jdbcUrl, String secret) {
         super(address);
+        this.secret = secret;
         kafkaProperties = new Properties();
         kafkaProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
         kafkaProperties.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
@@ -265,15 +269,23 @@ public class SocketApiServer extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket socket, ClientHandshake handshake) {
-        LOGGER.info("Client connected {}", socket.getRemoteSocketAddress());
-        socket.setAttachment(new ClientState());
+        if (handshake.getFieldValue("Cookie").contains(secret)
+                || handshake.getResourceDescriptor().contains(secret)) {
+            LOGGER.info("Client connected {}", socket.getRemoteSocketAddress());
+            socket.setAttachment(new ClientState());
+        } else {
+            LOGGER.info("Client missing auth cookie {}", socket.getRemoteSocketAddress());
+            socket.close(CloseFrame.POLICY_VALIDATION);
+        }
     }
 
     @Override
     public void onClose(WebSocket socket, int code, String reason, boolean remote) {
         LOGGER.info("Client disconnected {}", socket.getRemoteSocketAddress());
         ClientState state = socket.getAttachment();
-        state.unsubscribeAll();
+        if (state != null) {
+            state.unsubscribeAll();
+        }
     }
 
     @Override

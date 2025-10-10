@@ -38,10 +38,20 @@ type ClientMessage<R> = {
     unsubscribe?: number[];
 };
 
+let url;
+if (document.location.hostname == "localhost") {
+    url = "ws://localhost:8887";
+} else {
+    url =
+        (document.location.protocol == "https:" ? "wss://" : "ws://") +
+        document.location.host +
+        "/api";
+}
+
 // The complete API runs over this WebSocket.
 const socketConnection = webSocket<
     ServerMessage<unknown> | ClientMessage<unknown>
->("ws://localhost:8887");
+>(url);
 socketConnection.pipe(retry({ delay: 1000 })).subscribe(() => {
     // Not sure why we need this, but otherwise the multiplex below does not
     // seem to connect correctly. I assume there is some issue with the socket
@@ -257,7 +267,7 @@ export class UpdateTable<K, R> extends Table<K & UpdateRow<R>> {
     clone(): this {
         return new UpdateTable(
             this.name,
-            this.keys,
+            this.keys as (keyof K & UpdateRow<R>)[],
             this.filters,
             this.limited,
             this.deps

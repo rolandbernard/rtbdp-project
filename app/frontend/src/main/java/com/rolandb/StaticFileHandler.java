@@ -3,6 +3,7 @@ package com.rolandb;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
@@ -120,6 +121,8 @@ public class StaticFileHandler implements HttpHandler {
                     os.write(content);
                 }
             }
+        } catch (FileNotFoundException ex) {
+            sendNotFound(exchange);
         } catch (RuntimeException | IOException ex) {
             LOGGER.error("Failed to handle request", ex);
             sendInternalServerError(exchange);
