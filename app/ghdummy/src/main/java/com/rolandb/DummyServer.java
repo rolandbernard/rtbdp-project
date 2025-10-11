@@ -4,14 +4,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rolandb.DummyData.Event;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -81,10 +82,10 @@ public class DummyServer {
                 perPage = 100;
             }
             // Read events from dummy data
-            List<JsonNode> events = data.getEvents(page, perPage);
-            // Serialize into JSON binary string
-            ObjectMapper objectMapper = new ObjectMapper();
-            byte[] bytes = objectMapper.writeValueAsBytes(events);
+            List<Event> events = data.getEvents(page, perPage);
+            // Serialize into JSON byte string
+            byte[] bytes = events.stream().map(e -> e.json).collect(Collectors.joining(",", "[", "]"))
+                    .getBytes(StandardCharsets.UTF_8);
             // Send response
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");

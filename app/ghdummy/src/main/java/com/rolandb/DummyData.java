@@ -42,11 +42,21 @@ public class DummyData {
     private static final Logger LOGGER = LoggerFactory.getLogger(DummyData.class);
     private static final String RESOURCE_NAME = "dummy.json.gz";
 
+    public static class Event {
+        public final Instant timestamp;
+        public final String json;
+
+        public Event(Instant timestamp, String json) {
+            this.timestamp = timestamp;
+            this.json = json;
+        }
+    }
+
     private static class HourlyData {
         public final Instant last;
-        public final List<JsonNode> events;
+        public final List<Event> events;
 
-        public HourlyData(Instant last, List<JsonNode> events) {
+        public HourlyData(Instant last, List<Event> events) {
             this.last = last;
             this.events = events;
         }
@@ -166,30 +176,29 @@ public class DummyData {
         }
 
         /**
-         * Modify all timestamps such that they are moved forward or backwards in
-         * time to lie within one hour before the given target timestamp. This is for
-         * when we use dummy data, to still have correct timestamps.
+         * Modify the timestamp of the given event such that ti is moved forward or
+         * backwards in time to lie within one hour before the given target timestamp.
+         * This is for when we use dummy data, to still have correct timestamps.
          *
-         * @param original
-         *            The original list of events to modify.
+         * @param event
+         *            The original event to modify.
          * @param target
          *            The target timestamp to which the events should be adjusted to.
-         * @return The same list as given in, but with the objects modified.
+         * @return The creation time that is not in the event. Either the modified one
+         *         or the original if it was already in the correct timestamp.
          */
-        private static List<JsonNode> modifyTimestamps(List<JsonNode> original, Instant target) {
+        private static Instant modifyTimestamp(JsonNode event, Instant target) {
             long perHour = Duration.ofHours(1).toMillis();
-            for (JsonNode event : original) {
-                Instant ts = Instant.parse(event.at("/created_at").asText());
-                if (!ts.isBefore(target)) {
-                    long diff = (ts.toEpochMilli() - target.toEpochMilli() + perHour) / perHour;
-                    ts = ts.minus(Duration.ofHours(diff));
-                } else if (ts.isBefore(target.minus(Duration.ofHours(1)))) {
-                    long diff = (target.toEpochMilli() - ts.toEpochMilli() - 1) / perHour;
-                    ts = ts.plus(Duration.ofHours(diff));
-                }
-                ((ObjectNode) event).put("created_at", ts.toString());
+            Instant ts = Instant.parse(event.at("/created_at").asText());
+            if (!ts.isBefore(target)) {
+                long diff = (ts.toEpochMilli() - target.toEpochMilli() + perHour) / perHour;
+                ts = ts.minus(Duration.ofHours(diff));
+            } else if (ts.isBefore(target.minus(Duration.ofHours(1)))) {
+                long diff = (target.toEpochMilli() - ts.toEpochMilli() - 1) / perHour;
+                ts = ts.plus(Duration.ofHours(diff));
             }
-            return original;
+            ((ObjectNode) event).put("created_at", ts.toString());
+            return ts;
         }
 
         public static HourlyData loadFrom(Instant ts, String archiveUrl, String dataDir)
@@ -203,35 +212,31 @@ public class DummyData {
             LOGGER.info("Loading data for timestamp " + first + "(" + filename + ")");
             byte[] bytes = readDataForFile(filename, archiveUrl, dataDir);
             ObjectMapper objectMapper = new ObjectMapper();
-            List<JsonNode> events = new ArrayList<>();
+            List<Event> events = new ArrayList<>();
             try (ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes);
                     GZIPInputStream gzipStream = new GZIPInputStream(byteStream);
                     InputStreamReader reader = new InputStreamReader(gzipStream, StandardCharsets.UTF_8);
                     BufferedReader bufferedReader = new BufferedReader(reader)) {
                 String line;
                 while ((line = bufferedReader.readLine()) != null) {
-                    events.add(objectMapper.readTree(line));
+                    JsonNode node = objectMapper.readTree(line);
+                    Instant timestamp = modifyTimestamp(node, last);
+                    events.add(new Event(timestamp, line));
                 }
             } catch (IOException e) {
                 LOGGER.error("Failed to deserialize events data", e);
                 throw new IllegalStateException(e);
             }
-            events.sort((a, b) -> {
-                Instant ta = Instant.parse(a.at("/created_at").asText());
-                Instant tb = Instant.parse(b.at("/created_at").asText());
-                return ta.compareTo(tb);
-            });
-            modifyTimestamps(events, last);
+            events.sort((a, b) -> a.timestamp.compareTo(b.timestamp));
             return new HourlyData(last, events);
         }
 
-        public List<JsonNode> getLastAfter(Instant time, int n) {
+        public List<Event> getLastAfter(Instant time, int n) {
             int low = 0, high = events.size();
             while (low < high) {
                 int m = (low + high) / 2;
-                JsonNode event = events.get(m);
-                Instant eventTime = Instant.parse(event.at("/created_at").asText());
-                if (eventTime.isAfter(time)) {
+                Event event = events.get(m);
+                if (event.timestamp.isAfter(time)) {
                     high = m;
                 } else {
                     low = m + 1;
@@ -350,7 +355,7 @@ public class DummyData {
      *            The number of elements on each page.
      * @return A subset of current events based on {@code page} and {@code perPage}.
      */
-    public List<JsonNode> getEvents(int page, int perPage) {
+    public List<Event> getEvents(int page, int perPage) {
         return getEvents(currentTimestamp(), page, perPage);
     }
 
@@ -367,15 +372,15 @@ public class DummyData {
      *            The number of element on each page.
      * @return A subset of the events.
      */
-    public List<JsonNode> getEvents(Instant timestamp, int page, int perPage) {
+    public List<Event> getEvents(Instant timestamp, int page, int perPage) {
         LOGGER.info("Loading events for page {} ({} per page) at {}", page, perPage, timestamp);
         int len = page * perPage;
-        List<JsonNode> allEvents = new ArrayList<>();
+        List<Event> allEvents = new ArrayList<>();
         synchronized (cached) {
             Iterator<HourlyData> it = cached.descendingIterator();
             while (it.hasNext()) {
                 HourlyData d = it.next();
-                List<JsonNode> events = d.getLastAfter(timestamp, len - allEvents.size());
+                List<Event> events = d.getLastAfter(timestamp, len - allEvents.size());
                 for (int i = events.size() - 1; i >= 0; i--) {
                     allEvents.add(events.get(i));
                 }
