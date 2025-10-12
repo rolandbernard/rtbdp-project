@@ -9,13 +9,13 @@ CREATE EXTENSION timescaledb;
 -- reponame.
 CREATE EXTENSION pg_trgm;
 
-CREATE TYPE event_kind AS ENUM (
+CREATE TYPE EventKind AS ENUM (
     'all', 'push', 'watch', 'create_repo', 'create_branch', 'create_tag',
     'fork', 'wiki', 'issue_open', 'issue_close', 'pull_open', 'pull_close',
     'commit_comment', 'issue_comment', 'pull_comment', 'other'
 );
 
-CREATE TYPE window_size AS ENUM (
+CREATE TYPE WindowSize AS ENUM (
     '5m', '1h', '6h', '24h'
 );
 
@@ -28,7 +28,7 @@ CREATE TYPE window_size AS ENUM (
 CREATE TABLE events (
     created_at TIMESTAMP NOT NULL,
     id BIGINT NOT NULL,
-    kind event_kind NOT NULL,
+    kind EventKind NOT NULL,
     repo_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     details TEXT NOT NULL,
@@ -109,8 +109,8 @@ CREATE INDEX ON repos USING GIN (LOWER(fullname) gin_trgm_ops);
 -- =====================
 
 CREATE TABLE counts_live (
-    window_size window_size NOT NULL,
-    kind event_kind NOT NULL,
+    window_size WindowSize NOT NULL,
+    kind EventKind NOT NULL,
     num_events BIGINT NOT NULL,
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (window_size, kind)
@@ -135,7 +135,7 @@ SELECT window_size, kind, num_events,
     WHERE num_events > 0;
 
 CREATE TABLE counts_history (
-    kind event_kind NOT NULL,
+    kind EventKind NOT NULL,
     ts_start TIMESTAMP NOT NULL,
     ts_end TIMESTAMP NOT NULL,
     num_events BIGINT NOT NULL,
@@ -153,7 +153,7 @@ SELECT create_hypertable('counts_history', by_range('ts_start', INTERVAL '7 day'
 -- =====================
 
 CREATE TABLE users_live (
-    window_size window_size NOT NULL,
+    window_size WindowSize NOT NULL,
     user_id BIGINT NOT NULL,
     num_events BIGINT NOT NULL,
     seq_num BIGINT NOT NULL,
@@ -193,7 +193,7 @@ SELECT create_hypertable('users_history', by_range('ts_start', INTERVAL '1 hour'
 -- ===========================
 
 CREATE TABLE repos_live (
-    window_size window_size NOT NULL,
+    window_size WindowSize NOT NULL,
     repo_id BIGINT NOT NULL,
     num_events BIGINT NOT NULL,
     seq_num BIGINT NOT NULL,
@@ -232,5 +232,38 @@ SELECT create_hypertable('repos_history', by_range('ts_start', INTERVAL '1 hour'
 -- Trending repository detection
 -- =============================
 
--- TODO
+CREATE TABLE stars_live (
+    window_size WindowSize NOT NULL,
+    repo_id BIGINT NOT NULL,
+    num_stars BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (window_size, repo_id)
+);
 
+-- This index helps slightly with the performance of the ranking view.
+CREATE INDEX ON stars_live(window_size, num_stars DESC, repo_id ASC);
+
+-- This is a virtual view that also contains row numbers and ranks.
+CREATE VIEW stars_ranking AS
+SELECT window_size, repo_id, num_stars,
+        MAX(seq_num) OVER (PARTITION BY window_size) as seq_num,
+        ROW_NUMBER() OVER (
+            PARTITION BY window_size ORDER BY num_stars DESC, repo_id ASC
+        ) - 1 AS row_number,
+        RANK() OVER (
+            PARTITION BY window_size ORDER BY num_stars DESC
+        ) - 1 AS rank
+    FROM stars_live
+    WHERE num_stars > 0;
+
+CREATE TABLE stars_history (
+    repo_id BIGINT NOT NULL,
+    ts_start TIMESTAMP NOT NULL,
+    ts_end TIMESTAMP NOT NULL,
+    num_stars BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (repo_id, ts_start, ts_end)
+);
+
+-- We partition by four hours because this is relatively high volume.
+SELECT create_hypertable('stars_history', by_range('ts_start', INTERVAL '4 hour'));

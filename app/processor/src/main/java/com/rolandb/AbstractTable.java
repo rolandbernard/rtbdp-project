@@ -211,6 +211,14 @@ public abstract class AbstractTable<E extends SequencedRow> {
         });
     }
 
+    protected KeyedStream<GithubEvent, Long> getStarEventsByRepoStream() {
+        return getStream("starsByRepo", () -> {
+            return getEventStream()
+                    .filter(e -> e.eventType == GithubEventType.WATCH)
+                    .keyBy(event -> event.repoId);
+        });
+    }
+
     protected KeyedStream<GithubEvent, Long> getEventsByUserStream() {
         return getStream("eventsByUser", () -> {
             return getEventStream().keyBy(event -> event.userId);

@@ -158,8 +158,8 @@ public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSp
                     if (bucketEnd > lastClose - size * slideMs) {
                         totals[i]++;
                         out.collect(function.apply(
-                                Instant.ofEpochMilli(bucketEnd - size * slideMs),
-                                Instant.ofEpochMilli(bucketEnd),
+                                Instant.ofEpochMilli(lastClose - size * slideMs),
+                                Instant.ofEpochMilli(lastClose),
                                 ctx.getCurrentKey(), spec, totals[i]));
                     }
                 }

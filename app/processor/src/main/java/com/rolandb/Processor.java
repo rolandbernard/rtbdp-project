@@ -34,6 +34,9 @@ import com.rolandb.tables.ReposHistoryTable;
 import com.rolandb.tables.ReposLiveTable;
 import com.rolandb.tables.ReposRankingTable;
 import com.rolandb.tables.RepositoriesTable;
+import com.rolandb.tables.StarsHistoryTable;
+import com.rolandb.tables.StarsLiveTable;
+import com.rolandb.tables.StarsRankingTable;
 import com.rolandb.tables.UsersHistoryTable;
 import com.rolandb.tables.UsersLiveTable;
 import com.rolandb.tables.UsersRankingTable;
@@ -173,18 +176,27 @@ public class Processor {
                 .setReplicationFactor(replicationFactor)
                 .setRetentionMs(retentionMs);
         // Actually setup table computations.
+        // Table of all events
         builder.build("events", GithubEventsTable.class);
+        // Aggregated user and repository details
         builder.build("users", UsersTable.class);
         builder.build("repos", RepositoriesTable.class);
+        // Per-kind event counts
         builder.build("counts_history", CountsHistoryTable.class);
         builder.build("counts_live", CountsLiveTable.class);
         builder.build("counts_ranking", CountsRankingTable.class);
-        builder.build("repos_history", ReposHistoryTable.class);
-        builder.build("repos_live", ReposLiveTable.class);
-        builder.build("repos_ranking", ReposRankingTable.class);
+        // Per-user event counts
         builder.build("users_history", UsersHistoryTable.class);
         builder.build("users_live", UsersLiveTable.class);
         builder.build("users_ranking", UsersRankingTable.class);
+        // Per-repository event counts
+        builder.build("repos_history", ReposHistoryTable.class);
+        builder.build("repos_live", ReposLiveTable.class);
+        builder.build("repos_ranking", ReposRankingTable.class);
+        // Trending repository detection
+        builder.build("stars_history", StarsHistoryTable.class);
+        builder.build("stars_live", StarsLiveTable.class);
+        builder.build("stars_ranking", StarsRankingTable.class);
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
         env.execute("GitHub Event Analysis");
