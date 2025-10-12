@@ -269,7 +269,8 @@ public class SocketApiServer extends WebSocketServer {
 
     @Override
     public void onOpen(WebSocket socket, ClientHandshake handshake) {
-        if (handshake.getFieldValue("Cookie").contains(secret)
+        if (secret == null
+                || handshake.getFieldValue("Cookie").contains(secret)
                 || handshake.getResourceDescriptor().contains(secret)) {
             LOGGER.info("Client connected {}", socket.getRemoteSocketAddress());
             socket.setAttachment(new ClientState());

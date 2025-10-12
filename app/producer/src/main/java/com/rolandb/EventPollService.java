@@ -83,18 +83,19 @@ public class EventPollService {
                         LOGGER.info("Successfully fetched data from {} pages", numPages);
                         Observable<GithubEvent> combinedObservable = Observable.empty();
                         long index = 0;
-                        for (Object result : lists) {
+                        for (int i = lists.length - 1; i >= 0; i--) {
                             @SuppressWarnings("unchecked")
-                            List<GithubEvent> pageList = (List<GithubEvent>) result;
-                            Collections.reverse(pageList); // we reverse so the oldest ones are first
-                            for (int i = 0; i < pageList.size(); i++) {
+                            List<GithubEvent> pageList = (List<GithubEvent>) lists[i];
+                            // we reverse so the oldest ones are first
+                            Collections.reverse(pageList);
+                            for (int j = 0; j < pageList.size(); j++) {
                                 // This is the same kind of sequence number used as a fallback also
                                 // in the Flink processor.
                                 long timestamp = Instant.now().toEpochMilli() * 1000;
-                                pageList.get(i).seqNum = timestamp + index;
+                                pageList.get(j).seqNum = timestamp + index;
                                 index++;
                             }
-                            combinedObservable = Observable.fromIterable(pageList).concatWith(combinedObservable);
+                            combinedObservable = combinedObservable.concatWith(Observable.fromIterable(pageList));
                         }
                         return combinedObservable.toList().blockingGet();
                     });
