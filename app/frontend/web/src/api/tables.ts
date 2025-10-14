@@ -2,20 +2,20 @@ import { RankingTable, Table, UpdateTable } from "./client";
 
 export const EVENT_KINDS = {
     all: "All",
-    push: "Push",
-    watch: "Watch",
+    push: "Push Commit",
+    watch: "Star Repository",
     create_repo: "Create Repository",
     create_branch: "Create Branch",
     create_tag: "Create Tag",
-    fork: "Fork",
+    fork: "Fork Repository",
     wiki: "Edit Wiki",
     issue_open: "Open Issue",
     issue_close: "Close Issue",
     pull_open: "Open Pull Request",
     pull_close: "Close Pull Request",
-    commit_comment: "Comment on Commit",
-    issue_comment: "Comment on Issue",
-    pull_comment: "Comment on Pull Request",
+    commit_comment: "Comment Commit",
+    issue_comment: "Comment Issue",
+    pull_comment: "Comment Pull Request",
     other: "Other",
 };
 type EventKind = keyof typeof EVENT_KINDS;
@@ -125,3 +125,22 @@ export const usersHistory = new Table<{
     ts_end: string;
     num_events: number;
 }>("users_live", ["user_id", "ts_start", "ts_end"]);
+
+export const starsLive = new Table<{
+    window_size: WindowSize;
+    repo_id: number;
+    num_stars: number;
+}>("stars_live", ["window_size", "repo_id"]);
+
+export const starsRanking = new RankingTable<{
+    window_size: WindowSize;
+    repo_id: number;
+    num_stars: number;
+}>("stars_ranking", ["window_size", "repo_id"]).rankingsBy(["window_size"]);
+
+export const starsHistory = new Table<{
+    repo_id: number;
+    ts_start: string;
+    ts_end: string;
+    num_stars: number;
+}>("stars_live", ["repo_id", "ts_start", "ts_end"]);
