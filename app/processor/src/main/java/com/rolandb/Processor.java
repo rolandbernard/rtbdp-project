@@ -37,6 +37,8 @@ import com.rolandb.tables.RepositoriesTable;
 import com.rolandb.tables.StarsHistoryTable;
 import com.rolandb.tables.StarsLiveTable;
 import com.rolandb.tables.StarsRankingTable;
+import com.rolandb.tables.TrendingLiveTable;
+import com.rolandb.tables.TrendingRankingTable;
 import com.rolandb.tables.UsersHistoryTable;
 import com.rolandb.tables.UsersLiveTable;
 import com.rolandb.tables.UsersRankingTable;
@@ -197,6 +199,8 @@ public class Processor {
         builder.build("stars_history", StarsHistoryTable.class);
         builder.build("stars_live", StarsLiveTable.class);
         builder.build("stars_ranking", StarsRankingTable.class);
+        builder.build("trending_live", TrendingLiveTable.class);
+        builder.build("trending_ranking", TrendingRankingTable.class);
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
         env.execute("GitHub Event Analysis");
