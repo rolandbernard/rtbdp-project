@@ -267,3 +267,22 @@ CREATE TABLE stars_history (
 
 -- We partition by four hours because this is relatively high volume.
 SELECT create_hypertable('stars_history', by_range('ts_start', INTERVAL '4 hour'));
+
+CREATE TABLE trending_live (
+    repo_id BIGINT NOT NULL,
+    trending_score BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (repo_id)
+);
+
+-- This index helps slightly with the performance of the ranking view.
+CREATE INDEX ON trending_live(trending_score DESC, repo_id ASC);
+
+-- This is a virtual view that also contains row numbers and ranks.
+CREATE VIEW trending_ranking AS
+SELECT repo_id, trending_score,
+        MAX(seq_num) OVER () as seq_num,
+        ROW_NUMBER() OVER (ORDER BY trending_score DESC, repo_id ASC) - 1 AS row_number,
+        RANK() OVER (ORDER BY trending_score DESC) - 1 AS rank
+    FROM trending_live
+    WHERE trending_score > 0;

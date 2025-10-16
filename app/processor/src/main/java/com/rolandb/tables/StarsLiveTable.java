@@ -31,7 +31,7 @@ public class StarsLiveTable extends AbstractTable<StarsLiveTable.RepoStarCounts>
 
     @Override
     protected DataStream<RepoStarCounts> computeTable() {
-        return getStarEventsByRepoStream()
+        DataStream<RepoStarCounts> stream = getStarEventsByRepoStream()
                 .process(new MultiSlidingBuckets<>(Duration.ofSeconds(1),
                         List.of(
                                 WindowSize.MINUTES_5,
@@ -43,6 +43,8 @@ public class StarsLiveTable extends AbstractTable<StarsLiveTable.RepoStarCounts>
                         }))
                 .returns(RepoStarCounts.class)
                 .name("Live per Repo Stars");
+        streams.put("liveStarCounts", stream);
+        return stream;
     }
 
     @Override

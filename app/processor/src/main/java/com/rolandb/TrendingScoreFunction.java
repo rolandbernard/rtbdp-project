@@ -52,7 +52,11 @@ public class TrendingScoreFunction extends RichMapFunction<RepoStarCounts, RepoT
 
     @Override
     public RepoTrendingScore map(RepoStarCounts event) throws Exception {
-        lastCounts.put(event.windowSize, event.numStars);
+        if (event.numStars == 0) {
+            lastCounts.remove(event.windowSize);
+        } else {
+            lastCounts.put(event.windowSize, event.numStars);
+        }
         return new RepoTrendingScore(event.repoId, getTrendingScore());
     }
 }

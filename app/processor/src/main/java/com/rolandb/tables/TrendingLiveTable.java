@@ -24,7 +24,7 @@ public class TrendingLiveTable extends AbstractTable<TrendingLiveTable.RepoTrend
 
     @Override
     protected DataStream<RepoTrendingScore> computeTable() {
-        return this.<DataStream<RepoStarCounts>>getStream("[table]stars_live")
+        return this.<DataStream<RepoStarCounts>>getStream("liveStarCounts")
                 .keyBy(e -> e.repoId)
                 .map(new TrendingScoreFunction())
                 .returns(RepoTrendingScore.class)

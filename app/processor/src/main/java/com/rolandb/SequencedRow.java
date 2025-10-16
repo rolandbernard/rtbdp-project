@@ -65,7 +65,7 @@ public class SequencedRow {
                 }
             }
         }
-        return keys.isEmpty() ? null : keys;
+        return keys;
     }
 
     public static Object[] readValuesFrom(Object obj) {
