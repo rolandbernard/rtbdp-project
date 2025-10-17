@@ -264,6 +264,14 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("ts_end", FieldKind.SORTED_KEY, String.class, null),
                 new Field("num_stars", Long.class),
                 new Field("seq_num", Long.class))));
+        addTable(new Table("trending_live", 1_000L, List.of(
+                new Field("repo_id", FieldKind.KEY, Long.class, 1L),
+                new Field("trending_score", Long.class),
+                new Field("seq_num", Long.class))));
+        addTable(new RankingTable("trending_ranking", 1_000L, 1L, List.of(
+                new Field("repo_id", FieldKind.KEY, Long.class, 1L),
+                new Field("trending_score", Long.class),
+                new Field("seq_num", Long.class))));
         setReuseAddr(true);
         super.start();
     }

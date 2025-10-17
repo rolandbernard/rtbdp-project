@@ -77,7 +77,7 @@ public class Table {
     public final String name;
     public final Long maxLimit;
     public final List<Field> fields;
-    private Thread kafkaPollThread;
+    private Thread livePollThread;
     private Observable<Map<String, ?>> liveObservable;
 
     public Table(String name, Long maxLimit, List<Field> fields) {
@@ -89,7 +89,7 @@ public class Table {
     public void startLiveObservable(Properties kafkaProperties) {
         if (liveObservable == null) {
             PublishSubject<Map<String, ?>> subject = PublishSubject.create();
-            kafkaPollThread = new Thread(() -> {
+            livePollThread = new Thread(() -> {
                 try {
                     KafkaUtil.waitForTopics(kafkaProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG), name);
                 } catch (InterruptedException | ExecutionException e) {
@@ -122,7 +122,7 @@ public class Table {
                     subject.onComplete();
                 }
             });
-            kafkaPollThread.start();
+            livePollThread.start();
             liveObservable = subject.share();
         }
     }
@@ -130,8 +130,8 @@ public class Table {
     public void stopLiveObservable() throws InterruptedException {
         if (liveObservable != null) {
             liveObservable = null;
-            kafkaPollThread.interrupt();
-            kafkaPollThread.join();
+            livePollThread.interrupt();
+            livePollThread.join();
         }
     }
 

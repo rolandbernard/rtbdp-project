@@ -144,3 +144,13 @@ export const starsHistory = new Table<{
     ts_end: string;
     num_stars: number;
 }>("stars_live", ["repo_id", "ts_start", "ts_end"]);
+
+export const trendingLive = new Table<{
+    repo_id: number;
+    trending_score: number;
+}>("trending_live", ["repo_id"]);
+
+export const trendingRanking = new RankingTable<{
+    repo_id: number;
+    trending_score: number;
+}>("trending_ranking", ["repo_id"]).rankingsBy([]);
