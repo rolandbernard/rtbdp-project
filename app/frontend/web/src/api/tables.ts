@@ -1,4 +1,5 @@
-import { RankingTable, Table, UpdateTable } from "./client";
+import { Table, UpdateTable } from "./table";
+import { RankingTable } from "./ranking";
 
 export const EVENT_KINDS = {
     all: "All",

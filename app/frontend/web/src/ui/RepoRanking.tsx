@@ -1,8 +1,10 @@
-import RankingList from "./RankingList";
-import { usersRanking } from "../api/tables";
 import { useState } from "react";
 
-export default function UserRanking() {
+import { trendingRanking } from "../api/tables";
+
+import RankingList from "./RankingList";
+
+export default function RepoRanking() {
     const [start, setStart] = useState(0);
     return (
         <>
@@ -22,22 +24,24 @@ export default function UserRanking() {
                 <thead>
                     <tr>
                         <th className="pt-1">Rank</th>
-                        <th className="pt-1">UserId</th>
-                        <th className="pt-1">#Events</th>
+                        <th className="pt-1">RepoId</th>
+                        <th className="pt-1">Score</th>
                     </tr>
                 </thead>
                 <tbody>
                     <RankingList
-                        table={usersRanking.where("window_size", ["5m"])}
+                        table={trendingRanking}
                         from={start}
                         to={start + 10}
                         rows={row => (
-                            <tr key={row.user_id}>
+                            <tr key={row.repo_id}>
                                 <td className="pt-1 px-3">{row.rank}</td>
                                 <td className="pt-1 px-3 text-right">
-                                    {row.user_id}
+                                    {row.repo_id}
                                 </td>
-                                <td className="pt-1 px-3">{row.num_events}</td>
+                                <td className="pt-1 px-3">
+                                    {row.trending_score}
+                                </td>
                             </tr>
                         )}
                     ></RankingList>

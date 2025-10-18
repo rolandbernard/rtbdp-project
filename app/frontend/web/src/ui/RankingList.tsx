@@ -1,11 +1,9 @@
 import { useMemo, type ReactNode } from "react";
-import {
-    RankingTable,
-    useTable,
-    type RankingRow,
-    type Row,
-} from "../api/client";
-import { sort } from "../api/util";
+
+import type { RankingRow, RankingTable } from "../api/ranking";
+import type { Row } from "../api/client";
+import { useTable } from "../api/hooks";
+import { sort } from "../util";
 
 interface Props<R> {
     table: RankingTable<R>;

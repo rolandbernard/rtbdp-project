@@ -1,7 +1,8 @@
 import { useMemo } from "react";
-import { useTable } from "../api/client";
+
+import { useTable } from "../api/hooks";
 import { countsLive } from "../api/tables";
-import { groupBy, sort } from "../api/util";
+import { groupBy, sort } from "../util";
 
 export default function EventCounts() {
     const rawResult = useTable(countsLive);

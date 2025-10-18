@@ -1,4 +1,4 @@
-import { useTable } from "../api/client";
+import { useTable } from "../api/hooks";
 import { events } from "../api/tables";
 
 export default function App() {
