@@ -53,6 +53,12 @@ public class AuthHandler implements HttpHandler {
         return secret;
     }
 
+    private String getLoginPageTemplate() throws IOException {
+        return new String(
+                AuthHandler.class.getResourceAsStream("login.html").readAllBytes(),
+                StandardCharsets.UTF_8);
+    }
+
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         try {
@@ -90,23 +96,7 @@ public class AuthHandler implements HttpHandler {
                     }
                     return;
                 }
-                String response = """
-                        <html>
-                            <body>
-                                <form
-                                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"
-                                    method="POST"
-                                >
-                                    Password:
-                                    <input type="password" name="secret">
-
-                                    <div style="position: relative">
-                                        <div style="position: absolute; top: 1em; color: red">{{message}}</div>
-                                    </div>
-                                </from>
-                            </body>
-                        </html>
-                        """.replace("{{message}}", message);
+                String response = getLoginPageTemplate().replace("{{message}}", message);
                 exchange.getResponseHeaders().set("Content-Type", "text/html");
                 exchange.sendResponseHeaders(401, response.length());
                 try (OutputStream os = exchange.getResponseBody()) {

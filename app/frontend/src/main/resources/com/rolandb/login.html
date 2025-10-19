@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="theme-color" content="#1e1e1e" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Real-time Analysis of Public GitHub Activity" />
+    <meta name="name" content="rtgh | real-time GitHub events" />
+    <meta property="og:title" content="GitHub Real-Time Events" />
+    <title>GitHub Real-Time Events</title>
+    <style>
+        :root {
+            background: oklch(95% 0 0);
+            color: oklch(20% 0 0);
+        }
+
+        :root.dark {
+            background: oklch(21% 0 0);
+            color: oklch(84.955% 0 0);
+        }
+
+        .dark input {
+            background: oklch(30% 0 0);
+            color: oklch(84.955% 0 0);
+        }
+    </style>
+    <script>
+        function setupTheme(query) {
+            if (!query) {
+                query = matchMedia("(prefers-color-scheme: dark)");
+            }
+            document.documentElement.classList.toggle(
+                "dark",
+                "theme" in localStorage ? localStorage.theme === "dark" : query.matches
+            );
+        }
+        matchMedia("(prefers-color-scheme: dark)").addListener(setupTheme);
+        addEventListener("storage", () => setupTheme());
+        setupTheme();
+    </script>
+</head>
+
+<body>
+    <form style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: max-content;" method="POST">
+        Password:
+        <input type="password" name="secret">
+
+        <div style="position: relative; width: max-content;">
+            <div style="position: absolute; top: 1em; color: red; width: max-content;">{{message}}</div>
+        </div>
+    </from>
+</body>
+
+</html>
