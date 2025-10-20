@@ -62,7 +62,7 @@ export default function SearchBar(props: Props) {
         return combined;
     }, [userResults, repoResults]);
     const trueResults = results
-        .filter(row => row.name?.includes(query))
+        .filter(row => row.name?.toLowerCase()?.includes(query.toLowerCase()))
         .slice(0, 10);
     return (
         <div className="relative">
