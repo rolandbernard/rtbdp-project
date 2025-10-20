@@ -1,4 +1,4 @@
-import { useMemo, useState, type Ref } from "react";
+import { useMemo, useState } from "react";
 import { FaMagnifyingGlass } from "react-icons/fa6";
 
 import { users, repos } from "../api/tables";
@@ -24,7 +24,7 @@ function boldQuery(text: string, query: string) {
 }
 
 interface Props {
-    inputRef?: Ref<HTMLInputElement>;
+    autoFocus?: boolean;
 }
 
 export default function SearchBar(props: Props) {
@@ -75,13 +75,13 @@ export default function SearchBar(props: Props) {
                     className="block w-full ps-9 pe-3 border-2 border-base-content/65 outline-none text-sm rounded-field px-2 py-2 focus-visible:border-primary placeholder:text-base-content/65 placeholder:italic"
                     placeholder="Search for users or repositories..."
                     value={query}
-                    ref={props.inputRef}
+                    autoFocus={props.autoFocus}
                     onBlur={() => setQuery("")}
                     onChange={e => setQuery(e.target.value)}
                 />
             </div>
             {query.length !== 0 ? (
-                <div className="absolute inset-y-full end-0 w-full hidden peer-focus-within:block">
+                <div className="absolute inset-y-full end-0 w-full hidden peer-focus-within:block z-50">
                     <div className="flex flex-col w-full bg-base-300 rounded-box p-4">
                         {trueResults.length ? (
                             trueResults.map(row => {

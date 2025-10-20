@@ -6,6 +6,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+* {
+    transition-property: color, background, border;
+    transition-duration: 200ms;
+}
+
 @theme {
     --font-sans: "Noto Sans Variable", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "Noto Sans Mono Variable", ui-monospace, monospace;
@@ -16,28 +21,12 @@
     --size-selector: 0.25rem;
     --size-field: 0.25rem;
 
-    --color-base-100: oklch(98% 0 0);
-    --color-base-200: oklch(97% 0 0);
-    --color-base-300: oklch(92% 0 0);
+    --color-base-100: oklch(95% 0 0);
+    --color-base-200: oklch(93% 0 0);
+    --color-base-300: oklch(90% 0 0);
     --color-base-content: oklch(20% 0 0);
 
-    --color-primary: oklch(78% 0.115 274.713);
-    --color-primary-content: oklch(25% 0.09 281.288);
-    --color-secondary: oklch(80% 0.105 251.813);
-    --color-secondary-content: oklch(28% 0.091 267.935);
-    --color-accent: oklch(80% 0.114 19.571);
-    --color-accent-content: oklch(25% 0.092 26.042);
-    --color-neutral: oklch(26% 0 0);
-    --color-neutral-content: oklch(98% 0 0);
-
-    --color-success: oklch(60% 0.118 184.704);
-    --color-success-content: oklch(98% 0.014 180.72);
-    --color-info: oklch(60% 0.126 221.723);
-    --color-info-content: oklch(98% 0.019 200.873);
-    --color-warning: oklch(68% 0.162 75.834);
-    --color-warning-content: oklch(98% 0.026 102.212);
-    --color-error: oklch(59% 0.249 0.584);
-    --color-error-content: oklch(97% 0.014 343.198);
+    --color-primary: oklch(45% 0.2 274.713);
 }
 
 .dark {
@@ -45,4 +34,6 @@
     --color-base-200: oklch(16% 0 0);
     --color-base-300: oklch(8% 0 0);
     --color-base-content: oklch(84.955% 0 0);
+
+    --color-primary: oklch(78% 0.1 274.713);
 }

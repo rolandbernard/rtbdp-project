@@ -14,7 +14,7 @@
     <meta property="og:title" content="GitHub Real-Time Events" />
     <title>GitHub Real-Time Events</title>
     <script>
-        function setDarkMode(query) {
+        function setupTheme(query) {
             if (!query) {
                 query = matchMedia("(prefers-color-scheme: dark)");
             }
@@ -23,8 +23,9 @@
                 "theme" in localStorage ? localStorage.theme === "dark" : query.matches
             );
         }
-        matchMedia("(prefers-color-scheme: dark)").addListener(setDarkMode);
-        setDarkMode();
+        matchMedia("(prefers-color-scheme: dark)").addListener(setupTheme);
+        addEventListener("storage", () => setupTheme());
+        setupTheme();
     </script>
     <script type="module" src="/src/main.tsx"></script>
 </head>
