@@ -7,7 +7,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 * {
-    transition-property: color, background, border;
+    transition-property: color, background, border, transform, opacity;
     transition-duration: 200ms;
 }
 

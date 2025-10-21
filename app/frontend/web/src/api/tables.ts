@@ -19,7 +19,7 @@ export const EVENT_KINDS = {
     pull_comment: "Comment Pull Request",
     other: "Other",
 };
-type EventKind = keyof typeof EVENT_KINDS;
+export type EventKind = keyof typeof EVENT_KINDS;
 
 export const WINDOW_SIZES = {
     "5m": 60 * 5,
@@ -27,7 +27,7 @@ export const WINDOW_SIZES = {
     "6h": 60 * 60 * 6,
     "24h": 60 * 60 * 24,
 };
-type WindowSize = keyof typeof WINDOW_SIZES;
+export type WindowSize = keyof typeof WINDOW_SIZES;
 
 export const events = new Table<{
     created_at: string;
