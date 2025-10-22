@@ -126,25 +126,19 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     }
                     break;
                 }
-                case CREATE_TAG: {
+                case DELETE_BRANCH: {
                     String tagName = rawEvent.at("/payload/ref").asText();
-                    JsonNode description = rawEvent.at("/payload/description");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
                     builder.append(userId);
-                    builder.append("}> created the tag <code{");
+                    builder.append("}> deleted the branch <code{");
                     builder.append(tagName);
                     builder.append("}> in repository <repo{");
                     builder.append(reponame);
                     builder.append("}{");
                     builder.append(repoId);
                     builder.append("}>.");
-                    if (description.isTextual()) {
-                        builder.append("<quote{");
-                        builder.append(description.asText());
-                        builder.append("}>");
-                    }
                     break;
                 }
                 case FORK: {

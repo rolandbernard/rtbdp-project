@@ -10,7 +10,7 @@ CREATE EXTENSION timescaledb;
 CREATE EXTENSION pg_trgm;
 
 CREATE TYPE EventKind AS ENUM (
-    'all', 'push', 'watch', 'create_repo', 'create_branch', 'create_tag',
+    'all', 'push', 'watch', 'create_repo', 'create_branch', 'delete_branch',
     'fork', 'wiki', 'issue_open', 'issue_close', 'pull_open', 'pull_close',
     'commit_comment', 'issue_comment', 'pull_comment', 'other'
 );

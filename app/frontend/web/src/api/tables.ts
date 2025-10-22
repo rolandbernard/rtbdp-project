@@ -7,7 +7,7 @@ export const EVENT_KINDS = {
     watch: "Star Repository",
     create_repo: "Create Repository",
     create_branch: "Create Branch",
-    create_tag: "Create Tag",
+    delete_branch: "Delete Branch",
     fork: "Fork Repository",
     wiki: "Edit Wiki",
     issue_open: "Open Issue",

@@ -36,7 +36,7 @@ export default function EventCounts() {
                 >
                     <EventCounter
                         kind={key as EventKind}
-                        windowSize="5m"
+                        windowSize="24h"
                     ></EventCounter>
                 </div>
             ))}

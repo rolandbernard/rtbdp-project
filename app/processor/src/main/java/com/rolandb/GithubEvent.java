@@ -49,13 +49,34 @@ public class GithubEvent extends SequencedRow {
             case "CreateEvent":
                 switch (rawEvent.at("/payload/ref_type").asText()) {
                     case "branch":
-                        eventType = GithubEventType.CREATE_BRANCH;
+                        if (rawEvent.at("/payload/ref").asText()
+                                .equals(rawEvent.at("/payload/master_branch").asText())) {
+                            eventType = GithubEventType.CREATE_REPO;
+                        } else {
+                            eventType = GithubEventType.CREATE_BRANCH;
+                        }
                         break;
                     case "tag":
-                        eventType = GithubEventType.CREATE_TAG;
+                        eventType = GithubEventType.OTHER;
                         break;
                     case "repository":
                         eventType = GithubEventType.CREATE_REPO;
+                        break;
+                    default:
+                        eventType = GithubEventType.OTHER;
+                        break;
+                }
+                break;
+            case "DeleteEvent":
+                switch (rawEvent.at("/payload/ref_type").asText()) {
+                    case "branch":
+                        eventType = GithubEventType.DELETE_BRANCH;
+                        break;
+                    case "tag":
+                        eventType = GithubEventType.OTHER;
+                        break;
+                    case "repository":
+                        eventType = GithubEventType.OTHER;
                         break;
                     default:
                         eventType = GithubEventType.OTHER;
