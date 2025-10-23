@@ -48,8 +48,8 @@ export default function ThemeSelector() {
                 id="search-toggle"
                 className="
                     flex items-center justify-center w-10 h-10 cursor-pointer
-                    rounded-box hover:bg-base-content/15 border border-transparent
-                    active:border-base-content/20"
+                    rounded-box hover:bg-content/10 dark:hover:bg-content/15 border
+                    border-transparent active:border-content/10"
                 onClick={() => setShow(true)}
             >
                 <FaMoon className="w-5 h-5 hidden dark:block"></FaMoon>
@@ -58,7 +58,7 @@ export default function ThemeSelector() {
             </button>
             {show ? (
                 <div className="absolute inset-y-full end-3 z-50">
-                    <div className="flex flex-col items-stretch w-full bg-base-300 rounded-box p-1">
+                    <div className="flex flex-col items-stretch w-full bg-base-300 rounded-box p-1 shadow-xl">
                         {Object.entries(OPTIONS).map(([name, icon]) => {
                             return (
                                 <button
@@ -66,9 +66,10 @@ export default function ThemeSelector() {
                                     key={name}
                                     className={
                                         "flex items-center justify-start whitespace-nowrap p-2 cursor-pointer rounded-box " +
-                                        "hover:bg-base-content/15 border border-transparent active:border-base-content/20" +
+                                        "hover:bg-content/10 border border-transparent active:border-content/10 " +
+                                        "dark:hover:bg-content/15 " +
                                         (selected === name
-                                            ? " text-primary"
+                                            ? "text-primary"
                                             : "")
                                     }
                                     onClick={() => setupTheme(name)}

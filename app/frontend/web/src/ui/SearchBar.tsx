@@ -68,11 +68,13 @@ export default function SearchBar(props: Props) {
         <div className="relative">
             <div className="peer w-full relative block">
                 <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <FaMagnifyingGlass className="w-4 h-4 text-base-content/65"></FaMagnifyingGlass>
+                    <FaMagnifyingGlass className="w-4 h-4 text-border"></FaMagnifyingGlass>
                 </div>
                 <input
                     type="text"
-                    className="block w-full ps-9 pe-3 border-2 border-base-content/65 outline-none text-sm rounded-field px-2 py-2 focus-visible:border-primary placeholder:text-base-content/65 placeholder:italic"
+                    className="block w-full ps-9 pe-3 border-2 border-border outline-none text-sm
+                        rounded-field px-2 py-2 focus-visible:border-primary placeholder:text-content/65
+                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
                     placeholder="Search for users or repositories..."
                     value={query}
                     autoFocus={props.autoFocus}
@@ -82,7 +84,7 @@ export default function SearchBar(props: Props) {
             </div>
             {query.length !== 0 ? (
                 <div className="absolute inset-y-full end-0 w-full hidden peer-focus-within:block z-50">
-                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4">
+                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4 shadow-xl">
                         {trueResults.length ? (
                             trueResults.map(row => {
                                 return (

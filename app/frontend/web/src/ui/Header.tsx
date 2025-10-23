@@ -37,7 +37,8 @@ export default function Header() {
                             aria-expanded={showSearch}
                             id="search-toggle"
                             className="flex items-center justify-center md:hidden w-10 h-10 cursor-pointer rounded-box
-                            hover:bg-base-content/15 border border-transparent active:border-base-content/20"
+                                hover:bg-content/10 dark:hover:bg-content/15 border border-transparent
+                                active:border-content/20"
                             onClick={() => setShowSearch(true)}
                         >
                             <FaMagnifyingGlass className="w-5 h-5"></FaMagnifyingGlass>
