@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FaMagnifyingGlass } from "react-icons/fa6";
+import { Search } from "lucide-react";
 
 import { users, repos } from "../api/tables";
 import { useLoadingTable } from "../api/hooks";
@@ -68,7 +68,7 @@ export default function SearchBar(props: Props) {
         <div className="relative">
             <div className="peer w-full relative block">
                 <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <FaMagnifyingGlass className="w-4 h-4 text-border"></FaMagnifyingGlass>
+                    <Search className="w-4 h-4 text-border stroke-3"></Search>
                 </div>
                 <input
                     type="text"

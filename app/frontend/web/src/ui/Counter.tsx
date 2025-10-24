@@ -42,7 +42,7 @@ export default function Counter(props: Props) {
                 {props.value}
             </div>
             <div
-                className="flex flex-row pointer-events-none select-none"
+                className="flex flex-row justify-end pointer-events-none select-none"
                 aria-hidden="true"
             >
                 {[...Array(props.maxDigits)]

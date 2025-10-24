@@ -87,7 +87,7 @@ export const countsHistory = new Table<{
     ts_start: string;
     ts_end: string;
     num_events: number;
-}>("counts_live", ["kind", "ts_start", "ts_end"]);
+}>("counts_history", ["kind", "ts_start", "ts_end"]);
 
 export const reposLive = new Table<{
     window_size: WindowSize;
@@ -106,7 +106,7 @@ export const reposHistory = new Table<{
     ts_start: string;
     ts_end: string;
     num_events: number;
-}>("repos_live", ["repo_id", "ts_start", "ts_end"]);
+}>("repos_history", ["repo_id", "ts_start", "ts_end"]);
 
 export const usersLive = new Table<{
     window_size: WindowSize;
@@ -125,7 +125,7 @@ export const usersHistory = new Table<{
     ts_start: string;
     ts_end: string;
     num_events: number;
-}>("users_live", ["user_id", "ts_start", "ts_end"]);
+}>("users_history", ["user_id", "ts_start", "ts_end"]);
 
 export const starsLive = new Table<{
     window_size: WindowSize;
@@ -144,7 +144,7 @@ export const starsHistory = new Table<{
     ts_start: string;
     ts_end: string;
     num_stars: number;
-}>("stars_live", ["repo_id", "ts_start", "ts_end"]);
+}>("stars_history", ["repo_id", "ts_start", "ts_end"]);
 
 export const trendingLive = new Table<{
     repo_id: number;

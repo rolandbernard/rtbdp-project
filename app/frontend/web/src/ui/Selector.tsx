@@ -29,7 +29,7 @@ export default function Selector(props: Props) {
                         name={props.name}
                         value={key}
                         className="peer hidden"
-                        checked={
+                        defaultChecked={
                             props.value != null
                                 ? props.value === key
                                 : undefined

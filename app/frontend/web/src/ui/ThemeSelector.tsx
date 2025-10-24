@@ -1,10 +1,10 @@
+import { Moon, Settings, Sun } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { FaGear, FaMoon, FaSun } from "react-icons/fa6";
 
 const OPTIONS = {
-    light: FaSun,
-    dark: FaMoon,
-    system: FaGear,
+    light: Sun,
+    dark: Moon,
+    system: Settings,
 };
 
 export default function ThemeSelector() {
@@ -14,7 +14,7 @@ export default function ThemeSelector() {
         const handler = () => setSelected(localStorage.theme ?? "system");
         addEventListener("storage", handler);
         return () => removeEventListener("storage", handler);
-    }, [setSelected]);
+    }, []);
     const setupTheme = (value: string) => {
         if (value) {
             if (value === "system") {
@@ -52,13 +52,13 @@ export default function ThemeSelector() {
                     border-transparent active:border-content/10"
                 onClick={() => setShow(true)}
             >
-                <FaMoon className="w-5 h-5 hidden dark:block"></FaMoon>
-                <FaSun className="w-5 h-5 block dark:hidden"></FaSun>
+                <Moon className="w-5 h-5 hidden dark:block"></Moon>
+                <Sun className="w-5 h-5 block dark:hidden"></Sun>
                 <span className="sr-only">Search</span>
             </button>
             {show ? (
                 <div className="absolute inset-y-full end-3 z-50">
-                    <div className="flex flex-col items-stretch w-full bg-base-300 rounded-box p-1 shadow-xl">
+                    <div className="flex flex-col items-stretch w-full bg-base-300 shadow-xl rounded-box p-1">
                         {Object.entries(OPTIONS).map(([name, icon]) => {
                             return (
                                 <button

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { FaMagnifyingGlass } from "react-icons/fa6";
+import { Search } from "lucide-react";
 
 import SearchBar from "./SearchBar";
 import ThemeSelector from "./ThemeSelector";
@@ -12,7 +12,7 @@ export default function Header() {
             <div className="w-full h-16"></div>
             <nav
                 id="header"
-                className="bg-base-200 fixed w-full z-20 top-0 start-0"
+                className="bg-base-200/75 backdrop-blur-md fixed w-full z-20 top-0 start-0"
                 onBlur={e => {
                     if (!e.relatedTarget?.closest("nav#header")) {
                         setShowSearch(false);
@@ -41,7 +41,7 @@ export default function Header() {
                                 active:border-content/20"
                             onClick={() => setShowSearch(true)}
                         >
-                            <FaMagnifyingGlass className="w-5 h-5"></FaMagnifyingGlass>
+                            <Search className="w-5 h-5"></Search>
                             <span className="sr-only">Search</span>
                         </button>
                         <div className="w-100 hidden md:block">

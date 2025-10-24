@@ -10,3 +10,13 @@ export function useDebounce<T>(value: T, millis: number) {
     }, [value, millis]);
     return debounced;
 }
+
+export function useLatched<T>(value: T, latch: boolean) {
+    const [latched, setLatched] = useState(value);
+    useEffect(() => {
+        if (latch) {
+            setLatched(value);
+        }
+    }, [latch, value]);
+    return latch ? value : latched;
+}
