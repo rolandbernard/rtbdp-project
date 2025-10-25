@@ -12,7 +12,7 @@ export default function Selector(props: Props) {
     return (
         <div
             className={
-                "flex flex-row outline-none rounded-field justify-stretch " +
+                "flex flex-row outline-none rounded-field " +
                 "focus-visible:border-primary select-none " +
                 props.className
             }

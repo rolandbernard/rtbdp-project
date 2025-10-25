@@ -82,7 +82,7 @@ function EventCounter(props: Props) {
 export default function EventCounts() {
     const [windowSize, setWindowSize] = useState("24h");
     return (
-        <div className="flex flex-col flex-auto grow-0 items-stretch">
+        <div className="flex flex-col flex-auto grow-0">
             <div className="flex flex-row justify-end">
                 <div className="w-full max-w-64 pb-1 px-2">
                     <Selector
@@ -99,7 +99,7 @@ export default function EventCounts() {
                     ></Selector>
                 </div>
             </div>
-            <div className="flex flex-wrap items-stretch">
+            <div className="flex flex-wrap">
                 {Object.keys(EVENT_KINDS).map(key => (
                     <div
                         key={key}
