@@ -7,7 +7,7 @@ import RankingList from "./RankingList";
 export default function RepoRanking() {
     const [start, setStart] = useState(0);
     return (
-        <div className="w-full max-w-1/2">
+        <div className="w-full max-w-1/2 min-w-0">
             <button
                 className="ms-1 p-2 bg-gray-600 hover:cursor-pointer"
                 onClick={_e => setStart(start - 10)}
