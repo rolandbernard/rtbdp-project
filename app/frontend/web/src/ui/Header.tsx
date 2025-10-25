@@ -9,10 +9,10 @@ export default function Header() {
     const [showSearch, setShowSearch] = useState(false);
     return (
         <>
-            <div className="w-full h-16"></div>
+            <div className="w-full h-16 shrink-0 grow-0"></div>
             <nav
                 id="header"
-                className="bg-base-200/75 backdrop-blur-md fixed w-full z-20 top-0 start-0"
+                className="bg-base-200/60 backdrop-blur-md fixed w-full z-20 top-0 start-0"
                 onBlur={e => {
                     if (!e.relatedTarget?.closest("nav#header")) {
                         setShowSearch(false);

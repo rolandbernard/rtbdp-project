@@ -26,11 +26,13 @@ function formatDate(date: Date) {
     return (
         MONTH_NAME[date.getMonth()] +
         " " +
-        (date.getDay() + 1) +
+        date.getDate() +
         ", " +
         twoDigitString(date.getHours()) +
         ":" +
-        twoDigitString(date.getMinutes())
+        twoDigitString(date.getMinutes()) +
+        "-" +
+        twoDigitString((date.getMinutes() + 5) % 60)
     );
 }
 
@@ -90,8 +92,8 @@ export default function Sparkline(props: Props) {
                     stroke={props.chartColor}
                     strokeWidth={2}
                     fill="url(#colorGradient)"
-                    activeDot={false}
-                    dot={false}
+                    animationDuration={200}
+                    animationEasing="linear"
                 />
             </AreaChart>
         </ResponsiveContainer>

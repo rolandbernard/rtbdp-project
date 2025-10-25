@@ -58,7 +58,7 @@ export default function ThemeSelector() {
             </button>
             {show ? (
                 <div className="absolute inset-y-full end-3 z-50">
-                    <div className="flex flex-col items-stretch w-full bg-base-300 shadow-xl rounded-box p-1">
+                    <div className="flex flex-col items-stretch w-full bg-base-300 shadow-xl dark:shadow-2xl rounded-box p-1">
                         {Object.entries(OPTIONS).map(([name, icon]) => {
                             return (
                                 <button

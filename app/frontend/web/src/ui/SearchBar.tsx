@@ -84,7 +84,7 @@ export default function SearchBar(props: Props) {
             </div>
             {query.length !== 0 ? (
                 <div className="absolute inset-y-full end-0 w-full hidden peer-focus-within:block z-50">
-                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4 shadow-xl">
+                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4 shadow-xl dark:shadow-2xl">
                         {trueResults.length ? (
                             trueResults.map(row => {
                                 return (
@@ -98,12 +98,14 @@ export default function SearchBar(props: Props) {
                                     </div>
                                 );
                             })
-                        ) : query !== debounced ||
-                          !userComplete ||
-                          !repoComplete ? (
-                            <div>Searching...</div>
                         ) : (
-                            <div>No results found.</div>
+                            <div className="text-content/80">
+                                {query !== debounced ||
+                                !userComplete ||
+                                !repoComplete
+                                    ? "Searching..."
+                                    : "No results found."}
+                            </div>
                         )}
                     </div>
                 </div>

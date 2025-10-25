@@ -119,7 +119,7 @@ export class Table<R> {
                 this.keys.map(
                     k =>
                         ([_key, row]) =>
-                            row[k]
+                            row[k] as number | string
                 ),
                 true
             );

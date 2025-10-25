@@ -1,5 +1,7 @@
-export function sortedKey<T, C>(
-    fn: ((a: T) => C)[],
+type Comparable = number | string | Date;
+
+export function sortedKey<T>(
+    fn: ((a: T) => Comparable)[],
     rev = false
 ): (a: T, b: T) => number {
     if (fn.length == 1) {
@@ -24,12 +26,12 @@ export function sortedKey<T, C>(
     }
 }
 
-export function sort<T, C>(
+export function sort<T>(
     array: T[],
-    fn: ((a: T) => C)[],
+    fn: ((a: T) => Comparable)[],
     rev?: boolean
 ): T[] {
-    return array.toSorted(sortedKey<T, C>(fn, rev));
+    return array.toSorted(sortedKey<T>(fn, rev));
 }
 
 export function groupKey<R>(row: R, keys: (keyof R)[]): string {
