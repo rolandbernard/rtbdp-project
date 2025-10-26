@@ -89,8 +89,8 @@ public class AuthHandler implements HttpHandler {
                     exchange.getResponseHeaders().add("Location", url.isEmpty() ? "/" : url);
                     exchange.getResponseHeaders().add("Set-Cookie",
                             "rtgh_secret=" + secret + "; Secure; HTTPOnly; SameSite=Lax");
-                    String response = "307 Temporary Redirect";
-                    exchange.sendResponseHeaders(307, response.length());
+                    String response = "303 See Other";
+                    exchange.sendResponseHeaders(303, response.length());
                     try (OutputStream os = exchange.getResponseBody()) {
                         os.write(response.getBytes());
                     }
@@ -112,8 +112,8 @@ public class AuthHandler implements HttpHandler {
                 }
                 if (!hasSecret) {
                     exchange.getResponseHeaders().add("Location", "/login?url=" + URLEncoder.encode(path, "UTF-8"));
-                    String response = "307 Temporary Redirect";
-                    exchange.sendResponseHeaders(307, response.length());
+                    String response = "303 See Other";
+                    exchange.sendResponseHeaders(303, response.length());
                     try (OutputStream os = exchange.getResponseBody()) {
                         os.write(response.getBytes());
                     }

@@ -300,7 +300,7 @@ public class SocketApiServer extends WebSocketServer {
             socket.setAttachment(new ClientState());
         } else {
             LOGGER.info("Client missing auth cookie {}", socket.getRemoteSocketAddress());
-            socket.close(CloseFrame.POLICY_VALIDATION);
+            socket.close(CloseFrame.POLICY_VALIDATION, "missing auth");
         }
     }
 

@@ -1,5 +1,5 @@
 import { webSocket } from "rxjs/webSocket";
-import { retry } from "rxjs/operators";
+import { catchError, retry } from "rxjs/operators";
 
 export type Row<R> = R & { seq_num: number };
 export type RowMessage<R> = {
@@ -25,9 +25,11 @@ export type ClientMessage<R> = {
 };
 
 // Determine the URL that the API will be available at.
+let loginUrl = "/login";
 let url;
 if (document.location.hostname == "localhost") {
     url = "ws://localhost:8887";
+    loginUrl = "http://localhost:8888/login";
 } else {
     url =
         (document.location.protocol == "https:" ? "wss://" : "ws://") +
@@ -39,11 +41,23 @@ if (document.location.hostname == "localhost") {
 export const socketConnection = webSocket<
     ServerMessage<unknown> | ClientMessage<unknown>
 >(url);
-socketConnection.pipe(retry({ delay: 1000 })).subscribe(() => {
-    // Not sure why we need this, but otherwise the multiplex below does not
-    // seem to connect correctly. I assume there is some issue with the socket
-    // connection being closed and opened in every rerender of the app.
-});
+socketConnection
+    .pipe(
+        // @ts-expect-error Wrong type signature in rxjs.
+        catchError(e => {
+            if (e.reason === "missing auth") {
+                console.log(loginUrl + "?url=" + encodeURIComponent(location.href));
+                location.href =
+                    loginUrl + "?url=" + encodeURIComponent(location.href);
+            }
+        }),
+        retry({ delay: 1000 })
+    )
+    .subscribe(() => {
+        // Not sure why we need this, but otherwise the multiplex below does not
+        // seem to connect correctly. I assume there is some issue with the socket
+        // connection being closed and opened in every rerender of the app.
+    });
 
 // Subscriptions each get a unique id that can be used to unsubscribe them again.
 let nextSubscriptionId = 0;

@@ -2,21 +2,26 @@ import { useMemo, useRef } from "react";
 import { Link } from "react-router";
 
 import { useLoadingTable } from "../api/hooks";
-import { EVENT_KINDS, events } from "../api/tables";
+import { EVENT_KINDS, events, type EventKind } from "../api/tables";
 import { sort } from "../util";
 import { ArrowUpToLine } from "lucide-react";
 
 const DESC_REGEX =
     /<(user\{(.*?)\}\{(.*?)\}|repo\{(.*?)\}\{(.*?)\}|code\{(.*?)\}|quote\{(.*?)\}|link\{(.*?)\}\{(.*?)\})>/gs;
 
-function transformDescription(desc: string) {
+interface DescriptionProps {
+    desc: string;
+}
+
+function Description(props: DescriptionProps) {
     const parts = [];
-    const split = desc.split(DESC_REGEX);
+    const split = props.desc.split(DESC_REGEX);
     for (let i = 0; i < split.length; i += 10) {
-        parts.push(split[i]);
+        parts.push(<span key={i}>{split[i]}</span>);
         if (split[i + 2] && split[i + 3]) {
             parts.push(
                 <Link
+                    key={i + 2}
                     to={"/user/" + split[i + 3]}
                     className="text-primary font-semibold"
                 >
@@ -27,6 +32,7 @@ function transformDescription(desc: string) {
         if (split[i + 4] && split[i + 5]) {
             parts.push(
                 <Link
+                    key={i + 4}
                     to={"/repo/" + split[i + 5]}
                     className="text-primary font-semibold"
                 >
@@ -36,7 +42,10 @@ function transformDescription(desc: string) {
         }
         if (split[i + 6]) {
             parts.push(
-                <code className="font-mono bg-border/25 rounded-selector px-1">
+                <code
+                    key={i + 6}
+                    className="font-mono bg-border/25 rounded-selector px-1"
+                >
                     {split[i + 6]}
                 </code>
             );
@@ -44,6 +53,7 @@ function transformDescription(desc: string) {
         if (split[i + 7]) {
             parts.push(
                 <blockquote
+                    key={i + 7}
                     className="relative ps-3 text-sm before:bg-border before:absolute
                         before:top-1 before:left-0 before:h-full before:w-1 max-h-32 overflow-hidden"
                 >
@@ -54,6 +64,7 @@ function transformDescription(desc: string) {
         if (split[i + 8] && split[i + 9]) {
             parts.push(
                 <a
+                    key={i + 8}
                     target="_blank"
                     href={split[i + 9]}
                     className="text-primary underline"
@@ -63,7 +74,57 @@ function transformDescription(desc: string) {
             );
         }
     }
-    return parts;
+    return <>{parts}</>;
+}
+
+interface EventProps {
+    created_at: string;
+    kind: EventKind;
+    desc: string;
+}
+
+function Event(props: EventProps) {
+    return (
+        <div className="bg-base-200 rounded-box my-2 p-2 flex flex-col border border-border/50">
+            <div className="flex flex-row justify-between">
+                <div className="text-xs">{EVENT_KINDS[props.kind]}</div>
+                <div className="text-xs px-1">
+                    {new Date(props.created_at).toLocaleString()}
+                </div>
+            </div>
+            <div className="pt-2 pb-1 px-2">
+                <Description desc={props.desc} />
+            </div>
+        </div>
+    );
+}
+
+function EventListFilters() {
+    return (
+        <div className="flex flex-row gap-1 pt-0.5">
+            <input
+                type="text"
+                className="block w-full px-3 border-2 border-border outline-none text-sm
+                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
+                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
+                placeholder="Filter by kind..."
+            ></input>
+            <input
+                type="text"
+                className="block w-full px-3 border-2 border-border outline-none text-sm
+                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
+                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
+                placeholder="Filter by user..."
+            ></input>
+            <input
+                type="text"
+                className="block w-full px-3 border-2 border-border outline-none text-sm
+                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
+                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
+                placeholder="Filter by repository..."
+            ></input>
+        </div>
+    );
 }
 
 export default function EventList() {
@@ -74,29 +135,7 @@ export default function EventList() {
     }, [rawResults]);
     return (
         <div className="md:w-full m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
-            <div className="flex flex-row gap-1 pt-0.5">
-                <input
-                    type="text"
-                    className="block w-full px-3 border-2 border-border outline-none text-sm
-                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
-                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
-                    placeholder="Filter by kind..."
-                ></input>
-                <input
-                    type="text"
-                    className="block w-full px-3 border-2 border-border outline-none text-sm
-                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
-                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
-                    placeholder="Filter by user..."
-                ></input>
-                <input
-                    type="text"
-                    className="block w-full px-3 border-2 border-border outline-none text-sm
-                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
-                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
-                    placeholder="Filter by repository..."
-                ></input>
-            </div>
+            <EventListFilters />
             <div className="text-sm flex flex-row justify-center items-start mt-2">
                 <button
                     className="text-content/50 hover:text-content/75 cursor-pointer"
@@ -118,22 +157,12 @@ export default function EventList() {
             >
                 {results.length !== 0 ? (
                     results.map(row => (
-                        <div
+                        <Event
                             key={row.id}
-                            className="bg-base-200 rounded-box my-2 p-2 flex flex-col border border-border/50"
-                        >
-                            <div className="flex flex-row justify-between">
-                                <div className="text-xs">
-                                    {EVENT_KINDS[row.kind]}
-                                </div>
-                                <div className="text-xs px-1">
-                                    {new Date(row.created_at).toLocaleString()}
-                                </div>
-                            </div>
-                            <div className="pt-2 pb-1 px-2">
-                                {transformDescription(row.details)}
-                            </div>
-                        </div>
+                            created_at={row.created_at}
+                            kind={row.kind}
+                            desc={row.details}
+                        />
                     ))
                 ) : (
                     <div className="w-full h-full flex justify-center items-center text-content/80">
