@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { createElement, useMemo, useState } from "react";
 import { Link } from "react-router";
 
 import { useLoadingTable, useTable } from "../api/hooks";
@@ -11,6 +11,7 @@ import {
 } from "../api/tables";
 import { useLatched } from "../hooks";
 import { sort } from "../util";
+import { EVENT_ICONS } from "../events";
 
 import Counter from "./Counter";
 import Selector from "./Selector";
@@ -55,17 +56,20 @@ function EventCounter(props: Props) {
             className="rounded-box bg-base-300 block border border-border/50"
         >
             <div
-                className="flex flex-row items-center rounded-box
+                className="flex flex-row items-end rounded-box
                     hover:bg-content/7 hover:dark:bg-content/10 p-1"
             >
-                <div className="w-1/2 md:w-1/3 px-2 flex flex-col pe-4">
+                <div className="w-1/2 md:w-1/3 px-1 flex flex-col pe-3 pt-1">
                     <div className="text-xs whitespace-nowrap pb-2">
+                        {createElement(EVENT_ICONS[props.kind], {
+                            className: "inline w-5 h-5 pe-1",
+                        })}
                         {EVENT_KINDS[props.kind]}
                     </div>
                     <Counter
                         value={total}
                         maxDigits={7}
-                        className="text-lg"
+                        className="text-lg pb-2"
                     ></Counter>
                 </div>
                 <div className="w-1/2 md:w-2/3 h-16">

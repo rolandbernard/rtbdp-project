@@ -1,10 +1,11 @@
-import { useMemo, useRef } from "react";
+import { createElement, useMemo, useRef } from "react";
 import { Link } from "react-router";
+import { ArrowUpToLine } from "lucide-react";
 
 import { useLoadingTable } from "../api/hooks";
 import { EVENT_KINDS, events, type EventKind } from "../api/tables";
 import { sort } from "../util";
-import { ArrowUpToLine } from "lucide-react";
+import { EVENT_ICONS } from "../events";
 
 const DESC_REGEX =
     /<(user\{(.*?)\}\{(.*?)\}|repo\{(.*?)\}\{(.*?)\}|code\{(.*?)\}|quote\{(.*?)\}|link\{(.*?)\}\{(.*?)\})>/gs;
@@ -87,12 +88,17 @@ function Event(props: EventProps) {
     return (
         <div className="bg-base-200 rounded-box my-2 p-2 flex flex-col border border-border/50">
             <div className="flex flex-row justify-between">
-                <div className="text-xs">{EVENT_KINDS[props.kind]}</div>
+                <div className="text-xs flex flex-row items-center">
+                    {createElement(EVENT_ICONS[props.kind], {
+                        className: "inline w-5 h-5 pe-1",
+                    })}
+                    {EVENT_KINDS[props.kind]}
+                </div>
                 <div className="text-xs px-1">
                     {new Date(props.created_at).toLocaleString()}
                 </div>
             </div>
-            <div className="pt-2 pb-1 px-2">
+            <div className="pt-2 pb-1 px-2 break-words">
                 <Description desc={props.desc} />
             </div>
         </div>
