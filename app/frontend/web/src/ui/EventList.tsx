@@ -3,9 +3,18 @@ import { Link } from "react-router";
 import { ArrowUpToLine } from "lucide-react";
 
 import { useLoadingTable } from "../api/hooks";
-import { EVENT_KINDS, events, type EventKind } from "../api/tables";
+import {
+    EVENT_KINDS,
+    events,
+    repos,
+    users,
+    type EventKind,
+} from "../api/tables";
 import { sort } from "../util";
-import { EVENT_ICONS } from "../events";
+import { boldQuery, EVENT_ICONS } from "../utils";
+
+import SearchSelect from "./SearchSelect";
+import { ConstantTable } from "../api/table";
 
 const DESC_REGEX =
     /<(user\{(.*?)\}\{(.*?)\}|repo\{(.*?)\}\{(.*?)\}|code\{(.*?)\}|quote\{(.*?)\}|link\{(.*?)\}\{(.*?)\})>/gs;
@@ -108,27 +117,62 @@ function Event(props: EventProps) {
 function EventListFilters() {
     return (
         <div className="flex flex-row gap-1 pt-0.5">
-            <input
-                type="text"
-                className="block w-full px-3 border-2 border-border outline-none text-sm
-                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
-                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
+            <SearchSelect
+                ident="kind-filter"
+                table={_query =>
+                    new ConstantTable(
+                        Object.entries(EVENT_KINDS)
+                            .filter(([key, _name]) => key !== "all")
+                            .map(([key, name]) => ({
+                                key,
+                                name,
+                            }))
+                    )
+                }
+                id={row => row.key}
+                name={row => row.name}
+                selected={[]}
+                output={(row, query) => boldQuery(row.name, query)}
+                className="block w-full"
                 placeholder="Filter by kind..."
-            ></input>
-            <input
-                type="text"
-                className="block w-full px-3 border-2 border-border outline-none text-sm
-                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
-                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
+                suppress={false}
+                limit={15}
+            />
+            <SearchSelect
+                ident="user-filter"
+                table={query =>
+                    users.where("username", { substr: query }).limit(10)
+                }
+                id={row => row.id}
+                name={row => row.username!}
+                selected={[]}
+                output={(row, query) => [
+                    <span key="prefix" className="font-bold">
+                        @
+                    </span>,
+                    boldQuery(row.username!, query),
+                ]}
+                className="block w-full"
                 placeholder="Filter by user..."
-            ></input>
-            <input
-                type="text"
-                className="block w-full px-3 border-2 border-border outline-none text-sm
-                        rounded-field py-2 focus-visible:border-primary placeholder:text-content/65
-                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
+            />
+            <SearchSelect
+                ident="repo-filter"
+                table={query =>
+                    repos
+                        .where("reponame", { substr: query })
+                        .or()
+                        .where("fullname", { substr: query })
+                        .limit(10)
+                }
+                id={row => row.id}
+                name={row => (row.fullname ?? row.reponame)!}
+                selected={[]}
+                output={(row, query) =>
+                    boldQuery((row.fullname ?? row.reponame)!, query)
+                }
+                className="block w-full"
                 placeholder="Filter by repository..."
-            ></input>
+            />
         </div>
     );
 }

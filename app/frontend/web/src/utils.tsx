@@ -33,3 +33,20 @@ export const EVENT_ICONS = {
     pull_comment: MessageSquare,
     other: MoreHorizontal,
 };
+
+export function boldQuery(text: string, query: string) {
+    const index = text.toLowerCase().indexOf(query.toLowerCase());
+    if (index == -1) {
+        return <span key="query-highlight">{text}</span>;
+    } else {
+        return (
+            <span key="query-highlight">
+                <span>{text.substring(0, index)}</span>
+                <span className="font-bold">
+                    {text.substring(index, index + query.length)}
+                </span>
+                <span>{text.substring(index + query.length)}</span>
+            </span>
+        );
+    }
+}

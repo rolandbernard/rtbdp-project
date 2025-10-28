@@ -11,7 +11,7 @@ import {
     type RowFilter,
     type ServerMessage,
 } from "./client";
-import { Table } from "./table";
+import { NormalTable } from "./table";
 
 export type RankingRow<R> = R & { row_number: number; rank: number };
 type RankingUpdateRow<R> = R &
@@ -43,7 +43,7 @@ type RankingMsgRow<R> = RankingRow<R> | RankingUpdateRow<R>;
 
 const MARGIN = 50;
 
-export class RankingTable<R> extends Table<RankingRow<R>> {
+export class RankingTable<R> extends NormalTable<RankingRow<R>> {
     rankingKeys: (keyof R)[] = [];
     range?: [number, number];
 

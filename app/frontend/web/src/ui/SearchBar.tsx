@@ -1,108 +1,76 @@
-import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
-import { users, repos } from "../api/tables";
 import { useLoadingTable } from "../api/hooks";
-import { useDebounce } from "../hooks";
-import { sortedKey } from "../util";
+import { useClickOutside, useDebounce } from "../hooks";
+import { sort } from "../util";
+import type { Table } from "../api/table";
+import type { Row } from "../api/client";
 
-function boldQuery(text: string, query: string) {
-    const index = text.toLowerCase().indexOf(query.toLowerCase());
-    if (index == -1) {
-        return <span>{text}</span>;
-    } else {
-        return (
-            <>
-                <span>{text.substring(0, index)}</span>
-                <span className="font-bold">
-                    {text.substring(index, index + query.length)}
-                </span>
-                <span>{text.substring(index + query.length)}</span>
-            </>
-        );
-    }
-}
-
-interface Props {
+interface Props<R, V> {
+    name: string;
+    table: (query: string) => Table<R, V>;
+    match: (row: Row<R>, query: string) => number;
+    output: (row: Row<R>, query: string) => ReactNode;
+    prefix?: ReactNode;
+    limit?: number;
+    default?: Row<R>[];
+    debounce?: number;
     autoFocus?: boolean;
+    placeholder?: string;
+    className?: string;
+    suppress?: boolean;
 }
 
-export default function SearchBar(props: Props) {
+export default function SearchBar<R, V>(props: Props<R, V>) {
     const [query, setQuery] = useState("");
-    const debounced = useDebounce(query.toLowerCase(), 250);
-    const [userComplete, userResults] = useLoadingTable(
-        users.where("username", { substr: debounced }).limit(10),
-        debounced.length === 0
+    const lowerQuery = query.toLowerCase();
+    const debounced = useDebounce(lowerQuery, props.debounce ?? 250);
+    const [complete, results] = useLoadingTable(
+        props.table(debounced),
+        props.suppress !== false && debounced.length === 0
     );
-    const [repoComplete, repoResults] = useLoadingTable(
-        repos
-            .where("reponame", { substr: debounced })
-            .or()
-            .where("fullname", { substr: debounced })
-            .limit(10),
-        debounced.length === 0
-    );
-    const results = useMemo(() => {
-        const combined = [];
-        for (const user of userResults ?? []) {
-            combined.push({
-                ...user,
-                name: user.username,
-                kind: user.user_type ?? "User",
-            });
-        }
-        for (const repo of repoResults ?? []) {
-            combined.push({
-                ...repo,
-                name: repo.fullname ?? repo.reponame,
-                kind: "Repo",
-            });
-        }
-        combined.sort(sortedKey([e => e.name?.length ?? 0]));
-        return combined;
-    }, [userResults, repoResults]);
-    const trueResults = results
-        .filter(row => row.name?.toLowerCase()?.includes(query.toLowerCase()))
-        .slice(0, 10);
+    const filteredResults = (
+        props.suppress !== false && query.length === 0
+            ? props.default ?? []
+            : results
+    ).filter(row => props.match(row, lowerQuery) > 0);
+    const trueResults = sort(
+        filteredResults,
+        [row => props.match(row, lowerQuery)],
+        true
+    ).slice(0, props.limit ?? filteredResults.length);
+    useClickOutside("div#search-bar-" + props.name, () => setQuery(""));
     return (
-        <div className="relative">
+        <div
+            id={"search-bar-" + props.name}
+            className={"relative " + (props.className ?? "")}
+        >
             <div className="peer w-full relative block">
-                <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <Search className="w-4 h-4 text-border stroke-3"></Search>
-                </div>
+                {props.prefix}
                 <input
                     type="text"
-                    className="block w-full ps-9 pe-3 border-2 border-border outline-none text-sm
-                        rounded-field px-2 py-2 focus-visible:border-primary placeholder:text-content/65
+                    className="block w-full px-3 py-2 border-2 border-border outline-none text-sm
+                        rounded-field focus-visible:border-primary placeholder:text-content/65
                         placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
-                    placeholder="Search for users or repositories..."
+                    placeholder={props.placeholder}
                     value={query}
                     autoFocus={props.autoFocus}
-                    onBlur={() => setQuery("")}
                     onChange={e => setQuery(e.target.value)}
                 />
             </div>
-            {query.length !== 0 ? (
-                <div className="absolute inset-y-full end-0 w-full hidden peer-focus-within:block z-50">
-                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4 shadow-xl dark:shadow-2xl">
+            {props.suppress === false || query.length !== 0 ? (
+                <div
+                    className="absolute inset-y-full end-0 w-full hidden focus-within:block
+                        peer-focus-within:block hover:block active:block z-50"
+                >
+                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4 py-3 shadow-xl dark:shadow-2xl">
                         {trueResults.length ? (
-                            trueResults.map(row => {
-                                return (
-                                    <div key={row.id}>
-                                        <div className="w-15 inline-block whitespace-nowrap overflow-hidden">
-                                            {row.kind}
-                                        </div>
-                                        <div className="w-60 inline-block whitespace-nowrap overflow-hidden overflow-ellipsis">
-                                            {boldQuery(row.name!, query)}
-                                        </div>
-                                    </div>
-                                );
-                            })
+                            trueResults.map(row =>
+                                props.output(row, lowerQuery)
+                            )
                         ) : (
                             <div className="text-content/80">
-                                {query !== debounced ||
-                                !userComplete ||
-                                !repoComplete
+                                {query !== debounced || !complete
                                     ? "Searching..."
                                     : "No results found."}
                             </div>

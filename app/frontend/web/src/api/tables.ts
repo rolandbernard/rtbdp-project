@@ -1,4 +1,4 @@
-import { Table, UpdateTable } from "./table";
+import { NormalTable, UpdateTable } from "./table";
 import { RankingTable } from "./ranking";
 
 export const EVENT_KINDS = {
@@ -29,7 +29,7 @@ export const WINDOW_SIZES = {
 };
 export type WindowSize = keyof typeof WINDOW_SIZES;
 
-export const events = new Table<{
+export const events = new NormalTable<{
     created_at: string;
     id: number;
     kind: EventKind;
@@ -70,7 +70,7 @@ export const repos = new UpdateTable<
     }
 >("repos", ["id"]);
 
-export const countsLive = new Table<{
+export const countsLive = new NormalTable<{
     window_size: WindowSize;
     kind: EventKind;
     num_events: number;
@@ -82,14 +82,14 @@ export const countsRanking = new RankingTable<{
     num_events: number;
 }>("counts_ranking", ["window_size", "kind"]).rankingsBy(["window_size"]);
 
-export const countsHistory = new Table<{
+export const countsHistory = new NormalTable<{
     kind: EventKind;
     ts_start: string;
     ts_end: string;
     num_events: number;
 }>("counts_history", ["kind", "ts_start", "ts_end"]);
 
-export const reposLive = new Table<{
+export const reposLive = new NormalTable<{
     window_size: WindowSize;
     repo_id: number;
     num_events: number;
@@ -101,14 +101,14 @@ export const reposRanking = new RankingTable<{
     num_events: number;
 }>("repos_ranking", ["window_size", "repo_id"]).rankingsBy(["window_size"]);
 
-export const reposHistory = new Table<{
+export const reposHistory = new NormalTable<{
     repo_id: number;
     ts_start: string;
     ts_end: string;
     num_events: number;
 }>("repos_history", ["repo_id", "ts_start", "ts_end"]);
 
-export const usersLive = new Table<{
+export const usersLive = new NormalTable<{
     window_size: WindowSize;
     user_id: number;
     num_events: number;
@@ -120,14 +120,14 @@ export const usersRanking = new RankingTable<{
     num_events: number;
 }>("users_ranking", ["window_size", "user_id"]).rankingsBy(["window_size"]);
 
-export const usersHistory = new Table<{
+export const usersHistory = new NormalTable<{
     user_id: number;
     ts_start: string;
     ts_end: string;
     num_events: number;
 }>("users_history", ["user_id", "ts_start", "ts_end"]);
 
-export const starsLive = new Table<{
+export const starsLive = new NormalTable<{
     window_size: WindowSize;
     repo_id: number;
     num_stars: number;
@@ -139,14 +139,14 @@ export const starsRanking = new RankingTable<{
     num_stars: number;
 }>("stars_ranking", ["window_size", "repo_id"]).rankingsBy(["window_size"]);
 
-export const starsHistory = new Table<{
+export const starsHistory = new NormalTable<{
     repo_id: number;
     ts_start: string;
     ts_end: string;
     num_stars: number;
 }>("stars_history", ["repo_id", "ts_start", "ts_end"]);
 
-export const trendingLive = new Table<{
+export const trendingLive = new NormalTable<{
     repo_id: number;
     trending_score: number;
 }>("trending_live", ["repo_id"]);

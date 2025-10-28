@@ -1,5 +1,6 @@
 import { Moon, Settings, Sun } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { useClickOutside } from "../hooks";
 
 const OPTIONS = {
     light: Sun,
@@ -31,15 +32,11 @@ export default function ThemeSelector() {
                 : matchMedia("(prefers-color-scheme: dark)").matches
         );
     };
+    useClickOutside("div#theme-select", () => setShow(false));
     return (
         <div
             id="theme-select"
             className="relative max-w-screen-xl flex items-center justify-between mx-auto p-3"
-            onBlur={e => {
-                if (!e.relatedTarget?.closest("div#theme-select")) {
-                    setShow(false);
-                }
-            }}
         >
             <button
                 type="button"

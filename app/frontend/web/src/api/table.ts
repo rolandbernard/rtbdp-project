@@ -1,5 +1,14 @@
 import type { WebSocketSubject } from "rxjs/webSocket";
-import { auditTime, filter, map, retry } from "rxjs";
+import {
+    auditTime,
+    combineLatest,
+    EMPTY,
+    filter,
+    map,
+    Observable,
+    retry,
+    startWith,
+} from "rxjs";
 
 import { groupKey, sort } from "../util";
 import {
@@ -15,7 +24,17 @@ import {
     type ServerMessage,
 } from "./client";
 
-export class Table<R> {
+export abstract class Table<R, V> {
+    abstract createView(): V;
+
+    abstract extractFromView(view: V): Row<R>[];
+
+    abstract connect(view: V): Observable<boolean>;
+
+    abstract dependencies(): unknown[];
+}
+
+export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
     name: string;
     keys: (keyof R)[];
     filters?: Filters<R>;
@@ -24,11 +43,12 @@ export class Table<R> {
 
     constructor(
         name: string,
-        keys: typeof this.keys,
-        filters?: typeof this.filters,
-        limited?: typeof this.limited,
-        deps?: typeof this.deps
+        keys: (keyof R)[],
+        filters?: Filters<R>,
+        limited?: number,
+        deps?: unknown[]
     ) {
+        super();
         this.name = name;
         this.keys = keys;
         this.filters = filters;
@@ -37,13 +57,21 @@ export class Table<R> {
     }
 
     clone(): this {
-        return new Table(
+        return new NormalTable(
             this.name,
             this.keys,
             this.filters,
             this.limited,
             this.deps
         ) as this;
+    }
+
+    createView(): Map<string, Row<R>> {
+        return new Map();
+    }
+
+    dependencies(): unknown[] {
+        return this.deps;
     }
 
     acceptsMessage(message: RowMessage<R>) {
@@ -184,7 +212,7 @@ export class Table<R> {
 
 type UpdateRow<R> = R & { [P in keyof R as `${string & P}_seq_num`]: number };
 
-export class UpdateTable<K, R> extends Table<K & UpdateRow<R>> {
+export class UpdateTable<K, R> extends NormalTable<K & UpdateRow<R>> {
     clone(): this {
         return new UpdateTable(
             this.name,
@@ -220,5 +248,70 @@ export class UpdateTable<K, R> extends Table<K & UpdateRow<R>> {
         } else {
             return newRow;
         }
+    }
+}
+
+export class UnionTable<
+    V extends unknown[],
+    R extends { [K in keyof V]: unknown }
+> extends Table<R[keyof V], V> {
+    tables: { [K in keyof V]: Table<R[K], V[K]> };
+
+    constructor(tables: { [K in keyof V]: Table<R[K], V[K]> }) {
+        super();
+        this.tables = tables;
+    }
+
+    createView(): V {
+        return this.tables.map(table => table.createView()) as V;
+    }
+
+    extractFromView(view: V): Row<R[keyof V]>[] {
+        return this.tables.flatMap((table, i) =>
+            table.extractFromView(view[i])
+        );
+    }
+
+    connect(view: V): Observable<boolean> {
+        return combineLatest(
+            this.tables.map((table, i) =>
+                table.connect(view[i]).pipe(startWith(false))
+            )
+        ).pipe(
+            map(values => values.every(e => e)),
+            auditTime(50)
+        );
+    }
+
+    dependencies(): unknown[] {
+        return this.tables.flatMap(table => table.dependencies());
+    }
+}
+
+export class ConstantTable<R> extends Table<R, void> {
+    values: R[];
+
+    constructor(values: R[]) {
+        super();
+        this.values = values;
+    }
+
+    createView() {
+        return undefined;
+    }
+
+    extractFromView(): Row<R>[] {
+        return this.values.map(row => ({
+            ...row,
+            seq_num: 0,
+        }));
+    }
+
+    connect(): Observable<boolean> {
+        return EMPTY;
+    }
+
+    dependencies(): unknown[] {
+        return [this.values];
     }
 }

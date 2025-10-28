@@ -20,3 +20,15 @@ export function useLatched<T>(value: T, latch: boolean) {
     }, [latch, value]);
     return latch ? value : latched;
 }
+
+export function useClickOutside(target: string, func: () => void) {
+    useEffect(() => {
+        const handler = (e: PointerEvent) => {
+            if (!(e.target as HTMLElement)?.closest(target)) {
+                func();
+            }
+        };
+        document.addEventListener("click", handler);
+        return () => document.removeEventListener("click", handler);
+    }, [target, func]);
+}

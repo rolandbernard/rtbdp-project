@@ -2,22 +2,20 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { Search } from "lucide-react";
 
-import SearchBar from "./SearchBar";
+import { useClickOutside } from "../hooks";
+
+import GlobalSearch from "./GlobalSearch";
 import ThemeSelector from "./ThemeSelector";
 
 export default function Header() {
     const [showSearch, setShowSearch] = useState(false);
+    useClickOutside("nav#header", () => setShowSearch(false));
     return (
         <>
             <div className="w-full h-16 shrink-0 grow-0"></div>
             <nav
                 id="header"
                 className="bg-base-200/60 backdrop-blur-md fixed w-full z-20 top-0 start-0"
-                onBlur={e => {
-                    if (!e.relatedTarget?.closest("nav#header")) {
-                        setShowSearch(false);
-                    }
-                }}
             >
                 <div className="max-w-screen-xl flex items-center justify-between mx-auto">
                     <Link to="/" className="flex items-center space-x-3 ps-4">
@@ -45,14 +43,14 @@ export default function Header() {
                             <span className="sr-only">Search</span>
                         </button>
                         <div className="w-100 hidden md:block">
-                            <SearchBar></SearchBar>
+                            <GlobalSearch></GlobalSearch>
                         </div>
                         <ThemeSelector></ThemeSelector>
                     </div>
                 </div>
                 {showSearch ? (
                     <div className="w-full px-2 pb-3" id="navbar-search">
-                        <SearchBar autoFocus={true}></SearchBar>
+                        <GlobalSearch autoFocus={true}></GlobalSearch>
                     </div>
                 ) : undefined}
             </nav>

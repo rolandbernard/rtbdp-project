@@ -11,7 +11,7 @@ import {
 } from "../api/tables";
 import { useLatched } from "../hooks";
 import { sort } from "../util";
-import { EVENT_ICONS } from "../events";
+import { EVENT_ICONS } from "../utils";
 
 import Counter from "./Counter";
 import Selector from "./Selector";
