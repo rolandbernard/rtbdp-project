@@ -18,11 +18,7 @@ export default function Selector(props: Props) {
             }
         >
             {Object.entries(props.options).map(([key, node], i) => (
-                <div
-                    key={key}
-                    className="w-full has-checked:z-1 ml-[-2px]"
-                    onClick={() => props.onChange?.(key)}
-                >
+                <div key={key} className="w-full has-checked:z-1 ml-[-2px]">
                     <input
                         type="radio"
                         id={(props.name ?? "") + "-option-" + key}
@@ -34,6 +30,11 @@ export default function Selector(props: Props) {
                                 ? props.value === key
                                 : undefined
                         }
+                        onChange={e => {
+                            if (e.target.checked) {
+                                props.onChange?.(key);
+                            }
+                        }}
                     />
                     <label
                         htmlFor={(props.name ?? "") + "-option-" + key}

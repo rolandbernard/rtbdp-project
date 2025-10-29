@@ -17,6 +17,7 @@ interface Props<R, V> {
     debounce?: number;
     autoFocus?: boolean;
     placeholder?: string;
+    placeholderItalic?: boolean;
     className?: string;
     suppress?: boolean;
 }
@@ -49,16 +50,23 @@ export default function SearchBar<R, V>(props: Props<R, V>) {
                 {props.prefix}
                 <input
                     type="text"
-                    className="block w-full px-3 py-2 border-2 border-border outline-none text-sm
-                        rounded-field focus-visible:border-primary placeholder:text-content/65
-                        placeholder:italic hover:bg-content/3 dark:hover:bg-content/8"
+                    className={
+                        "block w-full px-3 py-2 border-2 border-border outline-none text-sm " +
+                        "rounded-field focus-visible:border-primary " +
+                        "hover:bg-content/3 dark:hover:bg-content/8 " +
+                        (props.placeholderItalic !== false
+                            ? "placeholder:text-content/65 placeholder:italic "
+                            : "placeholder:text-content/80 ")
+                    }
                     placeholder={props.placeholder}
                     value={query}
                     autoFocus={props.autoFocus}
                     onChange={e => setQuery(e.target.value)}
                 />
             </div>
-            {props.suppress === false || query.length !== 0 ? (
+            {props.suppress === false ||
+            (props.default && props.default.length !== 0) ||
+            query.length !== 0 ? (
                 <div
                     className="absolute inset-y-full end-0 w-full hidden focus-within:block
                         peer-focus-within:block hover:block active:block z-50"

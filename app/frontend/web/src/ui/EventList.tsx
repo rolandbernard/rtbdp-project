@@ -1,4 +1,4 @@
-import { createElement, useMemo, useRef } from "react";
+import { createElement, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { ArrowUpToLine } from "lucide-react";
 
@@ -12,9 +12,9 @@ import {
 } from "../api/tables";
 import { sort } from "../util";
 import { boldQuery, EVENT_ICONS } from "../utils";
+import { ConstantTable } from "../api/table";
 
 import SearchSelect from "./SearchSelect";
-import { ConstantTable } from "../api/table";
 
 const DESC_REGEX =
     /<(user\{(.*?)\}\{(.*?)\}|repo\{(.*?)\}\{(.*?)\}|code\{(.*?)\}|quote\{(.*?)\}|link\{(.*?)\}\{(.*?)\})>/gs;
@@ -114,78 +114,101 @@ function Event(props: EventProps) {
     );
 }
 
-function EventListFilters() {
-    return (
-        <div className="flex flex-row gap-1 pt-0.5">
-            <SearchSelect
-                ident="kind-filter"
-                table={_query =>
-                    new ConstantTable(
-                        Object.entries(EVENT_KINDS)
-                            .filter(([key, _name]) => key !== "all")
-                            .map(([key, name]) => ({
-                                key,
-                                name,
-                            }))
-                    )
-                }
-                id={row => row.key}
-                name={row => row.name}
-                selected={[]}
-                output={(row, query) => boldQuery(row.name, query)}
-                className="block w-full"
-                placeholder="Filter by kind..."
-                suppress={false}
-                limit={15}
-            />
-            <SearchSelect
-                ident="user-filter"
-                table={query =>
-                    users.where("username", { substr: query }).limit(10)
-                }
-                id={row => row.id}
-                name={row => row.username!}
-                selected={[]}
-                output={(row, query) => [
-                    <span key="prefix" className="font-bold">
-                        @
-                    </span>,
-                    boldQuery(row.username!, query),
-                ]}
-                className="block w-full"
-                placeholder="Filter by user..."
-            />
-            <SearchSelect
-                ident="repo-filter"
-                table={query =>
-                    repos
-                        .where("reponame", { substr: query })
-                        .or()
-                        .where("fullname", { substr: query })
-                        .limit(10)
-                }
-                id={row => row.id}
-                name={row => (row.fullname ?? row.reponame)!}
-                selected={[]}
-                output={(row, query) =>
-                    boldQuery((row.fullname ?? row.reponame)!, query)
-                }
-                className="block w-full"
-                placeholder="Filter by repository..."
-            />
-        </div>
-    );
-}
+const eventKinds = new ConstantTable(
+    Object.entries(EVENT_KINDS)
+        .filter(([key, _name]) => key !== "all")
+        .map(([key, name]) => ({
+            key,
+            name,
+        }))
+);
 
 export default function EventList() {
+    const [showKinds, setKinds] = useState<
+        ReturnType<typeof eventKinds.extractFromView>
+    >([]);
+    const [showUsers, setUsers] = useState<
+        ReturnType<typeof users.extractFromView>
+    >([]);
+    const [showRepos, setRepos] = useState<
+        ReturnType<typeof repos.extractFromView>
+    >([]);
+    const kindIds = useMemo(
+        () => showKinds.map(r => r.key as EventKind),
+        [showKinds]
+    );
+    const userIds = useMemo(() => showUsers.map(r => r.id), [showUsers]);
+    const repoIds = useMemo(() => showRepos.map(r => r.id), [showRepos]);
     const listRef = useRef<HTMLDivElement>(null);
-    const [loaded, rawResults] = useLoadingTable(events.limit(100));
+    let filtered = events.limit(100);
+    if (showKinds.length !== 0) {
+        filtered = filtered.where("kind", kindIds);
+    }
+    if (showUsers.length !== 0) {
+        filtered = filtered.where("user_id", userIds);
+    }
+    if (showRepos.length !== 0) {
+        filtered = filtered.where("repo_id", repoIds);
+    }
+    const [loaded, rawResults] = useLoadingTable(filtered);
     const results = useMemo(() => {
         return sort(rawResults, [e => e.created_at, e => e.id], true);
     }, [rawResults]);
     return (
         <div className="md:w-full m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
-            <EventListFilters />
+            <div className="flex flex-row gap-1 pt-0.5">
+                <SearchSelect
+                    ident="kind-filter"
+                    table={_query => eventKinds}
+                    id={row => row.key}
+                    name={row => row.name}
+                    selected={showKinds}
+                    onChange={e => setKinds(e)}
+                    output={(row, query) => boldQuery(row.name, query)}
+                    className="block w-full"
+                    placeholder="Filter by kind..."
+                    suppress={false}
+                    limit={15}
+                    debounce={0}
+                />
+                <SearchSelect
+                    ident="user-filter"
+                    table={query =>
+                        users.where("username", { substr: query }).limit(10)
+                    }
+                    id={row => row.id}
+                    name={row => row.username!}
+                    selected={showUsers}
+                    onChange={e => setUsers(e)}
+                    output={(row, query) => [
+                        <span key="prefix" className="font-bold">
+                            @
+                        </span>,
+                        boldQuery(row.username!, query),
+                    ]}
+                    className="block w-full"
+                    placeholder={"Filter by user..."}
+                />
+                <SearchSelect
+                    ident="repo-filter"
+                    table={query =>
+                        repos
+                            .where("reponame", { substr: query })
+                            .or()
+                            .where("fullname", { substr: query })
+                            .limit(10)
+                    }
+                    id={row => row.id}
+                    name={row => (row.fullname ?? row.reponame)!}
+                    selected={showRepos}
+                    onChange={e => setRepos(e)}
+                    output={(row, query) =>
+                        boldQuery((row.fullname ?? row.reponame)!, query)
+                    }
+                    className="block w-full"
+                    placeholder={"Filter by repository..."}
+                />
+            </div>
             <div className="text-sm flex flex-row justify-center items-start mt-2">
                 <button
                     className="text-content/50 hover:text-content/75 cursor-pointer"

@@ -46,7 +46,6 @@ socketConnection
         // @ts-expect-error Wrong type signature in rxjs.
         catchError(e => {
             if (e.reason === "missing auth") {
-                console.log(loginUrl + "?url=" + encodeURIComponent(location.href));
                 location.href =
                     loginUrl + "?url=" + encodeURIComponent(location.href);
             }

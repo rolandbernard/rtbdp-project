@@ -12,11 +12,13 @@ interface Props<R, V> {
     name: (row: Row<R>) => string;
     output: (row: Row<R>, query: string) => ReactNode;
     selected: Row<R>[];
+    onChange?: (selection: Row<R>[]) => void;
     prefix?: ReactNode;
     placeholder?: string;
     className?: string;
     suppress?: boolean;
     limit?: number;
+    debounce?: number;
 }
 
 export default function SearchSelect<R, V>(props: Props<R, V>) {
@@ -25,29 +27,56 @@ export default function SearchSelect<R, V>(props: Props<R, V>) {
             name={props.ident}
             table={props.table}
             match={(row, query) => {
-                const name = props.name(row);
-                return name.toLowerCase().includes(query)
-                    ? 1 / (1 + Math.abs(name.length - query.length))
-                    : 0;
+                if (query.length === 0) {
+                    return 1;
+                } else {
+                    const name = props.name(row);
+                    return name.toLowerCase().includes(query)
+                        ? 1 / (1 + Math.abs(name.length - query.length))
+                        : 0;
+                }
             }}
             output={(row, query) => (
                 <div key={props.id(row)} className="flex flex-row">
                     <input
                         id={props.ident + "-" + props.id(row)}
                         type="checkbox"
+                        defaultChecked={props.selected.some(
+                            r => props.id(r) === props.id(row)
+                        )}
+                        onChange={e => {
+                            if (props.onChange) {
+                                const without = props.selected.filter(
+                                    r => props.id(r) !== props.id(row)
+                                );
+                                if (e.target.checked) {
+                                    props.onChange([...without, row]);
+                                } else {
+                                    props.onChange(without);
+                                }
+                            }
+                        }}
                     />
                     <label
                         htmlFor={props.ident + "-" + props.id(row)}
-                        className="pl-2 overflow-hidden overflow-ellipsis whitespace-nowrap py-0.5 cursor-pointer"
+                        className="pl-2 overflow-hidden overflow-ellipsis whitespace-nowrap py-0.5
+                            cursor-pointer select-none"
                     >
                         {props.output(row, query)}
                     </label>
                 </div>
             )}
-            placeholder={props.placeholder}
+            placeholder={
+                props.selected.length === 0
+                    ? props.placeholder
+                    : "Selected " + props.selected.length
+            }
+            placeholderItalic={props.selected.length === 0}
             className={props.className}
             suppress={props.suppress}
             limit={props.limit ?? 10}
+            debounce={props.debounce}
+            default={props.selected}
         />
     );
 }

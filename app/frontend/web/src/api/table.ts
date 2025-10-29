@@ -2,8 +2,8 @@ import type { WebSocketSubject } from "rxjs/webSocket";
 import {
     auditTime,
     combineLatest,
-    EMPTY,
     filter,
+    from,
     map,
     Observable,
     retry,
@@ -308,7 +308,7 @@ export class ConstantTable<R> extends Table<R, void> {
     }
 
     connect(): Observable<boolean> {
-        return EMPTY;
+        return from([true]);
     }
 
     dependencies(): unknown[] {
