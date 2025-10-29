@@ -25,7 +25,7 @@ export function useLatched<T>(value: T, latch: boolean) {
 
 export function useClickOutside(target: string, func: () => void) {
     useEffect(() => {
-        const handler = (e: PointerEvent) => {
+        const handler = (e: MouseEvent) => {
             if (!(e.target as HTMLElement)?.closest(target)) {
                 func();
             }
