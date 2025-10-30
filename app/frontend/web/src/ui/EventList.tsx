@@ -225,7 +225,7 @@ export default function EventList() {
                 </button>
             </div>
             <div
-                className="grow overflow-y-scroll overflow-x-hidden max-h-[75dvh] min-w-0"
+                className="grow overflow-y-scroll overflow-x-hidden not-md:h-[50dvh] min-w-0"
                 ref={listRef}
             >
                 {results.length !== 0 ? (

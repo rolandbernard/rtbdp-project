@@ -37,9 +37,15 @@ export default function SearchSelect<R, V>(props: Props<R, V>) {
                 }
             }}
             output={(row, query) => (
-                <div key={props.id(row)} className="flex flex-row">
+                <label
+                    key={props.id(row)}
+                    htmlFor={props.ident + "-" + props.id(row)}
+                    className="flex flex-row items-center cursor-pointer select-none"
+                >
                     <input
                         id={props.ident + "-" + props.id(row)}
+                        className="w-4 h-4 appearance-none border-1 border-border bg-base-200
+                            checked:bg-green-700 cursor-pointer"
                         type="checkbox"
                         defaultChecked={props.selected.some(
                             r => props.id(r) === props.id(row)
@@ -57,14 +63,10 @@ export default function SearchSelect<R, V>(props: Props<R, V>) {
                             }
                         }}
                     />
-                    <label
-                        htmlFor={props.ident + "-" + props.id(row)}
-                        className="pl-2 overflow-hidden overflow-ellipsis whitespace-nowrap py-0.5
-                            cursor-pointer select-none"
-                    >
+                    <div className="pl-2 overflow-hidden overflow-ellipsis whitespace-nowrap py-0.5">
                         {props.output(row, query)}
-                    </label>
-                </div>
+                    </div>
+                </label>
             )}
             placeholder={
                 props.selected.length === 0
