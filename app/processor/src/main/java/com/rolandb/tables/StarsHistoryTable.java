@@ -33,13 +33,20 @@ public class StarsHistoryTable extends AbstractTable<StarsHistoryTable.RepoStarC
         }
     }
 
+    private Duration window = Duration.ofMinutes(5);
+
+    public AbstractTable setWindowSize(Duration window) {
+        this.window = window;
+        return this;
+    }
+
     @Override
     protected DataStream<RepoStarCounts> computeTable() {
         return getStarEventsByRepoStream()
-                .window(TumblingEventTimeWindows.of(Duration.ofMinutes(5)))
+                .window(TumblingEventTimeWindows.of(window))
                 // Here we can afford to allow more lateness and retroactively
                 // upsert with a new value.
-                .allowedLateness(Duration.ofMinutes(30))
+                .allowedLateness(window.multipliedBy(10))
                 .<Long, Long, RepoStarCounts>aggregate(new CountAggregation<>(),
                         (key, window, elements, out) -> {
                             long count = elements.iterator().next();

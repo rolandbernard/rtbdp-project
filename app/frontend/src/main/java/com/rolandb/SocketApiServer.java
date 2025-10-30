@@ -216,6 +216,12 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("ts_end", FieldKind.SORTED_KEY, String.class, 16L),
                 new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
+        addTable(new Table("counts_history_fine", 5_000L, List.of(
+                new Field("kind", FieldKind.KEY, String.class, null),
+                new Field("ts_start", FieldKind.SORTED_KEY, String.class, 16L),
+                new Field("ts_end", FieldKind.SORTED_KEY, String.class, 16L),
+                new Field("num_events", Long.class),
+                new Field("seq_num", Long.class))));
         addTable(new Table("repos_live", 1_000L, List.of(
                 new Field("window_size", FieldKind.KEY, String.class, null),
                 new Field("repo_id", FieldKind.KEY, Long.class, 4L),
@@ -227,6 +233,12 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
         addTable(new Table("repos_history", 5_000L, List.of(
+                new Field("repo_id", FieldKind.KEY, Long.class, 5_000L),
+                new Field("ts_start", FieldKind.SORTED_KEY, String.class, null),
+                new Field("ts_end", FieldKind.SORTED_KEY, String.class, null),
+                new Field("num_events", Long.class),
+                new Field("seq_num", Long.class))));
+        addTable(new Table("repos_history_fine", 5_000L, List.of(
                 new Field("repo_id", FieldKind.KEY, Long.class, 5_000L),
                 new Field("ts_start", FieldKind.SORTED_KEY, String.class, null),
                 new Field("ts_end", FieldKind.SORTED_KEY, String.class, null),
@@ -248,6 +260,12 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("ts_end", FieldKind.SORTED_KEY, String.class, null),
                 new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
+        addTable(new Table("users_history_fine", 5_000L, List.of(
+                new Field("user_id", FieldKind.KEY, Long.class, 5_000L),
+                new Field("ts_start", FieldKind.SORTED_KEY, String.class, null),
+                new Field("ts_end", FieldKind.SORTED_KEY, String.class, null),
+                new Field("num_events", Long.class),
+                new Field("seq_num", Long.class))));
         addTable(new Table("stars_live", 1_000L, List.of(
                 new Field("window_size", FieldKind.KEY, String.class, null),
                 new Field("repo_id", FieldKind.KEY, Long.class, 4L),
@@ -259,6 +277,12 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("num_stars", Long.class),
                 new Field("seq_num", Long.class))));
         addTable(new Table("stars_history", 5_000L, List.of(
+                new Field("repo_id", FieldKind.KEY, Long.class, 5_000L),
+                new Field("ts_start", FieldKind.SORTED_KEY, String.class, null),
+                new Field("ts_end", FieldKind.SORTED_KEY, String.class, null),
+                new Field("num_stars", Long.class),
+                new Field("seq_num", Long.class))));
+        addTable(new Table("stars_history_fine", 5_000L, List.of(
                 new Field("repo_id", FieldKind.KEY, Long.class, 5_000L),
                 new Field("ts_start", FieldKind.SORTED_KEY, String.class, null),
                 new Field("ts_end", FieldKind.SORTED_KEY, String.class, null),

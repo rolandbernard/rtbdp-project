@@ -148,6 +148,20 @@ CREATE TABLE counts_history (
 -- ~20 kinds * 0.2 events/kind/minute * 60 minutes/hour * 24 hours/day * 7 days/partition = 40320 /partition
 SELECT create_hypertable('counts_history', by_range('ts_start', INTERVAL '7 day'));
 
+CREATE TABLE counts_history_fine (
+    kind EventKind NOT NULL,
+    ts_start TIMESTAMP NOT NULL,
+    ts_end TIMESTAMP NOT NULL,
+    num_events BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (kind, ts_start, ts_end)
+);
+
+-- We partition by four hours.
+SELECT create_hypertable('counts_history_fine', by_range('ts_start', INTERVAL '4 hours'));
+-- We only keep one day worth of fine history, due to the volume of data.
+SELECT add_retention_policy('counts_history_fine', INTERVAL '1 days');
+
 -- =====================
 -- Per-user event counts
 -- =====================
@@ -187,6 +201,20 @@ CREATE TABLE users_history (
 
 -- We partition by hour because this is relatively high volume.
 SELECT create_hypertable('users_history', by_range('ts_start', INTERVAL '1 hour'));
+
+CREATE TABLE users_history_fine (
+    user_id BIGINT NOT NULL,
+    ts_start TIMESTAMP NOT NULL,
+    ts_end TIMESTAMP NOT NULL,
+    num_events BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (user_id, ts_start, ts_end)
+);
+
+-- We partition by 10 minutes.
+SELECT create_hypertable('users_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
+-- We only keep one day worth of fine history, due to the volume of data.
+SELECT add_retention_policy('users_history_fine', INTERVAL '1 days');
 
 -- ===========================
 -- Per-repository event counts
@@ -228,6 +256,20 @@ CREATE TABLE repos_history (
 -- We partition by hour because this is relatively high volume.
 SELECT create_hypertable('repos_history', by_range('ts_start', INTERVAL '1 hour'));
 
+CREATE TABLE repos_history_fine (
+    repo_id BIGINT NOT NULL,
+    ts_start TIMESTAMP NOT NULL,
+    ts_end TIMESTAMP NOT NULL,
+    num_events BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (repo_id, ts_start, ts_end)
+);
+
+-- We partition by 10 minutes.
+SELECT create_hypertable('repos_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
+-- We only keep one day worth of fine history, due to the volume of data.
+SELECT add_retention_policy('repos_history_fine', INTERVAL '1 days');
+
 -- =============================
 -- Trending repository detection
 -- =============================
@@ -267,6 +309,20 @@ CREATE TABLE stars_history (
 
 -- We partition by four hours because this is relatively high volume.
 SELECT create_hypertable('stars_history', by_range('ts_start', INTERVAL '4 hour'));
+
+CREATE TABLE stars_history_fine (
+    repo_id BIGINT NOT NULL,
+    ts_start TIMESTAMP NOT NULL,
+    ts_end TIMESTAMP NOT NULL,
+    num_stars BIGINT NOT NULL,
+    seq_num BIGINT NOT NULL,
+    PRIMARY KEY (repo_id, ts_start, ts_end)
+);
+
+-- We partition by 10 minutes.
+SELECT create_hypertable('stars_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
+-- We only keep one day worth of fine history, due to the volume of data.
+SELECT add_retention_policy('stars_history_fine', INTERVAL '1 days');
 
 CREATE TABLE trending_live (
     repo_id BIGINT NOT NULL,

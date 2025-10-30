@@ -185,18 +185,30 @@ public class Processor {
         builder.build("repos", RepositoriesTable.class);
         // Per-kind event counts
         builder.build("counts_history", CountsHistoryTable.class);
+        builder.get("counts_history_fine", CountsHistoryTable.class)
+                .setWindowSize(Duration.ofSeconds(10))
+                .build();
         builder.build("counts_live", CountsLiveTable.class);
         builder.build("counts_ranking", CountsRankingTable.class);
         // Per-user event counts
         builder.build("users_history", UsersHistoryTable.class);
+        builder.get("users_history_fine", UsersHistoryTable.class)
+                .setWindowSize(Duration.ofSeconds(10))
+                .build();
         builder.build("users_live", UsersLiveTable.class);
         builder.build("users_ranking", UsersRankingTable.class);
         // Per-repository event counts
         builder.build("repos_history", ReposHistoryTable.class);
+        builder.get("repos_history_fine", ReposHistoryTable.class)
+                .setWindowSize(Duration.ofSeconds(10))
+                .build();
         builder.build("repos_live", ReposLiveTable.class);
         builder.build("repos_ranking", ReposRankingTable.class);
         // Trending repository detection
         builder.build("stars_history", StarsHistoryTable.class);
+        builder.get("stars_history_fine", StarsHistoryTable.class)
+                .setWindowSize(Duration.ofSeconds(10))
+                .build();
         builder.build("stars_live", StarsLiveTable.class);
         builder.build("stars_ranking", StarsRankingTable.class);
         builder.build("trending_live", TrendingLiveTable.class);

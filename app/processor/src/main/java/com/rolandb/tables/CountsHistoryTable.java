@@ -34,13 +34,20 @@ public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCo
         }
     }
 
+    private Duration window = Duration.ofMinutes(5);
+
+    public AbstractTable setWindowSize(Duration window) {
+        this.window = window;
+        return this;
+    }
+
     @Override
     protected DataStream<EventCounts> computeTable() {
         return getEventsByTypeStream()
-                .window(TumblingEventTimeWindows.of(Duration.ofMinutes(5)))
+                .window(TumblingEventTimeWindows.of(window))
                 // Here we can afford to allow more lateness and retroactively
                 // upsert with a new value.
-                .allowedLateness(Duration.ofMinutes(30))
+                .allowedLateness(window.multipliedBy(10))
                 .<Long, Long, EventCounts>aggregate(new CountAggregation<>(),
                         (key, window, elements, out) -> {
                             // The count could function as a sequence number, since
