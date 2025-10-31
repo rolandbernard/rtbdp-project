@@ -8,31 +8,17 @@ function twoDigitString(number: number) {
     }
 }
 
-function formatDate(date: Date) {
-    const MONTH_NAME = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-    ];
+function formatDate(date: Date, long: boolean) {
     return (
-        MONTH_NAME[date.getMonth()] +
-        " " +
-        date.getDate() +
-        ", " +
         twoDigitString(date.getHours()) +
         ":" +
         twoDigitString(date.getMinutes()) +
-        "-" +
-        twoDigitString((date.getMinutes() + 5) % 60)
+        (long
+            ? "-" + twoDigitString((date.getMinutes() + 5) % 60)
+            : ":" +
+              twoDigitString(date.getSeconds()) +
+              "-" +
+              twoDigitString((date.getSeconds() + 10) % 60))
     );
 }
 
@@ -40,15 +26,17 @@ interface TooltipProps {
     active?: boolean;
     payload?: { value: number }[];
     label?: Date;
+    long?: boolean;
 }
 
 function CustomTooltip(props: TooltipProps) {
     if (props.active && props.payload && props.payload.length) {
         return (
             <div className="custom-tooltip p-3 rounded-box bg-base-300/75 shadow-xl backdrop-blur-md hidden lg:block">
-                <p className="label">{`${formatDate(props.label!)} : ${
-                    props.payload[0]?.value
-                }`}</p>
+                <p className="label">{`${formatDate(
+                    props.label!,
+                    props.long ?? true
+                )} : ${props.payload[0]?.value}`}</p>
             </div>
         );
     }
@@ -58,6 +46,7 @@ function CustomTooltip(props: TooltipProps) {
 interface Props {
     data: { x: Date; y: number }[];
     chartColor: string;
+    long?: boolean;
 }
 
 export default function Sparkline(props: Props) {
@@ -85,7 +74,7 @@ export default function Sparkline(props: Props) {
                     </linearGradient>
                 </defs>
                 <XAxis dataKey="x" hide />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip long={props.long} />} />
                 <Area
                     type="monotone"
                     dataKey="y"

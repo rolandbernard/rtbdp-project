@@ -1,7 +1,6 @@
 import type { WebSocketSubject } from "rxjs/webSocket";
 import { auditTime, filter, map, retry } from "rxjs";
 
-import { groupKey } from "../util";
 import {
     acceptsRowWith,
     getSubscriptionId,
@@ -12,6 +11,7 @@ import {
     type ServerMessage,
 } from "./client";
 import { NormalTable } from "./table";
+import { groupKey } from "../util";
 
 export type RankingRow<R> = R & { row_number: number; rank: number };
 type RankingUpdateRow<R> = R &
@@ -86,6 +86,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
         for (const [key, row] of [...view.entries()]) {
             if (
                 row.seq_num < (newestPerRow.get(row.row_number) ?? 0) ||
+                !key.startsWith(this.name + ":") ||
                 !acceptsRowWith(row, this.filters)
             ) {
                 view.delete(key);
@@ -192,7 +193,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
         // Applies the update from the ranking update stream to all rows in the view.
         // This function will also delete all elements outside the range.
         const applyUpdateToView = (update: Row<RankingUpdateRow<R>>) => {
-            const key = groupKey(update, this.keys);
+            const key = this.groupKey(update as Row<RankingRow<R>>);
             if (update.old_row_number !== null) {
                 if (view.has(key)) {
                     const oldRow = view.get(key)!;
@@ -325,10 +326,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                                 return false;
                             }
                         } else {
-                            view.set(
-                                groupKey(message.row, this.keys),
-                                message.row
-                            );
+                            view.set(this.groupKey(message.row), message.row);
                             return true;
                         }
                     } else {

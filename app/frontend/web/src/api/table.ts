@@ -133,7 +133,10 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
 
     filterView(view: Map<string, Row<R>>) {
         for (const [key, row] of [...view.entries()]) {
-            if (!acceptsRowWith(row, this.filters)) {
+            if (
+                !key.startsWith(this.name + ":") ||
+                !acceptsRowWith(row, this.filters)
+            ) {
                 view.delete(key);
             }
         }
@@ -160,8 +163,12 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         }
     }
 
+    groupKey(row: Row<R>) {
+        return this.name + ":" + groupKey(row, this.keys);
+    }
+
     mergeIntoView(view: Map<string, Row<R>>, newRow: Row<R>) {
-        const rowKey = groupKey(newRow, this.keys);
+        const rowKey = this.groupKey(newRow);
         const oldRow = view.get(rowKey);
         const row = this.mergeRows(newRow, oldRow);
         if (row !== oldRow) {

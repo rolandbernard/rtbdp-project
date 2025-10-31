@@ -71,7 +71,7 @@ export default function SearchBar<R, V>(props: Props<R, V>) {
                     className="absolute inset-y-full end-0 w-full hidden focus-within:block
                         peer-focus-within:block hover:block active:block z-50"
                 >
-                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4 py-3 shadow-xl dark:shadow-2xl">
+                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4 not-xl:px-2 py-3 shadow-xl dark:shadow-2xl">
                         {trueResults.length ? (
                             trueResults.map(row =>
                                 props.output(row, lowerQuery)

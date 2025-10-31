@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { useLoadingTable, useTable } from "../api/hooks";
 import {
     countsHistory,
+    countsHistoryFine,
     countsLive,
     EVENT_KINDS,
     type EventKind,
@@ -17,11 +18,11 @@ import Counter from "./Counter";
 import Selector from "./Selector";
 import Sparkline from "./Sparkline";
 
-const SPARK_LINE_LEN = {
-    "5m": 24, // 2h
-    "1h": 6 * 12, // 6h
-    "6h": 24 * 12, // 24h
-    "24h": 7 * 24 * 12, // 7d
+const SPARK_LINE_SOURCE = {
+    "5m": countsHistoryFine.limit(5 * 6),
+    "1h": countsHistoryFine.limit(60 * 6),
+    "6h": countsHistory.limit(6 * 12),
+    "24h": countsHistory.limit(24 * 12),
 };
 
 interface Props {
@@ -36,20 +37,34 @@ function EventCounter(props: Props) {
             .where("window_size", [props.windowSize])
     );
     const total = useLatched(rawTotal[0]?.num_events ?? 0, loaded);
+    const historyTable = SPARK_LINE_SOURCE[props.windowSize];
+    const isFine = historyTable.name.endsWith("_fine");
     const history = useTable(
-        countsHistory
-            .where("kind", [props.kind])
-            .limit(SPARK_LINE_LEN[props.windowSize])
+        historyTable.where("kind", [props.kind]),
+        false,
+        props.windowSize
     );
     const data = useMemo(() => {
-        return sort(
+        const diff = isFine ? 10_000 : 300_000;
+        const sorted = sort(
             history.map(row => ({
                 x: new Date(row.ts_start),
                 y: row.num_events,
             })),
             [r => r.x]
         );
-    }, [history]);
+        const complete = [];
+        let last;
+        for (const row of sorted) {
+            while (last && last.x.getTime() + diff < row.x.getTime()) {
+                last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                complete.push(last);
+            }
+            complete.push(row);
+            last = row;
+        }
+        return complete;
+    }, [history, isFine]);
     return (
         <Link
             to={"/event/" + props.kind}
@@ -76,6 +91,7 @@ function EventCounter(props: Props) {
                     <Sparkline
                         data={data}
                         chartColor="var(--color-primary)"
+                        long={!isFine}
                     ></Sparkline>
                 </div>
             </div>
