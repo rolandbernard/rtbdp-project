@@ -1,7 +1,7 @@
 import { createElement, useMemo, useState } from "react";
 import { Link } from "react-router";
 
-import { useLoadingTable, useTable } from "../api/hooks";
+import { useLoadingTable } from "../api/hooks";
 import {
     countsHistory,
     countsHistoryFine,
@@ -11,19 +11,11 @@ import {
     type WindowSize,
 } from "../api/tables";
 import { useLatched } from "../hooks";
-import { sort } from "../util";
 import { EVENT_ICONS } from "../utils";
 
 import Counter from "./Counter";
 import Selector from "./Selector";
-import Sparkline from "./Sparkline";
-
-const SPARK_LINE_SOURCE = {
-    "5m": countsHistoryFine.limit(5 * 6),
-    "1h": countsHistoryFine.limit(60 * 6),
-    "6h": countsHistory.limit(6 * 12),
-    "24h": countsHistory.limit(24 * 12),
-};
+import HistorySpark from "./HistorySpark";
 
 interface Props {
     windowSize: WindowSize;
@@ -37,34 +29,14 @@ function EventCounter(props: Props) {
             .where("window_size", [props.windowSize])
     );
     const total = useLatched(rawTotal[0]?.num_events ?? 0, loaded);
-    const historyTable = SPARK_LINE_SOURCE[props.windowSize];
-    const isFine = historyTable.name.endsWith("_fine");
-    const history = useTable(
-        historyTable.where("kind", [props.kind]),
-        false,
-        props.windowSize
+    const history = useMemo(
+        () => countsHistory.where("kind", [props.kind]),
+        [props.kind]
     );
-    const data = useMemo(() => {
-        const diff = isFine ? 10_000 : 300_000;
-        const sorted = sort(
-            history.map(row => ({
-                x: new Date(row.ts_start),
-                y: row.num_events,
-            })),
-            [r => r.x]
-        );
-        const complete = [];
-        let last;
-        for (const row of sorted) {
-            while (last && last.x.getTime() + diff < row.x.getTime()) {
-                last = { x: new Date(last.x.getTime() + diff), y: 0 };
-                complete.push(last);
-            }
-            complete.push(row);
-            last = row;
-        }
-        return complete;
-    }, [history, isFine]);
+    const historyFine = useMemo(
+        () => countsHistoryFine.where("kind", [props.kind]),
+        [props.kind]
+    );
     return (
         <Link
             to={"/event/" + props.kind}
@@ -88,11 +60,11 @@ function EventCounter(props: Props) {
                     ></Counter>
                 </div>
                 <div className="w-1/2 md:w-2/3 h-16">
-                    <Sparkline
-                        data={data}
-                        chartColor="var(--color-primary)"
-                        long={!isFine}
-                    ></Sparkline>
+                    <HistorySpark
+                        table={history}
+                        tableFine={historyFine}
+                        windowSize={props.windowSize}
+                    ></HistorySpark>
                 </div>
             </div>
         </Link>

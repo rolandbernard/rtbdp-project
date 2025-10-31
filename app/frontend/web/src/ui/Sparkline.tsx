@@ -8,17 +8,19 @@ function twoDigitString(number: number) {
     }
 }
 
-function formatDate(date: Date, long: boolean) {
+function formatDate(date: Date, window: number) {
     return (
         twoDigitString(date.getHours()) +
         ":" +
         twoDigitString(date.getMinutes()) +
-        (long
-            ? "-" + twoDigitString((date.getMinutes() + 5) % 60)
+        (window >= 60
+            ? "-" +
+              twoDigitString((date.getMinutes() + Math.trunc(window / 60)) % 60)
             : ":" +
               twoDigitString(date.getSeconds()) +
-              "-" +
-              twoDigitString((date.getSeconds() + 10) % 60))
+              (window >= 1
+                  ? "-" + twoDigitString((date.getSeconds() + window) % 60)
+                  : ""))
     );
 }
 
@@ -26,7 +28,7 @@ interface TooltipProps {
     active?: boolean;
     payload?: { value: number }[];
     label?: Date;
-    long?: boolean;
+    window?: number;
 }
 
 function CustomTooltip(props: TooltipProps) {
@@ -35,7 +37,7 @@ function CustomTooltip(props: TooltipProps) {
             <div className="custom-tooltip p-3 rounded-box bg-base-300/75 shadow-xl backdrop-blur-md hidden lg:block">
                 <p className="label">{`${formatDate(
                     props.label!,
-                    props.long ?? true
+                    props.window ?? 0
                 )} : ${props.payload[0]?.value}`}</p>
             </div>
         );
@@ -46,7 +48,7 @@ function CustomTooltip(props: TooltipProps) {
 interface Props {
     data: { x: Date; y: number }[];
     chartColor: string;
-    long?: boolean;
+    window?: number;
 }
 
 export default function Sparkline(props: Props) {
@@ -74,7 +76,7 @@ export default function Sparkline(props: Props) {
                     </linearGradient>
                 </defs>
                 <XAxis dataKey="x" hide />
-                <Tooltip content={<CustomTooltip long={props.long} />} />
+                <Tooltip content={<CustomTooltip window={props.window} />} />
                 <Area
                     type="monotone"
                     dataKey="y"
