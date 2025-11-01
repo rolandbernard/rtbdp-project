@@ -39,7 +39,7 @@ export default function Selector(props: Props) {
                     <label
                         htmlFor={(props.name ?? "") + "-option-" + key}
                         className={
-                            "inline-flex items-center justify-center w-full p-1 cursor-pointer peer-checked:text-primary " +
+                            "inline-flex items-center justify-center w-full p-0.75 cursor-pointer peer-checked:text-primary " +
                             "peer-checked:bg-primary/15 peer-checked:border-primary peer-checked:hover:bg-primary/25 " +
                             "border-2 border-border hover:bg-content/10 dark:hover:bg-content/15 " +
                             (i === 0 ? "rounded-l-field " : "") +

@@ -80,6 +80,6 @@ export default function HistorySpark<
                     "24h": 20 * 60,
                 }[props.windowSize]
             }
-        ></Sparkline>
+        />
     );
 }

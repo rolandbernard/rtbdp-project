@@ -12,7 +12,7 @@ export default function Header() {
     useClickOutside("nav#header", () => setShowSearch(false));
     return (
         <>
-            <div className="w-full h-16 shrink-0 grow-0"></div>
+            <div className="w-full h-16 shrink-0 grow-0" />
             <nav
                 id="header"
                 className="bg-base-200/60 backdrop-blur-md fixed w-full z-20 top-0 start-0"
@@ -39,18 +39,18 @@ export default function Header() {
                                 active:border-content/20"
                             onClick={() => setShowSearch(true)}
                         >
-                            <Search className="w-5 h-5"></Search>
+                            <Search className="w-5 h-5" />
                             <span className="sr-only">Search</span>
                         </button>
                         <div className="w-100 hidden md:block">
-                            <GlobalSearch></GlobalSearch>
+                            <GlobalSearch />
                         </div>
-                        <ThemeSelector></ThemeSelector>
+                        <ThemeSelector />
                     </div>
                 </div>
                 {showSearch ? (
                     <div className="w-full px-2 pb-3" id="navbar-search">
-                        <GlobalSearch autoFocus={true}></GlobalSearch>
+                        <GlobalSearch autoFocus={true} />
                     </div>
                 ) : undefined}
             </nav>

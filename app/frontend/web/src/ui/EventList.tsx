@@ -140,7 +140,7 @@ export default function EventList() {
     const userIds = useMemo(() => showUsers.map(r => r.id), [showUsers]);
     const repoIds = useMemo(() => showRepos.map(r => r.id), [showRepos]);
     const listRef = useRef<HTMLDivElement>(null);
-    let filtered = events.limit(100);
+    let filtered = events.limit(20);
     if (showKinds.length !== 0) {
         filtered = filtered.where("kind", kindIds);
     }
@@ -166,10 +166,11 @@ export default function EventList() {
                     onChange={e => setKinds(e)}
                     output={(row, query) => boldQuery(row.name, query)}
                     className="block w-full"
-                    placeholder="Filter by kind..."
+                    placeholder="Filter by type..."
                     suppress={false}
                     limit={15}
                     debounce={0}
+                    object="type"
                 />
                 <SearchSelect
                     ident="user-filter"
@@ -188,6 +189,7 @@ export default function EventList() {
                     ]}
                     className="block w-full"
                     placeholder={"Filter by user..."}
+                    object="user"
                 />
                 <SearchSelect
                     ident="repo-filter"
@@ -207,6 +209,7 @@ export default function EventList() {
                     }
                     className="block w-full"
                     placeholder={"Filter by repository..."}
+                    object="repository"
                 />
             </div>
             <div className="text-sm flex flex-row justify-center items-start mt-2">

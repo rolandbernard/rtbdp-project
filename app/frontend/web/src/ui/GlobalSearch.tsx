@@ -53,7 +53,7 @@ export default function GlobalSearch(props: Props) {
         <div id="global-search" className="relative">
             <div className="peer w-full relative block">
                 <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <Search className="w-4 h-4 text-border stroke-3"></Search>
+                    <Search className="w-4 h-4 text-border stroke-3" />
                 </div>
                 <input
                     type="text"

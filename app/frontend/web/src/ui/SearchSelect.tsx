@@ -15,6 +15,7 @@ interface Props<R, V> {
     onChange?: (selection: Row<R>[]) => void;
     prefix?: ReactNode;
     placeholder?: string;
+    object?: string;
     className?: string;
     suppress?: boolean;
     limit?: number;
@@ -71,7 +72,13 @@ export default function SearchSelect<R, V>(props: Props<R, V>) {
             placeholder={
                 props.selected.length === 0
                     ? props.placeholder
-                    : "Selected " + props.selected.length
+                    : "Selected " +
+                      props.selected.length +
+                      " " +
+                      (props.object
+                          ? props.object +
+                            (props.selected.length === 1 ? "." : "s.")
+                          : ".")
             }
             placeholderItalic={props.selected.length === 0}
             className={props.className}

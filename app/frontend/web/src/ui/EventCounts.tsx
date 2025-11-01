@@ -53,18 +53,14 @@ function EventCounter(props: Props) {
                         })}
                         {EVENT_KINDS[props.kind]}
                     </div>
-                    <Counter
-                        value={total}
-                        maxDigits={7}
-                        className="text-lg pb-2"
-                    ></Counter>
+                    <Counter value={total} className="text-lg pb-2" />
                 </div>
                 <div className="w-1/2 md:w-2/3 h-16">
                     <HistorySpark
                         table={history}
                         tableFine={historyFine}
                         windowSize={props.windowSize}
-                    ></HistorySpark>
+                    />
                 </div>
             </div>
         </Link>
@@ -74,7 +70,7 @@ function EventCounter(props: Props) {
 export default function EventCounts() {
     const [windowSize, setWindowSize] = useState("24h");
     return (
-        <div className="flex flex-col flex-auto grow-0">
+        <div className="flex flex-col flex-auto grow-0 mx-1">
             <div className="flex flex-row justify-end">
                 <div className="w-full max-w-64 pb-1 px-2">
                     <Selector
@@ -88,19 +84,22 @@ export default function EventCounts() {
                         className="w-full text-sm"
                         value={windowSize}
                         onChange={setWindowSize}
-                    ></Selector>
+                    />
                 </div>
             </div>
             <div className="flex flex-wrap">
                 {Object.keys(EVENT_KINDS).map(key => (
                     <div
                         key={key}
-                        className="p-1 basis-1/2 md:basis-1/3 xl:basis-1/4"
+                        className={
+                            "p-1 basis-1/2 md:basis-1/3 xl:basis-1/4" +
+                            (key === "wiki" ? " md:not-xl:hidden" : "")
+                        }
                     >
                         <EventCounter
                             kind={key as EventKind}
                             windowSize={windowSize as WindowSize}
-                        ></EventCounter>
+                        />
                     </div>
                 ))}
             </div>

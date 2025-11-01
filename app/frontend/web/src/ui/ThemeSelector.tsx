@@ -49,8 +49,8 @@ export default function ThemeSelector() {
                     border-transparent active:border-content/10"
                 onClick={() => setShow(true)}
             >
-                <Moon className="w-5 h-5 hidden dark:block"></Moon>
-                <Sun className="w-5 h-5 block dark:hidden"></Sun>
+                <Moon className="w-5 h-5 hidden dark:block" />
+                <Sun className="w-5 h-5 block dark:hidden" />
                 <span className="sr-only">Search</span>
             </button>
             {show ? (

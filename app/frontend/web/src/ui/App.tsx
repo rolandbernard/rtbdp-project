@@ -6,12 +6,12 @@ import Rankings from "./Rankings";
 export default function App() {
     return (
         <div className="md:h-dvh overflow-x-hidden flex flex-col">
-            <Header></Header>
+            <Header />
             <div className="flex flex-col min-h-0 grow">
-                <EventCounts></EventCounts>
+                <EventCounts />
                 <div className="flex flex-col md:flex-row min-h-0 min-w-0 grow">
-                    <Rankings></Rankings>
-                    <EventList></EventList>
+                    <Rankings />
+                    <EventList />
                 </div>
             </div>
         </div>
