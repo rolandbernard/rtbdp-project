@@ -159,8 +159,8 @@ CREATE TABLE counts_history_fine (
 
 -- We partition by four hours.
 SELECT create_hypertable('counts_history_fine', by_range('ts_start', INTERVAL '4 hours'));
--- We only keep one day worth of fine history, due to the volume of data.
-SELECT add_retention_policy('counts_history_fine', INTERVAL '1 days');
+-- We only keep one week worth of fine history, due to the volume of data.
+SELECT add_retention_policy('counts_history_fine', INTERVAL '7 days');
 
 -- =====================
 -- Per-user event counts
@@ -213,8 +213,8 @@ CREATE TABLE users_history_fine (
 
 -- We partition by 10 minutes.
 SELECT create_hypertable('users_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
--- We only keep one day worth of fine history, due to the volume of data.
-SELECT add_retention_policy('users_history_fine', INTERVAL '1 days');
+-- We only keep one week worth of fine history, due to the volume of data.
+SELECT add_retention_policy('users_history_fine', INTERVAL '7 days');
 
 -- ===========================
 -- Per-repository event counts
@@ -267,8 +267,8 @@ CREATE TABLE repos_history_fine (
 
 -- We partition by 10 minutes.
 SELECT create_hypertable('repos_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
--- We only keep one day worth of fine history, due to the volume of data.
-SELECT add_retention_policy('repos_history_fine', INTERVAL '1 days');
+-- We only keep one week worth of fine history, due to the volume of data.
+SELECT add_retention_policy('repos_history_fine', INTERVAL '7 days');
 
 -- =============================
 -- Trending repository detection
@@ -321,8 +321,8 @@ CREATE TABLE stars_history_fine (
 
 -- We partition by 10 minutes.
 SELECT create_hypertable('stars_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
--- We only keep one day worth of fine history, due to the volume of data.
-SELECT add_retention_policy('stars_history_fine', INTERVAL '1 days');
+-- We only keep one week worth of fine history, due to the volume of data.
+SELECT add_retention_policy('stars_history_fine', INTERVAL '7 days');
 
 CREATE TABLE trending_live (
     repo_id BIGINT NOT NULL,

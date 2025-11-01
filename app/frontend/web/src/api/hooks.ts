@@ -1,49 +1,54 @@
-import { useMemo, useRef, useSyncExternalStore } from "react";
-import { EMPTY } from "rxjs";
+import { useRef, useSyncExternalStore } from "react";
 
 import type { Table } from "./table";
 import type { Row } from "./client";
 
 export function useLoadingTable<R, V>(
     table: Table<R, V>,
-    suppress = false,
-    viewDep: unknown = undefined
+    suppress = false
 ): [boolean, Row<R>[]] {
     // The view keeps rows from the table between different connections.
-    const viewRef = useRef<[unknown, V]>([viewDep, table.createView()]);
-    const [subscribe, snapshot] = useMemo(() => {
-        const view = viewRef.current;
-        if (viewDep !== view[0]) {
-            view[0] = viewDep;
-            view[1] = table.createView();
-        }
-        const events = suppress ? EMPTY : table.connect(view[1]);
+    const view = useRef(table.createView());
+    const lastDep = useRef<unknown[]>([]);
+    const store = useRef<
+        [(onChange: () => void) => () => void, () => [boolean, Row<R>[]]] | null
+    >(null);
+    const dep = [suppress, ...table.dependencies()];
+    if (
+        lastDep.current.length != dep.length ||
+        lastDep.current.some((e, i) => e != dep[i])
+    ) {
+        lastDep.current = dep;
         // Initial build of snapshot reusing rows that we already know about.
         let snapshot: [boolean, Row<R>[]] = [
             suppress,
-            table.extractFromView(view[1]),
+            table.extractFromView(view.current),
         ];
-        return [
+        store.current = [
             (onChange: () => void) => {
-                const subscription = events.subscribe(replayed => {
-                    snapshot = [replayed, table.extractFromView(view[1])];
-                    onChange();
-                });
-                return () => subscription.unsubscribe();
+                if (suppress) {
+                    return () => {};
+                } else {
+                    const subscription = table
+                        .connect(view.current)
+                        .subscribe(replayed => {
+                            snapshot = [
+                                replayed,
+                                table.extractFromView(view.current),
+                            ];
+                            onChange();
+                        });
+                    return () => subscription.unsubscribe();
+                }
             },
             () => snapshot,
         ];
-        // Must be dynamic, since it is based on the filter we apply.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [...table.dependencies(), suppress]);
+    }
+    const [subscribe, snapshot] = store.current!;
     return useSyncExternalStore(subscribe, snapshot);
 }
 
-export function useTable<R, V>(
-    table: Table<R, V>,
-    suppress = false,
-    viewDep: unknown = undefined
-): Row<R>[] {
-    const [_replayed, results] = useLoadingTable(table, suppress, viewDep);
+export function useTable<R, V>(table: Table<R, V>, suppress = false): Row<R>[] {
+    const [_replayed, results] = useLoadingTable(table, suppress);
     return results;
 }

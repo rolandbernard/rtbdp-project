@@ -1,7 +1,7 @@
 import EventCounts from "./EventCounts";
 import EventList from "./EventList";
 import Header from "./Header";
-import RepoRanking from "./RepoRanking";
+import Rankings from "./Rankings";
 
 export default function App() {
     return (
@@ -10,7 +10,7 @@ export default function App() {
             <div className="flex flex-col min-h-0 grow">
                 <EventCounts></EventCounts>
                 <div className="flex flex-col md:flex-row min-h-0 min-w-0 grow">
-                    <RepoRanking></RepoRanking>
+                    <Rankings></Rankings>
                     <EventList></EventList>
                 </div>
             </div>

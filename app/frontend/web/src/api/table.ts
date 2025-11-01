@@ -53,7 +53,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         this.keys = keys;
         this.filters = filters;
         this.limited = limited;
-        this.deps = deps ?? [];
+        this.deps = deps ?? [name];
     }
 
     clone(): this {
