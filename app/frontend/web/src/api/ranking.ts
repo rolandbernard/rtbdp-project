@@ -71,7 +71,9 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
         const newTable = this.where("row_number", {
             start: start - MARGIN,
             end: end + MARGIN,
-        } as RangeFilter<RankingRow<R>["row_number"]>);
+        } as RangeFilter<RankingRow<R>["row_number"]>).limit(
+            end + MARGIN - Math.max(0, start - MARGIN)
+        );
         newTable.range = [start, end];
         return newTable;
     }

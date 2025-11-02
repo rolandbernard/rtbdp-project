@@ -176,11 +176,12 @@ CREATE TABLE users_live (
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON users_live(window_size, num_events DESC, user_id ASC);
+CREATE INDEX ON users_live(seq_num DESC);
 
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW users_ranking AS
 SELECT window_size, user_id, num_events,
-        MAX(seq_num) OVER (PARTITION BY window_size) as seq_num,
+		(SELECT MAX(seq_num) AS seq_num FROM users_live) AS seq_num,
         ROW_NUMBER() OVER (
             PARTITION BY window_size ORDER BY num_events DESC, user_id ASC
         ) - 1 AS row_number,
@@ -230,11 +231,12 @@ CREATE TABLE repos_live (
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON repos_live(window_size, num_events DESC, repo_id ASC);
+CREATE INDEX ON repos_live(seq_num DESC);
 
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW repos_ranking AS
 SELECT window_size, repo_id, num_events,
-        MAX(seq_num) OVER (PARTITION BY window_size) as seq_num,
+		(SELECT MAX(seq_num) AS seq_num FROM repos_live) AS seq_num,
         ROW_NUMBER() OVER (
             PARTITION BY window_size ORDER BY num_events DESC, repo_id ASC
         ) - 1 AS row_number,
@@ -284,11 +286,12 @@ CREATE TABLE stars_live (
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON stars_live(window_size, num_stars DESC, repo_id ASC);
+CREATE INDEX ON stars_live(seq_num DESC);
 
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW stars_ranking AS
 SELECT window_size, repo_id, num_stars,
-        MAX(seq_num) OVER (PARTITION BY window_size) as seq_num,
+		(SELECT MAX(seq_num) AS seq_num FROM stars_live) AS seq_num,
         ROW_NUMBER() OVER (
             PARTITION BY window_size ORDER BY num_stars DESC, repo_id ASC
         ) - 1 AS row_number,
@@ -333,12 +336,17 @@ CREATE TABLE trending_live (
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON trending_live(trending_score DESC, repo_id ASC);
+CREATE INDEX ON trending_live(seq_num DESC);
 
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW trending_ranking AS
 SELECT repo_id, trending_score,
-        MAX(seq_num) OVER () as seq_num,
-        ROW_NUMBER() OVER (ORDER BY trending_score DESC, repo_id ASC) - 1 AS row_number,
-        RANK() OVER (ORDER BY trending_score DESC) - 1 AS rank
+		(SELECT MAX(seq_num) AS seq_num FROM trending_live) AS seq_num,
+        ROW_NUMBER() OVER (
+            ORDER BY trending_score DESC, repo_id ASC
+        ) - 1 AS row_number,
+        RANK() OVER (
+            ORDER BY trending_score DESC
+        ) - 1 AS rank
     FROM trending_live
     WHERE trending_score > 0;

@@ -84,17 +84,13 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
     where<C extends keyof R>(column: C, options: InFilter<R[C]>): this;
     where<C extends keyof R>(column: C, range: RangeFilter<R[C]>): this;
     where<C extends keyof R>(column: C, filter: Filter<R[C]>) {
-        let newFilters = this.filters;
-        let newDeps = this.deps;
-        if (!newFilters) {
-            newFilters = [{}];
-        }
+        const newFilters = [...(this.filters ?? [{}])];
         const last = newFilters?.splice(-1)![0];
+        newFilters.push({ ...last, [column]: filter });
+        let newDeps = this.deps;
         if (Array.isArray(filter)) {
-            newFilters = [...newFilters, { ...last, [column]: filter }];
             newDeps = [...newDeps, ...filter];
         } else {
-            newFilters = [...newFilters, { ...last, [column]: filter }];
             const { start, end, substr } = filter;
             newDeps = [...newDeps, start, end, substr];
         }
