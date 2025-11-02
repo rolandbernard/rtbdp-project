@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 
-interface Props {
-    options: Record<string, ReactNode>;
+interface Props<O extends string> {
+    options: Record<O, ReactNode>;
     name?: string;
-    onChange?: (value: string) => void;
+    group?: string;
+    onChange?: (value: O) => void;
     value?: string;
     className?: string;
 }
 
-export default function Selector(props: Props) {
+export default function Selector<O extends string>(props: Props<O>) {
     return (
         <div
             className={
@@ -21,7 +22,13 @@ export default function Selector(props: Props) {
                 <div key={key} className="w-full has-checked:z-1 ml-[-2px]">
                     <input
                         type="radio"
-                        id={(props.name ?? "") + "-option-" + key}
+                        id={
+                            (props.name ?? "") +
+                            "-option-" +
+                            key +
+                            "-" +
+                            props.group
+                        }
                         name={props.name}
                         value={key}
                         className="peer hidden"
@@ -32,12 +39,18 @@ export default function Selector(props: Props) {
                         }
                         onChange={e => {
                             if (e.target.checked) {
-                                props.onChange?.(key);
+                                props.onChange?.(key as O);
                             }
                         }}
                     />
                     <label
-                        htmlFor={(props.name ?? "") + "-option-" + key}
+                        htmlFor={
+                            (props.name ?? "") +
+                            "-option-" +
+                            key +
+                            "-" +
+                            props.group
+                        }
                         className={
                             "inline-flex items-center justify-center w-full p-0.75 cursor-pointer peer-checked:text-primary " +
                             "peer-checked:bg-primary/15 peer-checked:border-primary peer-checked:hover:bg-primary/25 " +
@@ -48,7 +61,7 @@ export default function Selector(props: Props) {
                                 : "")
                         }
                     >
-                        {node}
+                        {node as ReactNode}
                     </label>
                 </div>
             ))}
