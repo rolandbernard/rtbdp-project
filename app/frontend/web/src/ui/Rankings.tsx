@@ -5,7 +5,7 @@ import UserRanking from "./UserRanking";
 import Selector from "./Selector";
 
 export default function Rankings() {
-    const [forUsers, setForUsers] = useState(true);
+    const [forUsers, setForUsers] = useState(false);
     return (
         <div className="md:w-full m-2 mr-0 p-2 xl:pt-0 flex flex-col border border-border/50 rounded-box min-w-0">
             <div className="text-sm flex flex-row items-center justify-end pt-0.5 px-1 xl:hidden">
@@ -15,13 +15,10 @@ export default function Rankings() {
                     name="user-repo-ranking"
                     options={{ users: "Users", repos: "Repositories" }}
                     value={forUsers ? "users" : "repos"}
-                    onChange={value => {
-                        console.log(value);
-                        setForUsers(value === "users");
-                    }}
+                    onChange={value => setForUsers(value === "users")}
                 />
             </div>
-            <div className="grow not-md:h-[50dvh] min-w-0 min-h-0 flex flex-row gap-8">
+            <div className="grow not-md:h-[50dvh] min-w-0 min-h-0 flex flex-row">
                 <div
                     className={
                         "w-full min-w-0 flex flex-col" +

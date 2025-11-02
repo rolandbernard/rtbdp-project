@@ -183,3 +183,4 @@ export const trendingRanking = new RankingTable<{
     repo_id: number;
     trending_score: number;
 }>("trending_ranking", ["repo_id"]).rankingsBy([]);
+

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useLoadingTable } from "../api/hooks";
+import { useHistoryTime, useLoadingTable } from "../api/hooks";
 import type { NormalTable } from "../api/table";
 import type { WindowSize } from "../api/tables";
 import Sparkline from "./Sparkline";
@@ -14,23 +14,19 @@ interface Props<R> {
 export default function HistorySpark<
     R extends { ts_start: string; num_events?: number; num_stars?: number }
 >(props: Props<R>) {
-    const historyTable =
-        props.windowSize === "5m" || props.windowSize === "1h"
-            ? props.tableFine
-            : props.table;
+    const useFine = props.windowSize === "5m" || props.windowSize === "1h";
+    const historyTable = useFine ? props.tableFine : props.table;
     const limit = { "5m": 5 * 6, "1h": 60 * 6, "6h": 6 * 12, "24h": 24 * 6 }[
         props.windowSize
     ];
     const [loaded, rawHistory] = useLoadingTable(historyTable.limit(limit));
+    const lastTime = useHistoryTime(useFine);
     const cleanHistory = useMemo(() => {
         if (!loaded) {
             // Avoid initial partial renders.
             return [];
         } else {
-            const diff =
-                props.windowSize === "5m" || props.windowSize === "1h"
-                    ? 10_000
-                    : 300_000;
+            const diff = useFine ? 10_000 : 300_000;
             const sorted = sort(
                 rawHistory.map(row => ({
                     x: new Date(row.ts_start),
@@ -39,14 +35,18 @@ export default function HistorySpark<
                 [r => r.x]
             );
             const complete = [];
-            let last;
+            let last = { x: new Date(lastTime.getTime() - limit * diff), y: 0 };
             for (const row of sorted) {
-                while (last && last.x.getTime() + diff < row.x.getTime()) {
+                while (last.x.getTime() + diff < row.x.getTime()) {
                     last = { x: new Date(last.x.getTime() + diff), y: 0 };
                     complete.push(last);
                 }
                 complete.push(row);
                 last = row;
+            }
+            while (complete.length < limit) {
+                last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                complete.push(last);
             }
             complete.splice(0, Math.max(0, complete.length - limit));
             if (props.windowSize === "1h" || props.windowSize === "24h") {
@@ -67,7 +67,7 @@ export default function HistorySpark<
                 return complete;
             }
         }
-    }, [loaded, limit, rawHistory, props.windowSize]);
+    }, [loaded, limit, rawHistory, useFine, lastTime, props.windowSize]);
     return (
         <Sparkline
             data={cleanHistory}

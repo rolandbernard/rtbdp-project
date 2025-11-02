@@ -1,5 +1,6 @@
 import { useRef, useSyncExternalStore } from "react";
 
+import { countsHistory, countsHistoryFine } from "./tables";
 import type { Table } from "./table";
 import type { Row } from "./client";
 
@@ -51,4 +52,60 @@ export function useLoadingTable<R, V>(
 export function useTable<R, V>(table: Table<R, V>, suppress = false): Row<R>[] {
     const [_replayed, results] = useLoadingTable(table, suppress);
     return results;
+}
+
+let latestCoarseHistoryTime = new Date();
+const coarseListeners = new Set();
+const coarseView = new Map();
+countsHistory
+    .where("kind", ["all"])
+    .limit(1)
+    .connect(coarseView)
+    .subscribe(() => {
+        const row = countsHistory.extractFromView(coarseView)[0];
+        if (row) {
+            latestCoarseHistoryTime = new Date(row.ts_start);
+        }
+    });
+
+function subscribeCoarse(onChange: () => void) {
+    coarseListeners.add(onChange);
+    return () => coarseListeners.delete(onChange);
+}
+
+function getCoarse() {
+    return latestCoarseHistoryTime;
+}
+
+let latestFineHistoryTime = new Date();
+const fineListeners = new Set<() => void>();
+const fineView = new Map();
+countsHistoryFine
+    .where("kind", ["all"])
+    .limit(1)
+    .connect(fineView)
+    .subscribe(() => {
+        const row = countsHistoryFine.extractFromView(fineView)[0];
+        if (row) {
+            latestFineHistoryTime = new Date(row.ts_start);
+            for (const l of fineListeners) {
+                l();
+            }
+        }
+    });
+
+function subscribeFine(onChange: () => void) {
+    fineListeners.add(onChange);
+    return () => fineListeners.delete(onChange);
+}
+
+function getFine() {
+    return latestFineHistoryTime;
+}
+
+export function useHistoryTime(fine: boolean) {
+    return useSyncExternalStore(
+        fine ? subscribeFine : subscribeCoarse,
+        fine ? getFine : getCoarse
+    );
 }

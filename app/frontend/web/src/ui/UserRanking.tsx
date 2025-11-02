@@ -66,9 +66,9 @@ export default function UserRanking() {
     const table = usersRanking.where("window_size", [windowSize]);
     return (
         <div className="flex flex-col h-full flex-1 min-h-0 mx-1 mt-2">
-            <div className="flex flex-row justify-end items-end gap-2">
-                <div className="w-1/2 max-w-32"></div>
-                <div className="w-full max-w-64"></div>
+            <div className="flex flex-row justify-end xl:justify-start items-end gap-2">
+                <div className="w-1/2 max-w-32 xl:hidden"></div>
+                <div className="w-full max-w-64 xl:hidden"></div>
                 <div className="w-full max-w-64">
                     <div className="text-xs">Activity</div>
                     <Selector
@@ -85,6 +85,8 @@ export default function UserRanking() {
                         onChange={w => setKind(w)}
                     />
                 </div>
+                <div className="w-1/2 max-w-32 not-xl:hidden"></div>
+                <div className="w-full max-w-64 not-xl:hidden"></div>
             </div>
             <RankingList
                 table={table}
