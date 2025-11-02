@@ -1,9 +1,65 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router";
 
-import { usersRanking, type WindowSize } from "../api/tables";
+import {
+    users,
+    usersHistory,
+    usersHistoryFine,
+    usersRanking,
+    type WindowSize,
+} from "../api/tables";
+import { useTable } from "../api/hooks";
 
-import RankingList from "./RankingList";
+import RankingList, { RankingRow } from "./RankingList";
 import Selector from "./Selector";
+import HistorySpark from "./HistorySpark";
+import Counter from "./Counter";
+
+interface UserRowProps {
+    userId: number;
+    value: number;
+    windowSize: WindowSize;
+}
+
+function UserRankRow(props: UserRowProps) {
+    const user = useTable(users.where("id", [props.userId]))[0];
+    const history = useMemo(
+        () => usersHistory.where("user_id", [props.userId]),
+        [props.userId]
+    );
+    const historyFine = useMemo(
+        () => usersHistoryFine.where("user_id", [props.userId]),
+        [props.userId]
+    );
+    return (
+        <div className="flex-1 min-w- min-w-0 flex flex-row items-center pl-4">
+            <div className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis text-primary font-semibold">
+                <Link
+                    to={"/user/" + props.userId}
+                    className={user?.username ? "" : "text-primary/50"}
+                >
+                    @{user?.username}
+                </Link>
+            </div>
+            <div className="flex-3 min-w-0 min-h-0 h-full flex flex-row items-center">
+                <div className="w-18 pr-1 flex flex-col">
+                    <Counter
+                        value={props.value}
+                        className="text-lg"
+                        maxDigits={7}
+                    />
+                </div>
+                <div className="w-full h-full">
+                    <HistorySpark
+                        table={history}
+                        tableFine={historyFine}
+                        windowSize={props.windowSize}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function UserRanking() {
     const [windowSize, setKind] = useState<WindowSize>("24h");
@@ -33,13 +89,13 @@ export default function UserRanking() {
             <RankingList
                 table={table}
                 rows={row => (
-                    <div key={row.user_id} className="flex-1 flex flex-row">
-                        <span className="pt-1 px-3">{row.rank}</span>
-                        <span className="pt-1 px-3 text-right">
-                            {row.user_id}
-                        </span>
-                        <span className="pt-1 px-3">{row.num_events}</span>
-                    </div>
+                    <RankingRow key={row.user_id} rank={row.rank}>
+                        <UserRankRow
+                            userId={row.user_id}
+                            value={row.num_events}
+                            windowSize={windowSize}
+                        />
+                    </RankingRow>
                 )}
             />
         </div>

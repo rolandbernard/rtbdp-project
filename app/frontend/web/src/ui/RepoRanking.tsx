@@ -8,7 +8,7 @@ import {
 } from "../api/tables";
 import type { RankingTable } from "../api/ranking";
 
-import RankingList from "./RankingList";
+import RankingList, { RankingRow } from "./RankingList";
 import Selector from "./Selector";
 
 export default function RepoRanking() {
@@ -78,15 +78,18 @@ export default function RepoRanking() {
             <RankingList
                 table={table}
                 rows={row => (
-                    <div key={row.repo_id} className="flex-1 flex flex-row">
-                        <span className="pt-1 px-3">{row.rank}</span>
-                        <span className="pt-1 px-3 text-right">{row.repo_id}</span>
-                        <span className="pt-1 px-3">
-                            {row.trending_score ??
-                                row.num_events ??
-                                row.num_stars}
-                        </span>
-                    </div>
+                    <RankingRow key={row.repo_id} rank={row.rank}>
+                        <div className="flex-1 flex flex-row">
+                            <span className="pt-1 px-3 text-right">
+                                {row.repo_id}
+                            </span>
+                            <span className="pt-1 px-3">
+                                {row.trending_score ??
+                                    row.num_events ??
+                                    row.num_stars}
+                            </span>
+                        </div>
+                    </RankingRow>
                 )}
             />
         </div>

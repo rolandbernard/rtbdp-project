@@ -1,9 +1,37 @@
+interface LettersProps {
+    value: string;
+    options: string[];
+    className?: string;
+}
+
+export function Letters(props: LettersProps) {
+    const len = props.options.length;
+    const idx = props.options.indexOf(props.value);
+    return (
+        <div className={"relative overflow-hidden " + props.className}>
+            {props.options.map((v, i) => (
+                <div
+                    key={i}
+                    style={{
+                        transform: `rotateX(${
+                            ((idx - i) * 360) / len
+                        }deg) translateZ(2em)`,
+                    }}
+                    className="top-0 left-0 absolute backface-hidden"
+                >
+                    {v}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 interface DigitProps {
     value: number;
     leading: boolean;
 }
 
-function Digit(props: DigitProps) {
+export function Digit(props: DigitProps) {
     return (
         <div className="relative overflow-hidden">
             <div className="invisible">0</div>
@@ -31,7 +59,7 @@ function Digit(props: DigitProps) {
 
 function numDigits(value: number) {
     let cnt = 1;
-    while (value > 10) {
+    while (value >= 10) {
         value /= 10;
         cnt += 1;
     }

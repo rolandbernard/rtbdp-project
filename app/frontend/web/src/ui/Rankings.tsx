@@ -5,7 +5,7 @@ import UserRanking from "./UserRanking";
 import Selector from "./Selector";
 
 export default function Rankings() {
-    const [forUsers, setForUsers] = useState(false);
+    const [forUsers, setForUsers] = useState(true);
     return (
         <div className="md:w-full m-2 mr-0 p-2 xl:pt-0 flex flex-col border border-border/50 rounded-box min-w-0">
             <div className="text-sm flex flex-row items-center justify-end pt-0.5 px-1 xl:hidden">
@@ -24,7 +24,7 @@ export default function Rankings() {
             <div className="grow not-md:h-[50dvh] min-w-0 min-h-0 flex flex-row gap-8">
                 <div
                     className={
-                        "w-full flex flex-col" +
+                        "w-full min-w-0 flex flex-col" +
                         (forUsers ? "" : " not-xl:hidden")
                     }
                 >
@@ -32,7 +32,7 @@ export default function Rankings() {
                 </div>
                 <div
                     className={
-                        "w-full flex flex-col" +
+                        "w-full min-w-0 flex flex-col" +
                         (forUsers ? " not-xl:hidden" : "")
                     }
                 >

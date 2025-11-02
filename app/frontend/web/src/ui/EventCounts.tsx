@@ -53,7 +53,11 @@ function EventCounter(props: Props) {
                         })}
                         {EVENT_KINDS[props.kind]}
                     </div>
-                    <Counter value={total} className="text-lg pb-2" />
+                    <Counter
+                        value={total}
+                        className="text-lg pb-2"
+                        maxDigits={7}
+                    />
                 </div>
                 <div className="w-1/2 md:w-2/3 h-16">
                     <HistorySpark
