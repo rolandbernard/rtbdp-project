@@ -155,7 +155,7 @@ export default function EventList() {
         return sort(rawResults, [e => e.created_at, e => e.id], true);
     }, [rawResults]);
     return (
-        <div className="md:w-full m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+        <div className="flex-1 md:w-full m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
             <div className="flex flex-row gap-1 pt-0.5">
                 <SearchSelect
                     ident="kind-filter"

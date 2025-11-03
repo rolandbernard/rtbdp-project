@@ -1,20 +1,102 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router";
 
 import {
+    repos,
+    reposHistory,
+    reposHistoryFine,
     reposRanking,
+    starsHistory,
+    starsHistoryFine,
     starsRanking,
     trendingRanking,
     type WindowSize,
 } from "../api/tables";
 import type { RankingTable } from "../api/ranking";
+import { useTable } from "../api/hooks";
+import type { NormalTable } from "../api/table";
 
 import RankingList, { RankingRow } from "./RankingList";
 import Selector from "./Selector";
+import Counter from "./Counter";
+import HistorySpark from "./HistorySpark";
+
+interface RepoRowProps {
+    repoId: number;
+    value: number;
+    kind: "trending" | "stars" | "activity";
+    windowSize: WindowSize;
+}
+
+type TableType = NormalTable<{
+    repo_id: number;
+    ts_start: string;
+    num_events?: number;
+    num_stars?: number;
+}>;
+
+function RepoRankRow(props: RepoRowProps) {
+    const repo = useTable(repos.where("id", [props.repoId]))[0];
+    const history = useMemo(
+        () =>
+            (
+                (props.kind === "activity"
+                    ? reposHistory
+                    : starsHistory) as TableType
+            ).where("repo_id", [props.repoId]),
+        [props.repoId, props.kind]
+    );
+    const historyFine = useMemo(
+        () =>
+            (
+                (props.kind === "activity"
+                    ? reposHistoryFine
+                    : starsHistoryFine) as TableType
+            ).where("repo_id", [props.repoId]),
+        [props.repoId, props.kind]
+    );
+    return (
+        <div className="flex-1 min-w- min-w-0 flex flex-row items-center pl-4">
+            <div
+                className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis text-primary font-semibold text-left"
+                style={{ direction: "rtl" }}
+            >
+                <Link
+                    to={"/repo/" + props.repoId}
+                    className={
+                        repo?.fullname ?? repo?.reponame
+                            ? ""
+                            : "text-primary/50"
+                    }
+                    title={repo?.fullname ?? repo?.reponame}
+                >
+                    {repo?.fullname ?? repo?.reponame}
+                </Link>
+            </div>
+            <div className="flex-3 min-w-0 min-h-0 h-full flex flex-row items-center">
+                <div className="w-18 pr-1 flex flex-col">
+                    <Counter
+                        value={props.value}
+                        className="text-lg"
+                        maxDigits={5}
+                    />
+                </div>
+                <div className="w-full h-full">
+                    <HistorySpark
+                        table={history}
+                        tableFine={historyFine}
+                        windowSize={props.windowSize}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function RepoRanking() {
     const [[kind, windowSize], setKind] = useState<
         ["trending" | "stars" | "activity", WindowSize]
-    >(["trending", "5m"]);
+    >(["trending", "24h"]);
     const table = (
         kind === "trending"
             ? trendingRanking
@@ -39,7 +121,7 @@ export default function RepoRanking() {
                         group="trending"
                         className="w-full text-sm"
                         value={kind === "trending" ? "trending" : undefined}
-                        onChange={_w => setKind(["trending", "5m"])}
+                        onChange={_w => setKind(["trending", "24h"])}
                     />
                 </div>
                 <div className="w-full max-w-64">
@@ -79,16 +161,16 @@ export default function RepoRanking() {
                 table={table}
                 rows={row => (
                     <RankingRow key={row.repo_id} rank={row.rank}>
-                        <div className="flex-1 flex flex-row">
-                            <span className="pt-1 px-3 text-right">
-                                {row.repo_id}
-                            </span>
-                            <span className="pt-1 px-3">
-                                {row.trending_score ??
-                                    row.num_events ??
-                                    row.num_stars}
-                            </span>
-                        </div>
+                        <RepoRankRow
+                            repoId={row.repo_id}
+                            value={
+                                row.num_events ??
+                                row.num_stars ??
+                                row.trending_score!
+                            }
+                            kind={kind}
+                            windowSize={windowSize}
+                        />
                     </RankingRow>
                 )}
             />

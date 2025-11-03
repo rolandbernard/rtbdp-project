@@ -37,6 +37,7 @@ function UserRankRow(props: UserRowProps) {
                 <Link
                     to={"/user/" + props.userId}
                     className={user?.username ? "" : "text-primary/50"}
+                    title={user?.username}
                 >
                     @{user?.username}
                 </Link>

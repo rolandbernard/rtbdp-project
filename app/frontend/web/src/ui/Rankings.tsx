@@ -7,7 +7,7 @@ import Selector from "./Selector";
 export default function Rankings() {
     const [forUsers, setForUsers] = useState(false);
     return (
-        <div className="md:w-full m-2 mr-0 p-2 xl:pt-0 flex flex-col border border-border/50 rounded-box min-w-0">
+        <div className="flex-1 xl:flex-2 md:w-full m-2 mr-0 p-2 xl:pt-0 flex flex-col border border-border/50 rounded-box min-w-0">
             <div className="text-sm flex flex-row items-center justify-end pt-0.5 px-1 xl:hidden">
                 <div className="pe-3 text-xs whitespace-nowrap">Ranking of</div>
                 <Selector
@@ -26,6 +26,9 @@ export default function Rankings() {
                     }
                 >
                     <UserRanking />
+                </div>
+                <div className="w-0 flex justify-center items-center not-xl:hidden">
+                    <div className="w-0 h-2/3 border-r border-border/50" />
                 </div>
                 <div
                     className={
