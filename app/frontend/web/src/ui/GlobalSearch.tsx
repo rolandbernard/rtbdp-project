@@ -1,11 +1,74 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Link } from "react-router";
+import { Bot, Building2, FolderGit2, Search, User } from "lucide-react";
 
 import { users, repos } from "../api/tables";
 import { useLoadingTable } from "../api/hooks";
 import { useClickOutside, useDebounce } from "../hooks";
 import { sortedKey } from "../util";
 import { boldQuery } from "../utils";
+
+interface UserRowProps {
+    userId: number;
+    username: string;
+    avatarUrl?: string;
+    kind: string;
+    query: string;
+}
+
+function UserSearchRow(props: UserRowProps) {
+    const kindIcon = {
+        Bot: <Bot />,
+        User: <User />,
+        Organization: <Building2 />,
+    }[props.kind] ?? <User />;
+    return (
+        <div className="p-1 flex flex-row items-center">
+            <div className="w-12 h-6 inline-flex items-center justify-center shrink-0">
+                {props.avatarUrl ? (
+                    <img
+                        src={props.avatarUrl}
+                        className="w-6 h-6 rounded-box bg-white"
+                    />
+                ) : (
+                    kindIcon
+                )}
+            </div>
+            <Link
+                to={"/user/" + props.userId}
+                title={props.username}
+                className="min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis text-primary font-semibold"
+            >
+                <span className="font-bold">@</span>
+                {boldQuery(props.username, props.query)}
+            </Link>
+        </div>
+    );
+}
+
+interface RepoRowProps {
+    repoId: number;
+    reponame: string;
+    query: string;
+}
+
+function RepoSearchRow(props: RepoRowProps) {
+    return (
+        <div className="p-1 flex flex-row items-center">
+            <div className="w-12 inline-flex items-center justify-center shrink-0">
+                <FolderGit2 />
+            </div>
+            <Link
+                to={"/repo/" + props.repoId}
+                title={props.reponame}
+                className="flex-1 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis text-primary font-semibold text-left"
+                style={{ direction: "rtl" }}
+            >
+                {boldQuery(props.reponame, props.query)}
+            </Link>
+        </div>
+    );
+}
 
 interface Props {
     autoFocus?: boolean;
@@ -39,7 +102,6 @@ export default function GlobalSearch(props: Props) {
             combined.push({
                 ...repo,
                 name: repo.fullname ?? repo.reponame,
-                kind: "Repo",
             });
         }
         combined.sort(sortedKey([e => e.name?.length ?? 0]));
@@ -68,22 +130,29 @@ export default function GlobalSearch(props: Props) {
             </div>
             {query.length !== 0 ? (
                 <div className="absolute inset-y-full end-0 w-full hidden peer-focus-within:block z-50">
-                    <div className="flex flex-col w-full bg-base-300 rounded-box p-4 py-3 shadow-xl dark:shadow-2xl">
+                    <div className="flex flex-col w-full bg-base-300 rounded-box p-1 py-3 shadow-xl dark:shadow-2xl">
                         {trueResults.length ? (
                             trueResults.map(row => {
-                                return (
-                                    <div key={row.id}>
-                                        <div className="w-15 inline-block whitespace-nowrap overflow-hidden">
-                                            {row.kind}
-                                        </div>
-                                        <div className="w-60 inline-block whitespace-nowrap overflow-hidden overflow-ellipsis">
-                                            {boldQuery(row.name!, query)}
-                                        </div>
-                                    </div>
+                                return "kind" in row ? (
+                                    <UserSearchRow
+                                        key={row.id}
+                                        userId={row.id}
+                                        username={row.username!}
+                                        avatarUrl={row.avatar_url}
+                                        kind={row.kind}
+                                        query={query}
+                                    />
+                                ) : (
+                                    <RepoSearchRow
+                                        key={row.id}
+                                        repoId={row.id}
+                                        reponame={row.fullname ?? row.reponame!}
+                                        query={query}
+                                    />
                                 );
                             })
                         ) : (
-                            <div className="text-content/80">
+                            <div className="text-content/80 px-4">
                                 {query !== debounced ||
                                 !userComplete ||
                                 !repoComplete

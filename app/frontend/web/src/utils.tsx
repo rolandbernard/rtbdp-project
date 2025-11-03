@@ -34,7 +34,11 @@ export const EVENT_ICONS = {
     other: MoreHorizontal,
 };
 
-export function boldQuery(text: string, query: string) {
+export function boldQuery(
+    text: string,
+    query: string,
+    style: string = "font-bold underline"
+) {
     const index = text.toLowerCase().indexOf(query.toLowerCase());
     if (index == -1) {
         return <span key="query-highlight">{text}</span>;
@@ -42,7 +46,7 @@ export function boldQuery(text: string, query: string) {
         return (
             <span key="query-highlight">
                 <span>{text.substring(0, index)}</span>
-                <span className="font-bold">
+                <span className={style}>
                     {text.substring(index, index + query.length)}
                 </span>
                 <span>{text.substring(index + query.length)}</span>

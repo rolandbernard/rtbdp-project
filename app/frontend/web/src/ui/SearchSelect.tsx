@@ -20,6 +20,7 @@ interface Props<R, V> {
     suppress?: boolean;
     limit?: number;
     debounce?: number;
+    rtl?: boolean;
 }
 
 export default function SearchSelect<R, V>(props: Props<R, V>) {
@@ -64,7 +65,14 @@ export default function SearchSelect<R, V>(props: Props<R, V>) {
                             }
                         }}
                     />
-                    <div className="pl-2 overflow-hidden overflow-ellipsis whitespace-nowrap py-0.5">
+                    <div
+                        className={
+                            "pl-2 overflow-hidden overflow-ellipsis whitespace-nowrap py-0.5" +
+                            (props.rtl ? " text-left" : "")
+                        }
+                        style={props.rtl ? { direction: "rtl" } : undefined}
+                        title={props.name(row)}
+                    >
                         {props.output(row, query)}
                     </div>
                 </label>

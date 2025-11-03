@@ -164,7 +164,9 @@ export default function EventList() {
                     name={row => row.name}
                     selected={showKinds}
                     onChange={e => setKinds(e)}
-                    output={(row, query) => boldQuery(row.name, query)}
+                    output={(row, query) =>
+                        boldQuery(row.name, query, "font-semibold underline")
+                    }
                     className="block w-full"
                     placeholder="Filter by type..."
                     suppress={false}
@@ -182,10 +184,14 @@ export default function EventList() {
                     selected={showUsers}
                     onChange={e => setUsers(e)}
                     output={(row, query) => [
-                        <span key="prefix" className="font-bold">
+                        <span key="prefix" className="font-semibold">
                             @
                         </span>,
-                        boldQuery(row.username!, query),
+                        boldQuery(
+                            row.username!,
+                            query,
+                            "font-semibold underline"
+                        ),
                     ]}
                     className="block w-full"
                     placeholder={"Filter by user..."}
@@ -205,11 +211,16 @@ export default function EventList() {
                     selected={showRepos}
                     onChange={e => setRepos(e)}
                     output={(row, query) =>
-                        boldQuery((row.fullname ?? row.reponame)!, query)
+                        boldQuery(
+                            (row.fullname ?? row.reponame)!,
+                            query,
+                            "font-semibold underline"
+                        )
                     }
                     className="block w-full"
                     placeholder={"Filter by repository..."}
                     object="repository"
+                    rtl={true}
                 />
             </div>
             <div className="text-sm flex flex-row justify-center items-start mt-2">

@@ -39,7 +39,8 @@ function UserRankRow(props: UserRowProps) {
                     className={user?.username ? "" : "text-primary/50"}
                     title={user?.username}
                 >
-                    @{user?.username}
+                    <span className="font-bold">@</span>
+                    {user?.username}
                 </Link>
             </div>
             <div className="flex-3 min-w-0 min-h-0 h-full flex flex-row items-center">
