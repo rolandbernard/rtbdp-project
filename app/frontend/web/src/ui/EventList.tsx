@@ -1,5 +1,5 @@
 import { createElement, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { ArrowUpToLine } from "lucide-react";
 
 import { useLoadingTable } from "../api/hooks";
@@ -124,6 +124,7 @@ const eventKinds = new ConstantTable(
 );
 
 export default function EventList() {
+    const [search, setSearch] = useSearchParams();
     const [showKinds, setKinds] = useState<
         ReturnType<typeof eventKinds.extractFromView>
     >([]);
@@ -163,7 +164,18 @@ export default function EventList() {
                     id={row => row.key}
                     name={row => row.name}
                     selected={showKinds}
-                    onChange={e => setKinds(e)}
+                    onChange={e => {
+                        if (e.length !== 0) {
+                            setSearch({
+                                ...search,
+                                elKinds: e.map(e => e.key).join("-"),
+                            });
+                        } else {
+                            search.delete("elKinds");
+                            setSearch(search);
+                        }
+                        setKinds(e);
+                    }}
                     output={(row, query) =>
                         boldQuery(row.name, query, "font-semibold underline")
                     }
@@ -177,7 +189,11 @@ export default function EventList() {
                 <SearchSelect
                     ident="user-filter"
                     table={query =>
-                        users.where("username", { substr: query }).limit(10)
+                        users
+                            .where("username", [query])
+                            .or()
+                            .where("username", { substr: query })
+                            .limit(10)
                     }
                     id={row => row.id}
                     name={row => row.username!}
@@ -201,6 +217,10 @@ export default function EventList() {
                     ident="repo-filter"
                     table={query =>
                         repos
+                            .where("reponame", [query])
+                            .or()
+                            .where("fullname", [query])
+                            .or()
                             .where("reponame", { substr: query })
                             .or()
                             .where("fullname", { substr: query })
