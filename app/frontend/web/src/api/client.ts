@@ -1,4 +1,4 @@
-import { webSocket } from "rxjs/webSocket";
+import { webSocket, WebSocketSubject } from "rxjs/webSocket";
 import { catchError, retry } from "rxjs/operators";
 
 export type Row<R> = R & { seq_num: number };
@@ -24,39 +24,59 @@ export type ClientMessage<R> = {
     unsubscribe?: number[];
 };
 
-// Determine the URL that the API will be available at.
-let loginUrl = "/login";
-let url;
-if (document.location.hostname == "localhost") {
-    url = "ws://localhost:8887";
-    loginUrl = "http://localhost:8888/login";
-} else {
-    url =
-        (document.location.protocol == "https:" ? "wss://" : "ws://") +
-        document.location.host +
-        "/api";
+export function getFreshConnection() {
+    // Determine the URL that the API will be available at.
+    let url;
+    if (document.location.hostname == "localhost") {
+        url = "ws://localhost:8887";
+    } else {
+        url =
+            (document.location.protocol == "https:" ? "wss://" : "ws://") +
+            document.location.host +
+            "/api";
+    }
+    return webSocket<ServerMessage<unknown> | ClientMessage<unknown>>(url);
 }
 
-// The complete API runs over this WebSocket.
-export const socketConnection = webSocket<
+// We create up to eight connection for better parallelism.
+const MAX_CONNECTIONS = 4;
+const connectionPool: WebSocketSubject<
     ServerMessage<unknown> | ClientMessage<unknown>
->(url);
-socketConnection
-    .pipe(
-        // @ts-expect-error Wrong type signature in rxjs.
-        catchError(e => {
-            if (e.reason === "missing auth") {
-                location.href =
-                    loginUrl + "?url=" + encodeURIComponent(location.href);
-            }
-        }),
-        retry({ delay: 1000 })
-    )
-    .subscribe(() => {
-        // Not sure why we need this, but otherwise the multiplex below does not
-        // seem to connect correctly. I assume there is some issue with the socket
-        // connection being closed and opened in every rerender of the app.
-    });
+>[] = [];
+let nextConnection = 0;
+
+export function getConnection() {
+    if (connectionPool.length < MAX_CONNECTIONS) {
+        const connection = getFreshConnection();
+        // Determine the URL to login at.
+        let loginUrl = "/login";
+        if (document.location.hostname == "localhost") {
+            loginUrl = "http://localhost:8888/login";
+        }
+        connection
+            .pipe(
+                // @ts-expect-error Wrong type signature in rxjs.
+                catchError(e => {
+                    if (e.reason === "missing auth") {
+                        location.href =
+                            loginUrl +
+                            "?url=" +
+                            encodeURIComponent(location.href);
+                    }
+                }),
+                retry({ delay: 1000 })
+            )
+            .subscribe(() => {
+                // We need this to keep the connection constantly open, instead
+                // of opening and closing possible whenever there are temporarily
+                // no users between renders.
+            });
+        connectionPool.push(connection);
+    }
+    const connection = connectionPool[nextConnection]!;
+    nextConnection = (nextConnection + 1) % MAX_CONNECTIONS;
+    return connection;
+}
 
 // Subscriptions each get a unique id that can be used to unsubscribe them again.
 let nextSubscriptionId = 0;

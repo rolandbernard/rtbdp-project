@@ -14,7 +14,7 @@ import { groupKey, sort } from "../util";
 import {
     acceptsRowWith,
     getSubscriptionId,
-    socketConnection,
+    getConnection,
     type Filter,
     type Filters,
     type InFilter,
@@ -184,7 +184,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
             limit: this.limited,
         };
         let replayed = false;
-        return (socketConnection as WebSocketSubject<ServerMessage<R>>)
+        return (getConnection() as WebSocketSubject<ServerMessage<R>>)
             .multiplex(
                 () => ({
                     subscribe: [subscription],
@@ -256,7 +256,7 @@ export class UpdateTable<K, R> extends NormalTable<K & UpdateRow<R>> {
 
 export class UnionTable<
     V extends unknown[],
-    R extends { [K in keyof V]: unknown }
+    R extends { [K in keyof V]: unknown },
 > extends Table<R[keyof V], V> {
     tables: { [K in keyof V]: Table<R[K], V[K]> };
 

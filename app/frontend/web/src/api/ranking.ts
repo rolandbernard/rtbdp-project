@@ -4,7 +4,7 @@ import { auditTime, filter, map, retry } from "rxjs";
 import {
     acceptsRowWith,
     getSubscriptionId,
-    socketConnection,
+    getConnection,
     type RangeFilter,
     type Row,
     type RowFilter,
@@ -163,6 +163,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
             limit: this.limited,
         };
         let replaySeqNum: number | undefined = undefined;
+        const connection = getConnection();
         const safeRanges = new Map<string, [number, number]>();
         const bufferedUpdates: Row<RankingUpdateRow<R>>[] = [];
         // Applies the update from the ranking update stream to the given range.
@@ -254,7 +255,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
             replaySeqNum = undefined;
             bufferedUpdates.length = 0;
             safeRanges.clear();
-            socketConnection.next({
+            connection.next({
                 replay: [replay],
             });
         };
@@ -297,11 +298,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                 return false;
             }
         };
-        return (
-            socketConnection as WebSocketSubject<
-                ServerMessage<RankingMsgRow<R>>
-            >
-        )
+        return (connection as WebSocketSubject<ServerMessage<RankingMsgRow<R>>>)
             .multiplex(
                 () => ({
                     subscribe: [subscription],
