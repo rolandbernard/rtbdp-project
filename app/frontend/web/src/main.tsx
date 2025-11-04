@@ -3,13 +3,13 @@ import { createHashRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { createRoot } from "react-dom/client";
 
-import Root from "./routes/Root";
-import Dashboard from "./routes/Dashboard";
-import ErrorPage from "./routes/ErrorPage";
-import ExtraPage from "./routes/ExtraPage";
-import EventPage from "./routes/EventPage";
-import UserPage from "./routes/UserPage";
-import RepoPage from "./routes/RepoPage";
+import Root from "./page/Root";
+import Dashboard from "./page/Dashboard";
+import ErrorPage from "./page/ErrorPage";
+import ExtraPage from "./page/ExtraPage";
+import EventPage from "./page/EventPage";
+import UserPage from "./page/UserPage";
+import RepoPage from "./page/RepoPage";
 
 import "./api/client";
 import "./styles.css";
