@@ -97,6 +97,7 @@ export default function UserRanking() {
                 <div className="w-full max-w-64 not-xl:hidden"></div>
             </div>
             <RankingList
+                name={"ur" + windowSize}
                 table={table}
                 rows={row => (
                     <RankingRow key={row.user_id} rank={row.rank}>

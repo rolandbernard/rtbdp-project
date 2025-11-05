@@ -176,6 +176,7 @@ export default function RepoRanking() {
                 </div>
             </div>
             <RankingList
+                name={"rr" + kind + windowSize}
                 table={table}
                 rows={row => (
                     <RankingRow key={row.repo_id} rank={row.rank}>

@@ -19,7 +19,9 @@ export default tseslint.config([
             ecmaVersion: 2020,
             globals: globals.browser,
         },
+        plugins: ["eslint-plugin-react-compiler", "react-refresh"],
         rules: {
+            "react-compiler/react-compiler": "error",
             "@typescript-eslint/no-unused-vars": [
                 "error",
                 {
