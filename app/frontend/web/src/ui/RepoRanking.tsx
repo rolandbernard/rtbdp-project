@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { useMemo } from "react";
+import { Link, useSearchParams } from "react-router";
 
 import {
     repos,
@@ -64,7 +64,7 @@ function RepoRankRow(props: RepoRowProps) {
                 <Link
                     to={"/repo/" + props.repoId}
                     className={
-                        repo?.fullname ?? repo?.reponame
+                        (repo?.fullname ?? repo?.reponame)
                             ? ""
                             : "text-primary/50"
                     }
@@ -94,15 +94,15 @@ function RepoRankRow(props: RepoRowProps) {
 }
 
 export default function RepoRanking() {
-    const [[kind, windowSize], setKind] = useState<
-        ["trending" | "stars" | "activity", WindowSize]
-    >(["trending", "24h"]);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const kind = searchParams.get("rrKind") ?? "trending";
+    const windowSize = (searchParams.get("rrWin") ?? "24h") as WindowSize;
     const table = (
         kind === "trending"
             ? trendingRanking
             : kind === "stars"
-            ? starsRanking.where("window_size", [windowSize])
-            : reposRanking.where("window_size", [windowSize])
+              ? starsRanking.where("window_size", [windowSize])
+              : reposRanking.where("window_size", [windowSize])
     ) as RankingTable<{
         repo_id: number;
         num_events?: number;
@@ -121,7 +121,13 @@ export default function RepoRanking() {
                         group="trending"
                         className="w-full text-sm"
                         value={kind === "trending" ? "trending" : undefined}
-                        onChange={_w => setKind(["trending", "24h"])}
+                        onChange={_w =>
+                            setSearchParams(p => {
+                                p.set("rrKind", "trending");
+                                p.set("rrWin", "24h");
+                                return p;
+                            })
+                        }
                     />
                 </div>
                 <div className="w-full max-w-64">
@@ -137,7 +143,13 @@ export default function RepoRanking() {
                         group="stars"
                         className="w-full text-sm"
                         value={kind === "stars" ? windowSize : undefined}
-                        onChange={w => setKind(["stars", w])}
+                        onChange={w =>
+                            setSearchParams(p => {
+                                p.set("rrKind", "stars");
+                                p.set("rrWin", w);
+                                return p;
+                            })
+                        }
                     />
                 </div>
                 <div className="w-full max-w-64">
@@ -153,7 +165,13 @@ export default function RepoRanking() {
                         group="activity"
                         className="w-full text-sm"
                         value={kind === "activity" ? windowSize : undefined}
-                        onChange={w => setKind(["activity", w])}
+                        onChange={w =>
+                            setSearchParams(p => {
+                                p.set("rrKind", "activity");
+                                p.set("rrWin", w);
+                                return p;
+                            })
+                        }
                     />
                 </div>
             </div>
@@ -168,7 +186,7 @@ export default function RepoRanking() {
                                 row.num_stars ??
                                 row.trending_score!
                             }
-                            kind={kind}
+                            kind={kind as "trending" | "stars" | "activity"}
                             windowSize={windowSize}
                         />
                     </RankingRow>

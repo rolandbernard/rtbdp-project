@@ -1,4 +1,4 @@
-import { createElement, useMemo, useRef, useState } from "react";
+import { createElement, useMemo, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ArrowUpToLine } from "lucide-react";
 
@@ -10,7 +10,7 @@ import {
     users,
     type EventKind,
 } from "../api/tables";
-import { sort } from "../util";
+import { asArray, asValue, sort } from "../util";
 import { boldQuery, EVENT_ICONS } from "../utils";
 import { ConstantTable } from "../api/table";
 
@@ -118,37 +118,37 @@ const eventKinds = new ConstantTable(
     Object.entries(EVENT_KINDS)
         .filter(([key, _name]) => key !== "all")
         .map(([key, name]) => ({
-            key,
+            key: key as EventKind,
             name,
         }))
 );
 
 export default function EventList() {
-    const [search, setSearch] = useSearchParams();
-    const [showKinds, setKinds] = useState<
-        ReturnType<typeof eventKinds.extractFromView>
-    >([]);
-    const [showUsers, setUsers] = useState<
-        ReturnType<typeof users.extractFromView>
-    >([]);
-    const [showRepos, setRepos] = useState<
-        ReturnType<typeof repos.extractFromView>
-    >([]);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const showKinds = searchParams.get("elKind");
+    const showUsers = searchParams.get("elUser");
+    const showRepos = searchParams.get("elRepo");
     const kindIds = useMemo(
-        () => showKinds.map(r => r.key as EventKind),
+        () => asArray(showKinds, e => e as EventKind),
         [showKinds]
     );
-    const userIds = useMemo(() => showUsers.map(r => r.id), [showUsers]);
-    const repoIds = useMemo(() => showRepos.map(r => r.id), [showRepos]);
+    const userIds = useMemo(
+        () => asArray(showUsers, r => parseInt(r)),
+        [showUsers]
+    );
+    const repoIds = useMemo(
+        () => asArray(showRepos, r => parseInt(r)),
+        [showRepos]
+    );
     const listRef = useRef<HTMLDivElement>(null);
     let filtered = events.limit(20);
-    if (showKinds.length !== 0) {
+    if (kindIds.length !== 0) {
         filtered = filtered.where("kind", kindIds);
     }
-    if (showUsers.length !== 0) {
+    if (userIds.length !== 0) {
         filtered = filtered.where("user_id", userIds);
     }
-    if (showRepos.length !== 0) {
+    if (repoIds.length !== 0) {
         filtered = filtered.where("repo_id", repoIds);
     }
     const [loaded, rawResults] = useLoadingTable(filtered);
@@ -160,22 +160,17 @@ export default function EventList() {
             <div className="flex flex-row gap-1 pt-0.5">
                 <SearchSelect
                     ident="kind-filter"
-                    table={_query => eventKinds}
+                    find={_ids => eventKinds}
+                    search={_query => eventKinds}
                     id={row => row.key}
                     name={row => row.name}
-                    selected={showKinds}
-                    onChange={e => {
-                        if (e.length !== 0) {
-                            setSearch({
-                                ...search,
-                                elKinds: e.map(e => e.key).join("-"),
-                            });
-                        } else {
-                            search.delete("elKinds");
-                            setSearch(search);
-                        }
-                        setKinds(e);
-                    }}
+                    selected={kindIds}
+                    onChange={e =>
+                        setSearchParams(p => {
+                            p.set("elKind", asValue(e));
+                            return p;
+                        })
+                    }
                     output={(row, query) =>
                         boldQuery(row.name, query, "font-semibold underline")
                     }
@@ -188,7 +183,8 @@ export default function EventList() {
                 />
                 <SearchSelect
                     ident="user-filter"
-                    table={query =>
+                    find={ids => users.where("id", ids)}
+                    search={query =>
                         users
                             .where("username", [query])
                             .or()
@@ -197,8 +193,13 @@ export default function EventList() {
                     }
                     id={row => row.id}
                     name={row => row.username!}
-                    selected={showUsers}
-                    onChange={e => setUsers(e)}
+                    selected={userIds}
+                    onChange={e =>
+                        setSearchParams(p => {
+                            p.set("elUser", asValue(e));
+                            return p;
+                        })
+                    }
                     output={(row, query) => [
                         <span key="prefix" className="font-semibold">
                             @
@@ -215,7 +216,8 @@ export default function EventList() {
                 />
                 <SearchSelect
                     ident="repo-filter"
-                    table={query =>
+                    find={ids => repos.where("id", ids)}
+                    search={query =>
                         repos
                             .where("reponame", [query])
                             .or()
@@ -228,8 +230,13 @@ export default function EventList() {
                     }
                     id={row => row.id}
                     name={row => (row.fullname ?? row.reponame)!}
-                    selected={showRepos}
-                    onChange={e => setRepos(e)}
+                    selected={repoIds}
+                    onChange={e =>
+                        setSearchParams(p => {
+                            p.set("elRepo", asValue(e));
+                            return p;
+                        })
+                    }
                     output={(row, query) =>
                         boldQuery(
                             (row.fullname ?? row.reponame)!,

@@ -1,18 +1,20 @@
-import { type ReactNode } from "react";
+import { type Key, type ReactNode } from "react";
 
 import type { Table } from "../api/table";
 import type { Row } from "../api/client";
+import { useTable } from "../api/hooks";
 
 import SearchBar from "./SearchBar";
 
-interface Props<R, V> {
+interface Props<K, R, V> {
     ident: string;
-    table: (query: string) => Table<R, V>;
-    id: (row: Row<R>) => number | string;
+    find: (ids: K[]) => Table<R, V>;
+    search: (query: string) => Table<R, V>;
+    id: (row: Row<R>) => K;
     name: (row: Row<R>) => string;
     output: (row: Row<R>, query: string) => ReactNode;
-    selected: Row<R>[];
-    onChange?: (selection: Row<R>[]) => void;
+    selected: K[];
+    onChange?: (selection: K[]) => void;
     prefix?: ReactNode;
     placeholder?: string;
     object?: string;
@@ -23,11 +25,14 @@ interface Props<R, V> {
     rtl?: boolean;
 }
 
-export default function SearchSelect<R, V>(props: Props<R, V>) {
+export default function SearchSelect<K extends Key, R, V>(
+    props: Props<K, R, V>
+) {
+    const selected = useTable(props.find(props.selected)) ?? [];
     return (
         <SearchBar
             name={props.ident}
-            table={props.table}
+            table={props.search}
             match={(row, query) => {
                 if (query.length === 0) {
                     return 1;
@@ -49,16 +54,15 @@ export default function SearchSelect<R, V>(props: Props<R, V>) {
                         className="w-4 h-4 appearance-none border-1 border-border bg-base-200
                             checked:bg-primary cursor-pointer shrink-0"
                         type="checkbox"
-                        defaultChecked={props.selected.some(
-                            r => props.id(r) === props.id(row)
-                        )}
+                        checked={props.selected.some(r => r === props.id(row))}
                         onChange={e => {
                             if (props.onChange) {
+                                const id = props.id(row);
                                 const without = props.selected.filter(
-                                    r => props.id(r) !== props.id(row)
+                                    r => r !== id
                                 );
                                 if (e.target.checked) {
-                                    props.onChange([...without, row]);
+                                    props.onChange([...without, id]);
                                 } else {
                                     props.onChange(without);
                                 }
@@ -93,7 +97,7 @@ export default function SearchSelect<R, V>(props: Props<R, V>) {
             suppress={props.suppress}
             limit={props.limit ?? 10}
             debounce={props.debounce}
-            default={props.selected}
+            default={selected}
         />
     );
 }

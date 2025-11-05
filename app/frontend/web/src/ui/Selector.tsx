@@ -32,11 +32,7 @@ export default function Selector<O extends string>(props: Props<O>) {
                         name={props.name}
                         value={key}
                         className="peer hidden"
-                        defaultChecked={
-                            props.value != null
-                                ? props.value === key
-                                : undefined
-                        }
+                        checked={props.value === key}
                         onChange={e => {
                             if (e.target.checked) {
                                 props.onChange?.(key as O);

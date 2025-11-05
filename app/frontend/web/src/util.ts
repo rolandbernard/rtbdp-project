@@ -43,3 +43,19 @@ export function groupBy<R>(table: R[], ...keys: (keyof R)[]): R[][] {
         Object.groupBy(table, row => groupKey(row, keys))
     ) as R[][];
 }
+
+export function asArray<T>(
+    x: string | null,
+    map: (e: string) => T,
+    def: T[] = []
+): T[] {
+    if (x) {
+        return x.split(",").map(map);
+    } else {
+        return def;
+    }
+}
+
+export function asValue(x: (string | number)[]): string {
+    return x.map(r => r.toString()).join(",");
+}
