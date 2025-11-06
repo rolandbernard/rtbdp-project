@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 
 import {
     repos,
@@ -15,6 +15,7 @@ import {
 import type { RankingTable } from "../api/ranking";
 import { useTable } from "../api/hooks";
 import type { NormalTable } from "../api/table";
+import { useParam } from "../hooks";
 
 import RankingList, { RankingRow } from "./RankingList";
 import Selector from "./Selector";
@@ -94,9 +95,8 @@ function RepoRankRow(props: RepoRowProps) {
 }
 
 export default function RepoRanking() {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const kind = searchParams.get("rrKind") ?? "trending";
-    const windowSize = (searchParams.get("rrWin") ?? "24h") as WindowSize;
+    const [kind, setKind] = useParam("rrkind", "trending");
+    const [windowSize, setWindowSize] = useParam<WindowSize>("rrwin", "24h");
     const table = (
         kind === "trending"
             ? trendingRanking
@@ -121,13 +121,10 @@ export default function RepoRanking() {
                         group="trending"
                         className="w-full text-sm"
                         value={kind === "trending" ? "trending" : undefined}
-                        onChange={_w =>
-                            setSearchParams(p => {
-                                p.set("rrKind", "trending");
-                                p.set("rrWin", "24h");
-                                return p;
-                            })
-                        }
+                        onChange={_w => {
+                            setKind("trending");
+                            setWindowSize("24h");
+                        }}
                     />
                 </div>
                 <div className="w-full max-w-64">
@@ -143,13 +140,10 @@ export default function RepoRanking() {
                         group="stars"
                         className="w-full text-sm"
                         value={kind === "stars" ? windowSize : undefined}
-                        onChange={w =>
-                            setSearchParams(p => {
-                                p.set("rrKind", "stars");
-                                p.set("rrWin", w);
-                                return p;
-                            })
-                        }
+                        onChange={w => {
+                            setKind("stars");
+                            setWindowSize(w);
+                        }}
                     />
                 </div>
                 <div className="w-full max-w-64">
@@ -165,13 +159,10 @@ export default function RepoRanking() {
                         group="activity"
                         className="w-full text-sm"
                         value={kind === "activity" ? windowSize : undefined}
-                        onChange={w =>
-                            setSearchParams(p => {
-                                p.set("rrKind", "activity");
-                                p.set("rrWin", w);
-                                return p;
-                            })
-                        }
+                        onChange={w => {
+                            setKind("activity");
+                            setWindowSize(w);
+                        }}
                     />
                 </div>
             </div>

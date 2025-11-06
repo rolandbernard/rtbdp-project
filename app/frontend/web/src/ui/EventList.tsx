@@ -1,5 +1,5 @@
 import { createElement, useMemo, useRef } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 import { ArrowUpToLine } from "lucide-react";
 
 import { useLoadingTable } from "../api/hooks";
@@ -10,9 +10,10 @@ import {
     users,
     type EventKind,
 } from "../api/tables";
-import { asArray, asValue, sort } from "../util";
-import { boldQuery, EVENT_ICONS } from "../utils";
 import { ConstantTable } from "../api/table";
+import { sort } from "../util";
+import { boldQuery, EVENT_ICONS } from "../utils";
+import { useParam } from "../hooks";
 
 import SearchSelect from "./SearchSelect";
 
@@ -124,22 +125,9 @@ const eventKinds = new ConstantTable(
 );
 
 export default function EventList() {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const showKinds = searchParams.get("elKind");
-    const showUsers = searchParams.get("elUser");
-    const showRepos = searchParams.get("elRepo");
-    const kindIds = useMemo(
-        () => asArray(showKinds, e => e as EventKind),
-        [showKinds]
-    );
-    const userIds = useMemo(
-        () => asArray(showUsers, r => parseInt(r)),
-        [showUsers]
-    );
-    const repoIds = useMemo(
-        () => asArray(showRepos, r => parseInt(r)),
-        [showRepos]
-    );
+    const [kindIds, setKindIds] = useParam("elkind", [] as EventKind[]);
+    const [userIds, setUserIds] = useParam("eluser", [] as number[]);
+    const [repoIds, setRepoIds] = useParam("elrepo", [] as number[]);
     const listRef = useRef<HTMLDivElement>(null);
     let filtered = events.limit(20);
     if (kindIds.length !== 0) {
@@ -165,12 +153,7 @@ export default function EventList() {
                     id={row => row.key}
                     name={row => row.name}
                     selected={kindIds}
-                    onChange={e =>
-                        setSearchParams(p => {
-                            p.set("elKind", asValue(e));
-                            return p;
-                        })
-                    }
+                    onChange={e => setKindIds(e)}
                     output={(row, query) =>
                         boldQuery(row.name, query, "font-semibold underline")
                     }
@@ -194,12 +177,7 @@ export default function EventList() {
                     id={row => row.id}
                     name={row => row.username!}
                     selected={userIds}
-                    onChange={e =>
-                        setSearchParams(p => {
-                            p.set("elUser", asValue(e));
-                            return p;
-                        })
-                    }
+                    onChange={e => setUserIds(e)}
                     output={(row, query) => [
                         <span key="prefix" className="font-semibold">
                             @
@@ -231,12 +209,7 @@ export default function EventList() {
                     id={row => row.id}
                     name={row => (row.fullname ?? row.reponame)!}
                     selected={repoIds}
-                    onChange={e =>
-                        setSearchParams(p => {
-                            p.set("elRepo", asValue(e));
-                            return p;
-                        })
-                    }
+                    onChange={e => setRepoIds(e)}
                     output={(row, query) =>
                         boldQuery(
                             (row.fullname ?? row.reponame)!,

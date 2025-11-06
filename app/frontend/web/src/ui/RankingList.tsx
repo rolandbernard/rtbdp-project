@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useSearchParams } from "react-router";
 
 import type { RankingRow, RankingTable } from "../api/ranking";
 import type { Row } from "../api/client";
 import { useLoadingTable } from "../api/hooks";
 import { sort } from "../util";
+import { useParam } from "../hooks";
 
 import Counter, { Letters } from "./Counter";
 
@@ -91,8 +91,7 @@ interface Props<R> {
 }
 
 export default function RankingList<R>(props: Props<R>) {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const start = parseInt(searchParams.get(props.name) ?? "0") ?? 0;
+    const [start, setStart] = useParam(props.name, 0);
     const [pageInput, setPageInput] = useState((start + 1).toString());
     const [atEnd, setAtEnd] = useState(false);
     return (
@@ -127,10 +126,7 @@ export default function RankingList<R>(props: Props<R>) {
                     disabled={start === 0}
                     onClick={_e => {
                         const newStart = Math.max(0, start - 10);
-                        setSearchParams(p => {
-                            p.set(props.name, newStart.toString());
-                            return p;
-                        });
+                        setStart(newStart);
                         setPageInput((newStart + 1).toString());
                     }}
                 >
@@ -143,13 +139,7 @@ export default function RankingList<R>(props: Props<R>) {
                             setPageInput(e.target.value);
                             const value = parseInt(e.target.value);
                             if (!isNaN(value)) {
-                                setSearchParams(p => {
-                                    p.set(
-                                        props.name,
-                                        Math.max(0, value - 1).toString()
-                                    );
-                                    return p;
-                                });
+                                setStart(Math.max(0, value - 1));
                             }
                         }}
                         className="block text-right w-32 pr-16.5 border-2 border-border
@@ -167,10 +157,7 @@ export default function RankingList<R>(props: Props<R>) {
                     disabled={atEnd}
                     onClick={_e => {
                         const newStart = start + 10;
-                        setSearchParams(p => {
-                            p.set(props.name, newStart.toString());
-                            return p;
-                        });
+                        setStart(newStart);
                         setPageInput((newStart + 1).toString());
                     }}
                 >

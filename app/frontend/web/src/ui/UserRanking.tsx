@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 
 import {
     users,
@@ -9,6 +9,7 @@ import {
     type WindowSize,
 } from "../api/tables";
 import { useTable } from "../api/hooks";
+import { useParam } from "../hooks";
 
 import RankingList, { RankingRow } from "./RankingList";
 import Selector from "./Selector";
@@ -64,8 +65,7 @@ function UserRankRow(props: UserRowProps) {
 }
 
 export default function UserRanking() {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const windowSize = (searchParams.get("urWin") ?? "24h") as WindowSize;
+    const [windowSize, setWindowSize] = useParam<WindowSize>("urwin", "24h");
     const table = usersRanking.where("window_size", [windowSize]);
     return (
         <div className="flex flex-col h-full flex-1 min-h-0 mx-1 mt-2">
@@ -85,12 +85,7 @@ export default function UserRanking() {
                         group="activity"
                         className="w-full text-sm"
                         value={windowSize}
-                        onChange={w =>
-                            setSearchParams(p => {
-                                p.set("urWin", w);
-                                return p;
-                            })
-                        }
+                        onChange={w => setWindowSize(w)}
                     />
                 </div>
                 <div className="w-1/2 max-w-32 not-xl:hidden"></div>

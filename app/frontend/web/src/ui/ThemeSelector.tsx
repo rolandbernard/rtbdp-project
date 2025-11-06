@@ -1,6 +1,7 @@
 import { Moon, Settings, Sun } from "lucide-react";
-import React, { useEffect, useState } from "react";
-import { useClickOutside } from "../hooks";
+import React, { useState } from "react";
+
+import { useClickOutside, useTheme } from "../hooks";
 
 const OPTIONS = {
     light: Sun,
@@ -10,28 +11,7 @@ const OPTIONS = {
 
 export default function ThemeSelector() {
     const [show, setShow] = useState(false);
-    const [selected, setSelected] = useState(localStorage.theme ?? "system");
-    useEffect(() => {
-        const handler = () => setSelected(localStorage.theme ?? "system");
-        addEventListener("storage", handler);
-        return () => removeEventListener("storage", handler);
-    }, []);
-    const setupTheme = (value: string) => {
-        if (value) {
-            if (value === "system") {
-                delete localStorage.theme;
-            } else {
-                localStorage.theme = value;
-            }
-        }
-        setSelected(value);
-        document.documentElement.classList.toggle(
-            "dark",
-            "theme" in localStorage
-                ? localStorage.theme === "dark"
-                : matchMedia("(prefers-color-scheme: dark)").matches
-        );
-    };
+    const [selected, setSelected] = useTheme();
     useClickOutside("div#theme-select", () => setShow(false));
     return (
         <div
@@ -69,7 +49,7 @@ export default function ThemeSelector() {
                                             ? "text-primary"
                                             : "")
                                     }
-                                    onClick={() => setupTheme(name)}
+                                    onClick={() => setSelected(name)}
                                 >
                                     {React.createElement(icon, {
                                         className: "w-5 h-5 inline",

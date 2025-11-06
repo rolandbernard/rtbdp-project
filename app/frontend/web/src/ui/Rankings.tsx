@@ -1,12 +1,11 @@
-import { useSearchParams } from "react-router";
+import { useParam } from "../hooks";
 
 import RepoRanking from "./RepoRanking";
 import UserRanking from "./UserRanking";
 import Selector from "./Selector";
 
 export default function Rankings() {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const kind = searchParams.get("ranking") ?? "repo";
+    const [kind, setKind] = useParam("ranking", "repo");
     return (
         <div className="flex-1 xl:flex-2 md:w-full m-2 mr-0 p-2 xl:pt-0 flex flex-col border border-border/50 rounded-box min-w-0">
             <div className="text-sm flex flex-row items-center justify-end pt-0.5 px-1 xl:hidden">
@@ -16,12 +15,7 @@ export default function Rankings() {
                     name="user-repo-ranking"
                     options={{ user: "Users", repo: "Repositories" }}
                     value={kind === "user" ? "user" : "repo"}
-                    onChange={value =>
-                        setSearchParams(p => {
-                            p.set("ranking", value);
-                            return p;
-                        })
-                    }
+                    onChange={value => setKind(value)}
                 />
             </div>
             <div className="grow not-md:h-[50dvh] min-w-0 min-h-0 flex flex-row">

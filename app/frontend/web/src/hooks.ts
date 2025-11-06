@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function useDebounce<T>(value: T, millis: number) {
     const [debounced, setDebounced] = useState(value);
@@ -33,4 +33,96 @@ export function useClickOutside(target: string, func: () => void) {
         document.addEventListener("click", handler);
         return () => document.removeEventListener("click", handler);
     }, [target, func]);
+}
+
+const themeListeners: Set<(t: string) => void> = new Set();
+
+function setupTheme(value: string) {
+    if (value) {
+        if (value === "system") {
+            delete localStorage.theme;
+        } else {
+            localStorage.theme = value;
+        }
+    }
+    for (const handle of themeListeners) {
+        handle(value);
+    }
+    document.documentElement.classList.toggle(
+        "dark",
+        "theme" in localStorage
+            ? localStorage.theme === "dark"
+            : matchMedia("(prefers-color-scheme: dark)").matches
+    );
+}
+
+export function useTheme(): [string, (v: string) => void] {
+    const [selected, setSelected] = useState(localStorage.theme ?? "system");
+    useEffect(() => {
+        const handler = () => setSelected(localStorage.theme ?? "system");
+        themeListeners.add(handler);
+        addEventListener("storage", handler);
+        return () => {
+            removeEventListener("storage", handler);
+            themeListeners.delete(handler);
+        };
+    }, []);
+    return [selected, setupTheme];
+}
+
+function getQuery() {
+    const hash = document.location.hash;
+    const idx = hash.indexOf("?");
+    if (idx >= 0) {
+        return new URLSearchParams(hash.slice(idx + 1));
+    } else {
+        return new URLSearchParams();
+    }
+}
+
+function getUrlWithQuery(q: URLSearchParams) {
+    const href = document.location.href;
+    const hashIdx = href.indexOf("#");
+    if (hashIdx >= 0) {
+        const idx = href.indexOf("?", hashIdx);
+        if (idx >= 0) {
+            return href.slice(0, idx + 1) + q.toString();
+        } else {
+            return href + "?" + q.toString();
+        }
+    } else {
+        return href + "#/?" + q.toString();
+    }
+}
+
+function getParam<T>(name: string) {
+    const query = getQuery();
+    if (query.has(name)) {
+        try {
+            return JSON.parse(query.get(name)!) as T;
+        } catch {
+            // Do nothing, use the normal default.
+        }
+    }
+    return undefined;
+}
+
+export function useParam<T>(name: string, def: T): [T, (v: T) => void] {
+    const [value, setValue] = useState(getParam(name) ?? def);
+    useEffect(() => {
+        const handler = () => setValue(getParam(name) ?? value);
+        addEventListener("hashchange", handler);
+        return () => removeEventListener("hashchange", handler);
+    }, []);
+    const setInnerValue = useCallback((v: T) => {
+        const query = getQuery();
+        if (JSON.stringify(def) !== JSON.stringify(v)) {
+            query.set(name, JSON.stringify(v));
+        } else {
+            query.delete(name);
+        }
+        document.location.replace(getUrlWithQuery(query));
+        setValue(v);
+    }, []);
+    return [value, setInnerValue];
 }

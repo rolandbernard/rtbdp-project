@@ -1,5 +1,5 @@
 import { createElement, useMemo } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 
 import { useLoadingTable } from "../api/hooks";
 import {
@@ -10,7 +10,7 @@ import {
     type EventKind,
     type WindowSize,
 } from "../api/tables";
-import { useLatched } from "../hooks";
+import { useLatched, useParam } from "../hooks";
 import { EVENT_ICONS } from "../utils";
 
 import Counter from "./Counter";
@@ -72,8 +72,7 @@ function EventCounter(props: Props) {
 }
 
 export default function EventCounts() {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const windowSize = searchParams.get("ecWin") ?? "24h";
+    const [windowSize, setWindowSize] = useParam("ecwin", "24h");
     return (
         <div className="flex flex-col flex-auto grow-0 mx-1">
             <div className="flex flex-row justify-end">
@@ -88,12 +87,7 @@ export default function EventCounts() {
                         name="window-size"
                         className="w-full text-sm"
                         value={windowSize}
-                        onChange={w =>
-                            setSearchParams(p => {
-                                p.set("ecWin", w);
-                                return p;
-                            })
-                        }
+                        onChange={w => setWindowSize(w)}
                     />
                 </div>
             </div>
