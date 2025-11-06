@@ -86,16 +86,18 @@ function getUrlWithQuery(q: URLSearchParams) {
     if (hashIdx >= 0) {
         const idx = href.indexOf("?", hashIdx);
         if (idx >= 0) {
-            return href.slice(0, idx + 1) + q.toString();
+            return q.size === 0
+                ? href.slice(0, idx)
+                : href.slice(0, idx + 1) + q.toString();
         } else {
-            return href + "?" + q.toString();
+            return q.size === 0 ? href : href + "?" + q.toString();
         }
     } else {
-        return href + "#/?" + q.toString();
+        return q.size === 0 ? href : href + "#/?" + q.toString();
     }
 }
 
-function getParam<T>(name: string) {
+function getParam<T>(name: string, def: T) {
     const query = getQuery();
     if (query.has(name)) {
         try {
@@ -104,25 +106,30 @@ function getParam<T>(name: string) {
             // Do nothing, use the normal default.
         }
     }
-    return undefined;
+    return def;
 }
 
 export function useParam<T>(name: string, def: T): [T, (v: T) => void] {
-    const [value, setValue] = useState(getParam(name) ?? def);
+    let [value, setValue] = useState(getParam(name, def));
     useEffect(() => {
-        const handler = () => setValue(getParam(name) ?? value);
+        setValue(getParam(name, def));
+        const handler = () => setValue(getParam(name, def));
         addEventListener("hashchange", handler);
         return () => removeEventListener("hashchange", handler);
-    }, []);
-    const setInnerValue = useCallback((v: T) => {
-        const query = getQuery();
-        if (JSON.stringify(def) !== JSON.stringify(v)) {
-            query.set(name, JSON.stringify(v));
-        } else {
-            query.delete(name);
-        }
-        document.location.replace(getUrlWithQuery(query));
-        setValue(v);
-    }, []);
+    }, [name]);
+    const setInnerValue = useCallback(
+        (v: T) => {
+            const query = getQuery();
+            if (JSON.stringify(def) !== JSON.stringify(v)) {
+                query.set(name, JSON.stringify(v));
+                setValue(v);
+            } else {
+                query.delete(name);
+                setValue(def);
+            }
+            document.location.replace(getUrlWithQuery(query));
+        },
+        [name]
+    );
     return [value, setInnerValue];
 }

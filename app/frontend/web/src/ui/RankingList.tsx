@@ -92,7 +92,7 @@ interface Props<R> {
 
 export default function RankingList<R>(props: Props<R>) {
     const [start, setStart] = useParam(props.name, 0);
-    const [pageInput, setPageInput] = useState((start + 1).toString());
+    const [pageInput, setPageInput] = useState<string | null>(null);
     const [atEnd, setAtEnd] = useState(false);
     return (
         <div className="flex-1 min-h-0 flex flex-col">
@@ -127,19 +127,25 @@ export default function RankingList<R>(props: Props<R>) {
                     onClick={_e => {
                         const newStart = Math.max(0, start - 10);
                         setStart(newStart);
-                        setPageInput((newStart + 1).toString());
+                        setPageInput(null);
                     }}
                 >
                     <ArrowLeft />
                 </button>
                 <div className="flex flex-row relative items-center overflow-hidden">
                     <input
-                        value={pageInput}
+                        value={
+                            pageInput === null
+                                ? (start + 1).toString()
+                                : pageInput
+                        }
                         onChange={e => {
-                            setPageInput(e.target.value);
                             const value = parseInt(e.target.value);
                             if (!isNaN(value)) {
                                 setStart(Math.max(0, value - 1));
+                                setPageInput(null);
+                            } else {
+                                setPageInput(e.target.value);
                             }
                         }}
                         className="block text-right w-32 pr-16.5 border-2 border-border
@@ -158,7 +164,7 @@ export default function RankingList<R>(props: Props<R>) {
                     onClick={_e => {
                         const newStart = start + 10;
                         setStart(newStart);
-                        setPageInput((newStart + 1).toString());
+                        setPageInput(null);
                     }}
                 >
                     <ArrowRight />
