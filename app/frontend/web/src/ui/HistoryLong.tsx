@@ -1,0 +1,52 @@
+import { useMemo } from "react";
+
+import { useHistoryTime, useLoadingTable } from "../api/hooks";
+import type { NormalTable } from "../api/table";
+import { sort } from "../util";
+
+import AreaBrush from "./charts/AreaBrush";
+
+interface Props<R> {
+    table: NormalTable<R>;
+}
+
+export default function HistoryLong<
+    R extends { ts_start: string; num_events?: number; num_stars?: number }
+>(props: Props<R>) {
+    const historyTable = props.table;
+    const [loaded, rawHistory] = useLoadingTable(historyTable);
+    const lastTime = useHistoryTime(false);
+    const cleanHistory = useMemo(() => {
+        if (!loaded || rawHistory.length === 0) {
+            // Avoid initial partial renders.
+            return [];
+        } else {
+            const diff = 300_000;
+            const sorted = sort(
+                rawHistory.map(row => ({
+                    x: new Date(row.ts_start),
+                    y: row.num_events ?? row.num_stars ?? 0,
+                })),
+                [r => r.x]
+            );
+            const complete = [];
+            let last = sorted[0]!;
+            for (const row of sorted) {
+                while (last.x.getTime() + diff < row.x.getTime()) {
+                    last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                    complete.push(last);
+                }
+                complete.push(row);
+                last = row;
+            }
+            return complete;
+        }
+    }, [loaded, rawHistory, lastTime]);
+    return (
+        <AreaBrush
+            data={cleanHistory}
+            chartColor="var(--color-primary)"
+            window={5 * 60}
+        />
+    );
+}

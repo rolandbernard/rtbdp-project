@@ -1,9 +1,11 @@
 import { useMemo } from "react";
+
 import { useHistoryTime, useLoadingTable } from "../api/hooks";
 import type { NormalTable } from "../api/table";
 import type { WindowSize } from "../api/tables";
-import Sparkline from "./Sparkline";
 import { sort } from "../util";
+
+import Sparkline from "./charts/Sparkline";
 
 interface Props<R> {
     table: NormalTable<R>;
