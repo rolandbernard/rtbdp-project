@@ -1,17 +1,49 @@
 import { useParams } from "react-router";
 
-import { countsHistory, EVENT_KINDS, type EventKind } from "../api/tables";
+import {
+    countsHistory,
+    countsLive,
+    EVENT_KINDS,
+    type EventKind,
+} from "../api/tables";
 
 import HistoryLong from "../ui/HistoryLong";
+import Proportions from "../ui/Proportions";
 
 export default function EventPage() {
     const params = useParams();
     const kind = params["kind"]! as EventKind;
-    const table = countsHistory.where("kind", [kind]);
+    const singleHistoryTable = countsHistory.where("kind", [kind]);
+    const proportionsTable = countsLive
+        .where("window_size", ["1h"])
+        .where(
+            "kind",
+            Object.keys(EVENT_KINDS).filter(e => e !== "all") as EventKind[]
+        );
     return (
-        <div className="flex flex-col min-h-0 grow p-3">
-            <div className="text-3xl font-semibold">{EVENT_KINDS[kind]}</div>
-            <HistoryLong table={table} />
+        <div className="flex flex-col grow p-3">
+            <div className="text-3xl font-semibold">
+                {EVENT_KINDS[kind]} Events
+            </div>
+            <div className="flex flex-col grow">
+                <div className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                    <div className="text-xs">Number of Events</div>
+                    <HistoryLong table={singleHistoryTable} />
+                </div>
+                <div className="flex flex-wrap grow">
+                    <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                        <div className="text-xs">Number of Events</div>
+                        <HistoryLong table={singleHistoryTable} />
+                    </div>
+                    <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                        <div className="text-xs">Events in Last Hour</div>
+                        <Proportions
+                            table={proportionsTable}
+                            highlight={kind === "all" ? undefined : kind}
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

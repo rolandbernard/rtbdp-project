@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
     AreaChart,
     ResponsiveContainer,
@@ -8,11 +9,10 @@ import {
     Area,
     CartesianGrid,
 } from "recharts";
+import type { AxisTick } from "recharts/types/util/types";
 
 import TimeTooltip from "./TimeTooltip";
-import { useState } from "react";
 import { formatDate } from "../../util";
-import type { AxisTick } from "recharts/types/util/types";
 
 function findTicksWithDiff(start: Date, stop: Date, r: (d: Date) => number) {
     const ticks = [];
@@ -87,7 +87,8 @@ export default function AreaBrush(props: Props) {
             ? props.data[props.data.length - 1]!.x.getTime() -
               props.data[0]!.x.getTime()
             : undefined;
-    const min_dur = start && stop ? stop.getTime() - start.getTime() : undefined;
+    const min_dur =
+        start && stop ? stop.getTime() - start.getTime() : undefined;
     const formatTick = (d: Date) => formatDate(d, 0, min_dur, min_dur);
     const formatTick2 = (d: Date) => formatDate(d, 0, min_dur, max_dur);
     return (
