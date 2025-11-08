@@ -9,8 +9,7 @@ import {
 } from "recharts";
 
 import CatTooltip from "./CatTooltip";
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+import { colorFor, sort } from "../../util";
 
 function labels({ percent }: PieLabelRenderProps) {
     if (percent && percent > 0.01) {
@@ -24,9 +23,10 @@ interface Props {
 }
 
 export default function PieChart(props: Props) {
+    const data = sort(props.data, [e => e.x]);
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <RePieChart data={props.data}>
+            <RePieChart data={data}>
                 <Tooltip content={<CatTooltip />} />
                 <Legend />
                 <Pie
@@ -38,16 +38,17 @@ export default function PieChart(props: Props) {
                     label={labels}
                     labelLine={false}
                 >
-                    {props.data.map((entry, index) => {
+                    {data.map(entry => {
                         const opacity =
-                            props.highligh && props.highligh !== entry.x
-                                ? "80"
-                                : "";
+                            props.highligh && props.highligh !== entry.x;
                         return (
                             <Cell
-                                key={`cell-${entry.x}`}
-                                stroke={"#ffffff" + opacity}
-                                fill={COLORS[index % COLORS.length] + opacity}
+                                key={entry.x}
+                                stroke={opacity ? "none" : "#ffffff"}
+                                fill={colorFor(
+                                    entry.x,
+                                    opacity ? "0.5" : "1.0"
+                                )}
                                 className="hover:transform-[scale(1.05)] active:transform-[scale(1.05)] origin-center transform-[scale(1)] transform-stroke"
                             />
                         );

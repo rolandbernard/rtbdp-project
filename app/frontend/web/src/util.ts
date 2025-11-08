@@ -117,3 +117,78 @@ export function formatDate(date: Date, window: number = 0, min_dur = 24 * 60 * 6
     }
     return result.trim();
 }
+
+function findTicksWithDiff(start: Date, stop: Date, r: (d: Date) => number) {
+    const ticks = [];
+    const diff = 300_000;
+    let curr = start;
+    while (curr < stop) {
+        const next = new Date(curr.getTime() + diff);
+        if (r(curr) !== r(next)) {
+            ticks.push(next);
+        }
+        curr = next;
+    }
+    return ticks;
+}
+
+export function findTicks(start: Date = new Date(), stop: Date = new Date()) {
+    const duration = stop.getTime() - start.getTime();
+    if (duration > 5 * 365 * 24 * 60 * 60 * 1000) {
+        return findTicksWithDiff(start, stop, d => d.getFullYear());
+    } else if (duration > 7 * 31 * 24 * 60 * 60 * 1000) {
+        return findTicksWithDiff(start, stop, d => d.getMonth());
+    } else if (duration > 4 * 31 * 24 * 60 * 60 * 1000) {
+        return findTicksWithDiff(
+            start,
+            stop,
+            d => Math.round(d.getDate() / 16) * 12 + d.getMonth()
+        );
+    } else if (duration > 31 * 24 * 60 * 60 * 1000) {
+        return findTicksWithDiff(
+            start,
+            stop,
+            d => Math.round(d.getDate() / 4) * 12 + d.getMonth()
+        );
+    } else if (duration > 14 * 24 * 60 * 60 * 1000) {
+        return findTicksWithDiff(
+            start,
+            stop,
+            d => Math.round(d.getDate() / 2) * 12 + d.getMonth()
+        );
+    } else if (duration > 7 * 24 * 60 * 60 * 1000) {
+        return findTicksWithDiff(start, stop, d => d.getDate());
+    } else if (duration > 4 * 24 * 60 * 60 * 1000) {
+        return findTicksWithDiff(
+            start,
+            stop,
+            d => Math.round(d.getHours() / 6) * 31 + d.getDate()
+        );
+    } else if (duration > 24 * 60 * 60 * 1000) {
+        return findTicksWithDiff(
+            start,
+            stop,
+            d => Math.round(d.getHours() / 3) * 31 + d.getDate()
+        );
+    } else {
+        return findTicksWithDiff(start, stop, d => d.getHours());
+    }
+}
+
+function hashString(str: string) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash += str.charCodeAt(i);
+      hash = Math.imul(hash, 7919);
+    }
+    return hash % 359;
+}
+
+export function colorFor(val: string, opacity?: string) {
+    const hue = hashString(val);
+    if (opacity) {
+        return `oklch(60% 80% ${hue} / ${opacity})`;
+    } else {
+        return `oklch(60% 80% ${hue})`;
+    }
+}

@@ -210,7 +210,7 @@ public class SocketApiServer extends WebSocketServer {
                 new Field("kind", FieldKind.KEY, String.class, 4L),
                 new Field("num_events", Long.class),
                 new Field("seq_num", Long.class))));
-        addTable(new Table("counts_history", 5_000L, List.of(
+        addTable(new Table("counts_history", null, List.of(
                 new Field("kind", FieldKind.KEY, String.class, null),
                 new Field("ts_start", FieldKind.SORTED_KEY, String.class, 16L),
                 new Field("ts_end", FieldKind.SORTED_KEY, String.class, 16L),

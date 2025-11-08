@@ -12,15 +12,17 @@ import {
 import type { AxisTick } from "recharts/types/util/types";
 
 import TimeTooltip from "./TimeTooltip";
-import { findTicks, formatDate } from "../../util";
+import { colorFor, findTicks, formatDate } from "../../util";
 
 interface Props {
-    data: { x: Date; y: number }[];
+    keys: string[];
+    data: { x: Date; y: number; [k: string]: number | Date }[];
     chartColor: string;
     window?: number;
+    highligh?: string;
 }
 
-export default function AreaBrush(props: Props) {
+export default function StackedAreaBrush(props: Props) {
     const [startIdx, setStart] = useState(0);
     const [endIdx, setEnd] = useState<number | undefined>(undefined);
     const start = props.data[startIdx]?.x;
@@ -54,24 +56,6 @@ export default function AreaBrush(props: Props) {
                             offset="100%"
                             stopColor={props.chartColor}
                             stopOpacity={0.1}
-                        />
-                    </linearGradient>
-                    <linearGradient
-                        id="colorGradient2"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                    >
-                        <stop
-                            offset="40%"
-                            stopColor={props.chartColor}
-                            stopOpacity={0.7}
-                        />
-                        <stop
-                            offset="100%"
-                            stopColor={props.chartColor}
-                            stopOpacity={0.5}
                         />
                     </linearGradient>
                 </defs>
@@ -117,15 +101,26 @@ export default function AreaBrush(props: Props) {
                         />
                     </AreaChart>
                 </Brush>
-                <Area
-                    type="monotone"
-                    dataKey="y"
-                    stroke={props.chartColor}
-                    strokeWidth={2}
-                    fill="url(#colorGradient2)"
-                    animationDuration={200}
-                    animationEasing="linear"
-                />
+                {props.keys.sort().map(key => {
+                    console.log(props.highligh, key);
+                    const opacity =
+                        props.highligh && props.highligh !== key
+                            ? "0.4"
+                            : "1.0";
+                    return (
+                        <Area
+                            key={key}
+                            type="monotone"
+                            dataKey={key}
+                            fill={colorFor(key, opacity)}
+                            stroke={colorFor(key, opacity)}
+                            strokeWidth={opacity == "0.4" ? 1 : 2}
+                            animationDuration={200}
+                            animationEasing="linear"
+                            stackId="1"
+                        />
+                    );
+                })}
             </AreaChart>
         </ResponsiveContainer>
     );
