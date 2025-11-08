@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router";
 
 import { useHistoryTime, useLoadingTable } from "../api/hooks";
 import type { NormalTable } from "../api/table";
@@ -16,6 +17,7 @@ interface Props<R> {
 export default function HistoryMulti<
     R extends { ts_start: string; kind: EventKind; num_events: number }
 >(props: Props<R>) {
+    const navigate = useNavigate();
     const historyTable = props.table;
     const [loaded, rawHistory] = useLoadingTable(historyTable);
     const lastTime = useHistoryTime(false);
@@ -84,6 +86,16 @@ export default function HistoryMulti<
             chartColor="var(--color-primary)"
             highligh={
                 props.highlight ? EVENT_KINDS[props.highlight] : undefined
+            }
+            onClick={k =>
+                navigate(
+                    "/event/" +
+                        (props.highlight && k === EVENT_KINDS[props.highlight]
+                            ? "all"
+                            : Object.entries(EVENT_KINDS).find(
+                                  ([_, n]) => n === k
+                              )![0])
+                )
             }
         />
     );

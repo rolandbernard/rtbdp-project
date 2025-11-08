@@ -24,6 +24,12 @@ export default function ErrorPage() {
                                 {error.stack}
                             </pre>
                         </>
+                    ) : error instanceof Response ? (
+                        <>
+                            <div className="pb-1">
+                                {error.status} {error.statusText}
+                            </div>
+                        </>
                     ) : (
                         "Unknown Error"
                     )}

@@ -14,6 +14,12 @@ import HistoryMulti from "../ui/HistoryMulti";
 export default function EventPage() {
     const params = useParams();
     const kind = params["kind"]! as EventKind;
+    if (!(kind in EVENT_KINDS)) {
+        throw new Response("Invalid Kind", {
+            status: 404,
+            statusText: "Not Found",
+        });
+    }
     const singleHistoryTable = countsHistory.where("kind", [kind]);
     const allButAll = Object.keys(EVENT_KINDS).filter(
         e => e !== "all"

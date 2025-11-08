@@ -1,10 +1,11 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router";
 
 import { useHistoryTime, useLoadingTable } from "../api/hooks";
+import { EVENT_KINDS, type EventKind } from "../api/tables";
 import type { NormalTable } from "../api/table";
 
 import PieChart from "./charts/PieChart";
-import { EVENT_KINDS, type EventKind } from "../api/tables";
 
 interface Props<R> {
     table: NormalTable<R>;
@@ -14,6 +15,7 @@ interface Props<R> {
 export default function Proportions<
     R extends { kind: EventKind; num_events: number }
 >(props: Props<R>) {
+    const navigate = useNavigate();
     const table = props.table;
     const [loaded, rawData] = useLoadingTable(table);
     const lastTime = useHistoryTime(false);
@@ -33,6 +35,16 @@ export default function Proportions<
             data={cleanData}
             highligh={
                 props.highlight ? EVENT_KINDS[props.highlight] : undefined
+            }
+            onClick={k =>
+                navigate(
+                    "/event/" +
+                        (props.highlight && k === EVENT_KINDS[props.highlight]
+                            ? "all"
+                            : Object.entries(EVENT_KINDS).find(
+                                  ([_, n]) => n === k
+                              )![0])
+                )
             }
         />
     );

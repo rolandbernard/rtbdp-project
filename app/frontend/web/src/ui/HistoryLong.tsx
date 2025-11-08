@@ -17,9 +17,11 @@ export default function HistoryLong<
     const [loaded, rawHistory] = useLoadingTable(historyTable);
     const lastTime = useHistoryTime(false);
     const cleanHistory = useMemo(() => {
-        if (!loaded || rawHistory.length === 0) {
+        if (!loaded) {
             // Avoid initial partial renders.
             return [];
+        } else if (rawHistory.length === 0) {
+            return [{ x: lastTime, y: 0 }];
         } else {
             const diff = 300_000;
             const sorted = sort(
@@ -42,6 +44,7 @@ export default function HistoryLong<
             return complete;
         }
     }, [loaded, rawHistory, lastTime]);
+    console.log(cleanHistory);
     return (
         <AreaBrush
             data={cleanHistory}

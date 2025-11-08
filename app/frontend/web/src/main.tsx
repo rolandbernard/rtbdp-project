@@ -6,7 +6,6 @@ import { createRoot } from "react-dom/client";
 import Root from "./page/Root";
 import Dashboard from "./page/Dashboard";
 import ErrorPage from "./page/ErrorPage";
-import ExtraPage from "./page/ExtraPage";
 import EventPage from "./page/EventPage";
 import UserPage from "./page/UserPage";
 import RepoPage from "./page/RepoPage";
@@ -20,10 +19,6 @@ const router = createHashRouter([
         errorElement: <ErrorPage />,
         children: [
             { index: true, element: <Dashboard /> },
-            {
-                path: "/extra",
-                element: <ExtraPage />,
-            },
             {
                 path: "/event/:kind",
                 element: <EventPage />,

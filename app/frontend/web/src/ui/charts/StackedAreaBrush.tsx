@@ -20,6 +20,7 @@ interface Props {
     chartColor: string;
     window?: number;
     highligh?: string;
+    onClick?: (v: string) => void;
 }
 
 export default function StackedAreaBrush(props: Props) {
@@ -118,6 +119,8 @@ export default function StackedAreaBrush(props: Props) {
                             animationDuration={200}
                             animationEasing="linear"
                             stackId="1"
+                            onClick={() => props.onClick?.(key)}
+                            className="cursor-pointer"
                         />
                     );
                 })}

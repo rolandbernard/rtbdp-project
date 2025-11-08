@@ -83,7 +83,10 @@ const MONTHS = [
     "Dec",
 ];
 
-export function formatDate(date: Date, window: number = 0, min_dur = 24 * 60 * 60 * 1000, max_dur = 24 * 60 * 60 * 1000) {
+export function formatDate(date: Date | undefined, window: number = 0, min_dur = 24 * 60 * 60 * 1000, max_dur = 24 * 60 * 60 * 1000) {
+    if (!date) {
+        return "No date";
+    }
     let result = "";
     if (max_dur > 365 * 24 * 60 * 60 * 1000) {
         result += date.getFullYear();
