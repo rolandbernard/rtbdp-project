@@ -148,13 +148,28 @@ public class Table {
     }
 
     /**
+     * Get the table name to use for the given description in SQL queries.
+     * 
+     * @param subscription
+     *            The subscription for which this SQL query is intended. This might
+     *            be used to make some optimization decisions.
+     * @return The SQL table name.
+     */
+    protected String asSqlQueryTableName(Subscription subscription) {
+        return name;
+    }
+
+    /**
      * Get the SQL query expression that would load the complete table, with all
      * of its fields. The query consists of the `SELECT` and `FROM` parts, but
      * does not include any other clause, so a `WHERE` could be added to it.
      *
+     * @param subscription
+     *            The subscription for which this SQL query is intended. This might
+     *            be used to make some optimization decisions.
      * @return The SQL query expression.
      */
-    public String asSqlQuery() {
+    public String asSqlQuery(Subscription subscription) {
         StringBuilder builder = new StringBuilder();
         builder.append("SELECT ");
         boolean first = true;
@@ -168,7 +183,7 @@ public class Table {
             }
         }
         builder.append(" FROM ");
-        builder.append(name);
+        builder.append(asSqlQueryTableName(subscription));
         return builder.toString();
     }
 
@@ -223,7 +238,7 @@ public class Table {
                         try (Statement st = con.createStatement(
                                 ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
                             st.setFetchSize(1_000);
-                            String query = asSqlQuery() + " WHERE " + subscription.asSqlQueryCondition();
+                            String query = asSqlQuery(subscription) + " WHERE " + subscription.asSqlQueryCondition();
                             if (subscription.isSorted()) {
                                 query += asSqlQueryOrder() + subscription.asSqlQueryLimit();
                             }

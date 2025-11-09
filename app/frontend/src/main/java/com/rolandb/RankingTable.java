@@ -23,4 +23,14 @@ public class RankingTable extends Table {
     public RankingTable(String name, Long maxLimit, Long rowCard, List<Field> fields) {
         super(name, maxLimit, expandFields(fields, rowCard));
     }
+
+    @Override
+    protected String asSqlQueryTableName(Subscription subscription) {
+        Long card = subscription.estimateCardinality(this);
+        if (card != null && card < 5 && subscription.usesOnlyKey(this)) {
+            return name + "_point";
+        } else {
+            return name;
+        }
+    }
 }

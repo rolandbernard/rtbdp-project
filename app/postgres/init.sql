@@ -134,6 +134,10 @@ SELECT window_size, kind, num_events,
     FROM counts_live
     WHERE num_events > 0;
 
+-- No need for efficiency here, but for uniformity we define it here.
+CREATE VIEW counts_ranking_point AS
+SELECT * FROM counts_ranking;
+
 CREATE TABLE counts_history (
     kind EventKind NOT NULL,
     ts_start TIMESTAMP NOT NULL,
@@ -191,6 +195,22 @@ SELECT window_size, user_id, num_events,
     FROM users_live
     WHERE num_events > 0;
 
+-- This is a version of the above that is semantically equivalent but much more
+-- efficient when querying individual rows only.
+CREATE VIEW users_ranking_point AS
+SELECT window_size, user_id, num_events,
+		(SELECT MAX(seq_num) AS seq_num FROM users_live) AS seq_num,
+        (SELECT COUNT(*)
+            FROM users_live AS i
+            WHERE (i.num_events > o.num_events
+                OR (i.num_events = o.num_events
+                    AND i.user_id < o.user_id))) AS row_number,
+        (SELECT COUNT(*)
+            FROM users_live AS i
+            WHERE i.num_events > o.num_events) AS rank
+    FROM users_live AS o
+    WHERE num_events > 0;
+
 CREATE TABLE users_history (
     user_id BIGINT NOT NULL,
     ts_start TIMESTAMP NOT NULL,
@@ -244,6 +264,24 @@ SELECT window_size, repo_id, num_events,
             PARTITION BY window_size ORDER BY num_events DESC
         ) - 1 AS rank
     FROM repos_live
+    WHERE num_events > 0;
+
+-- This is a version of the above that is semantically equivalent but much more
+-- efficient when querying individual rows only.
+CREATE VIEW repos_ranking_point AS
+SELECT window_size, repo_id, num_events,
+		(SELECT MAX(seq_num) AS seq_num FROM repos_live) AS seq_num,
+        (SELECT COUNT(*)
+            FROM repos_live AS i
+            WHERE i.window_size = o.window_size
+                AND (i.num_events > o.num_events
+                    OR (i.num_events = o.num_events
+                        AND i.repo_id < o.repo_id))) AS row_number,
+        (SELECT COUNT(*)
+            FROM repos_live AS i
+            WHERE i.window_size = o.window_size
+                AND i.num_events > o.num_events) AS rank
+    FROM repos_live AS o
     WHERE num_events > 0;
 
 CREATE TABLE repos_history (
@@ -301,6 +339,24 @@ SELECT window_size, repo_id, num_stars,
     FROM stars_live
     WHERE num_stars > 0;
 
+-- This is a version of the above that is semantically equivalent but much more
+-- efficient when querying individual rows only.
+CREATE VIEW stars_ranking_point AS
+SELECT window_size, repo_id, num_stars,
+		(SELECT MAX(seq_num) AS seq_num FROM stars_live) AS seq_num,
+        (SELECT COUNT(*)
+            FROM stars_live AS i
+            WHERE i.window_size = o.window_size
+                AND (i.num_stars > o.num_stars
+                    OR (i.num_stars = o.num_stars
+                        AND i.repo_id < o.repo_id))) AS row_number,
+        (SELECT COUNT(*)
+            FROM stars_live AS i
+            WHERE i.window_size = o.window_size
+                AND i.num_stars > o.num_stars) AS rank
+    FROM stars_live AS o
+    WHERE num_stars > 0;
+
 CREATE TABLE stars_history (
     repo_id BIGINT NOT NULL,
     ts_start TIMESTAMP NOT NULL,
@@ -349,4 +405,20 @@ SELECT repo_id, trending_score,
             ORDER BY trending_score DESC
         ) - 1 AS rank
     FROM trending_live
+    WHERE trending_score > 0;
+
+-- This is a version of the above that is semantically equivalent but much more
+-- efficient when querying individual rows only.
+CREATE VIEW trending_ranking_point AS
+SELECT repo_id, trending_score,
+		(SELECT MAX(seq_num) AS seq_num FROM trending_live) AS seq_num,
+        (SELECT COUNT(*)
+            FROM trending_live AS i
+            WHERE (i.trending_score > o.trending_score
+                OR (i.trending_score = o.trending_score
+                    AND i.repo_id < o.repo_id))) AS row_number,
+        (SELECT COUNT(*)
+            FROM trending_live AS i
+            WHERE i.trending_score > o.trending_score) AS rank
+    FROM trending_live AS o
     WHERE trending_score > 0;

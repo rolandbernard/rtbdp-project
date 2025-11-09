@@ -29,6 +29,45 @@ public class Subscription {
     }
 
     /**
+     * Return whether all fields used for filters are using keys.
+     *
+     * @param table
+     *            The table to check against.
+     * @return {@code true} if only keys are used.
+     */
+    public boolean usesOnlyKey(Table table) {
+        for (TableRowFilter filter : filters) {
+            if (!filter.usesOnlyKey(table)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Estimate the cardinality of rows returned by evaluating the subscription on
+     * the given table.
+     *
+     * @param table
+     *            The table to check against.
+     * @return An estimate of the cardinality or {@code null} to indicate unbounded.
+     */
+    public Long estimateCardinality(Table table) {
+        if (filters == null) {
+            return null;
+        }
+        long estimate = 0;
+        for (TableRowFilter filter : filters) {
+            Long est = filter.estimateCardinality(table);
+            if (est == null) {
+                return null;
+            }
+            estimate += est;
+        }
+        return estimate;
+    }
+
+    /**
      * Test whether this subscription can be used with the given table.
      *
      * @param table
@@ -38,18 +77,8 @@ public class Subscription {
      */
     public boolean applicableTo(Table table, boolean inReplay) {
         if (inReplay && table.maxLimit != null && (limit == null || limit > table.maxLimit)) {
-            if (filters == null) {
-                return false;
-            }
-            long estimate = 0;
-            for (TableRowFilter filter : filters) {
-                Long est = filter.estimateCardinality(table);
-                if (est == null) {
-                    return false;
-                }
-                estimate += est;
-            }
-            if (estimate > table.maxLimit) {
+            Long estimate = estimateCardinality(table);
+            if (estimate == null || estimate > table.maxLimit) {
                 return false;
             }
         }

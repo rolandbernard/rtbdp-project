@@ -103,7 +103,6 @@ export default function StackedAreaBrush(props: Props) {
                     </AreaChart>
                 </Brush>
                 {props.keys.sort().map(key => {
-                    console.log(props.highligh, key);
                     const opacity =
                         props.highligh && props.highligh !== key
                             ? "0.4"

@@ -44,7 +44,6 @@ export default function HistoryLong<
             return complete;
         }
     }, [loaded, rawHistory, lastTime]);
-    console.log(cleanHistory);
     return (
         <AreaBrush
             data={cleanHistory}

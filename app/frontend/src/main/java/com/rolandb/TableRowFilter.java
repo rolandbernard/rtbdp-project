@@ -39,6 +39,25 @@ public class TableRowFilter {
         }
         return true;
     }
+    
+    /**
+     * Return whether all fields used for filters are using keys.
+     *
+     * @param table
+     *            The table to check against.
+     * @return {@code true} if only keys are used.
+     */
+    public boolean usesOnlyKey(Table table) {
+        Map<String, Field> fields = table.fields.stream()
+                .collect(Collectors.toMap(e -> e.name, e -> e));
+        for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
+            Field field = fields.get(filter.getKey());
+            if (field == null || !field.isKey()) {
+                return false;
+            }
+        }
+        return true;
+    } 
 
     /**
      * Estimate the maximum number of tuples that can be returned in the presence
@@ -53,7 +72,7 @@ public class TableRowFilter {
         } else {
             Map<String, Field> fields = table.fields.stream()
                     .collect(Collectors.toMap(e -> e.name, e -> e));
-            long est = 0;
+            Long est = null;
             for (Entry<String, TableValueFilter<?>> filter : filters.entrySet()) {
                 Field field = fields.get(filter.getKey());
                 if (field == null) {
@@ -61,7 +80,7 @@ public class TableRowFilter {
                 }
                 Long child = filter.getValue().estimateCardinality(field);
                 if (child != null) {
-                    est = Long.min(est, child);
+                    est = est == null || child < est ? child : est;
                 }
             }
             return est;
