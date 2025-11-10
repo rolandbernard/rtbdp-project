@@ -1,23 +1,24 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
     AreaChart,
     ResponsiveContainer,
     XAxis,
     Tooltip,
     YAxis,
-    Brush,
     Area,
     CartesianGrid,
 } from "recharts";
 import type { AxisTick } from "recharts/types/util/types";
 
-import TimeTooltip from "./TimeTooltip";
 import { findTicks, formatDate } from "../../util";
+
+import TimeTooltip from "./TimeTooltip";
+import { computeFactor, VarBrush } from "./VarBrush";
 
 interface Props {
     data: { x: Date; y: number }[];
     chartColor: string;
-    window?: number;
+    window: number;
 }
 
 export default function AreaBrush(props: Props) {
@@ -32,11 +33,35 @@ export default function AreaBrush(props: Props) {
             : undefined;
     const min_dur =
         start && stop ? stop.getTime() - start.getTime() : undefined;
+    const newFactor = computeFactor(props.data.length, startIdx, endIdx);
+    let [factor, setFactor] = useState(newFactor);
+    if (newFactor !== factor && endIdx == null) {
+        factor = newFactor;
+        setFactor(newFactor);
+    }
+    const cleanData = useMemo(() => {
+        if (factor > 1) {
+            const reduced = [];
+            for (let i = props.data.length - 1; i >= 0; i -= factor) {
+                let sum = 0;
+                for (let j = 0; j < factor && i - j >= 0; j++) {
+                    sum += props.data[i - j]!.y;
+                }
+                reduced.push({
+                    x: props.data[Math.max(0, i + 1 - factor)]!.x,
+                    y: sum,
+                });
+            }
+            return reduced.reverse();
+        } else {
+            return props.data;
+        }
+    }, [props.data, factor]);
     const formatTick = (d: Date) => formatDate(d, 0, min_dur, min_dur);
     const formatTick2 = (d: Date) => formatDate(d, 0, min_dur, max_dur);
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={props.data}>
+            <AreaChart data={cleanData}>
                 <defs>
                     <linearGradient
                         id="colorGradient"
@@ -88,35 +113,24 @@ export default function AreaBrush(props: Props) {
                 <Tooltip
                     content={
                         <TimeTooltip
-                            window={props.window}
+                            window={props.window * factor}
                             start={start}
                             stop={stop}
+                            small={false}
                         />
                     }
                 />
-                <Brush
-                    dataKey="x"
-                    tickFormatter={formatTick2}
-                    fill="var(--color-base-100)"
-                    stroke="var(--color-border)"
-                    startIndex={startIdx}
-                    endIndex={endIdx}
-                    onChange={e => {
-                        setStart(e.startIndex);
-                        setEnd(e.endIndex);
-                    }}
-                >
-                    <AreaChart>
-                        <Area
-                            type="monotone"
-                            dataKey="y"
-                            stroke={props.chartColor}
-                            fill="url(#colorGradient)"
-                            animationDuration={200}
-                            animationEasing="linear"
-                        />
-                    </AreaChart>
-                </Brush>
+                <VarBrush
+                    len={props.data.length}
+                    startIdx={startIdx}
+                    endIdx={endIdx}
+                    factor={factor}
+                    chartColor={props.chartColor}
+                    formatTicks={formatTick2}
+                    setStart={setStart}
+                    setEnd={setEnd}
+                    setFactor={setFactor}
+                />
                 <Area
                     type="monotone"
                     dataKey="y"

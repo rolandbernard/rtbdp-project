@@ -7,13 +7,19 @@ interface TooltipProps {
     window?: number;
     start?: Date;
     stop?: Date;
+    small: boolean;
 }
 
 export default function TimeTooltip(props: TooltipProps) {
     if (props.active && props.payload) {
         if (props.payload.length == 1) {
             return (
-                <div className="custom-tooltip p-3 rounded-box bg-base-300/75 shadow-xl backdrop-blur-md hidden lg:block">
+                <div
+                    className={
+                        "custom-tooltip p-3 rounded-box bg-base-300/75 shadow-xl backdrop-blur-md" +
+                        (props.small ? " hidden lg:block" : "")
+                    }
+                >
                     <p className="label">
                         {formatDate(
                             props.label!,
@@ -28,7 +34,12 @@ export default function TimeTooltip(props: TooltipProps) {
             );
         } else {
             return (
-                <div className="custom-tooltip p-3 rounded-box bg-base-300/75 shadow-xl backdrop-blur-md hidden lg:block">
+                <div
+                    className={
+                        "custom-tooltip p-3 rounded-box bg-base-300/75 shadow-xl backdrop-blur-md" +
+                        (props.small ? " hidden lg:block" : "")
+                    }
+                >
                     <p className="label">
                         {formatDate(
                             props.label!,

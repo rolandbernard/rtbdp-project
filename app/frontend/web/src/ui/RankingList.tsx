@@ -28,7 +28,11 @@ export function RankingRow(props: RowProps) {
             >
                 <Counter value={rank} />
                 <Letters
-                    value={ORDINAL[rank % 10] ?? "th"}
+                    value={
+                        rank > 10 && rank <= 20
+                            ? "th"
+                            : ORDINAL[rank % 10] ?? "th"
+                    }
                     options={ORDINAL}
                     className="text-xs w-3.5 h-4 mb-2 ml-0.25"
                 />

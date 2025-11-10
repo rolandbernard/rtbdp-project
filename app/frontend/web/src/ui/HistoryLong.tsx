@@ -32,7 +32,10 @@ export default function HistoryLong<
                 [r => r.x]
             );
             const complete = [];
-            let last = sorted[0]!;
+            let last = {
+                x: new Date(lastTime.getTime() - 60 * 60 * 1000),
+                y: 0,
+            };
             for (const row of sorted) {
                 while (last.x.getTime() + diff < row.x.getTime()) {
                     last = { x: new Date(last.x.getTime() + diff), y: 0 };
@@ -40,6 +43,10 @@ export default function HistoryLong<
                 }
                 complete.push(row);
                 last = row;
+            }
+            while (last.x < lastTime) {
+                last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                complete.push(last);
             }
             return complete;
         }

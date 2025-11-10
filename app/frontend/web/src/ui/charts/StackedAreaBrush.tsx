@@ -1,26 +1,30 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
     AreaChart,
     ResponsiveContainer,
     XAxis,
     Tooltip,
     YAxis,
-    Brush,
     Area,
     CartesianGrid,
 } from "recharts";
 import type { AxisTick } from "recharts/types/util/types";
 
-import TimeTooltip from "./TimeTooltip";
 import { colorFor, findTicks, formatDate } from "../../util";
+
+import TimeTooltip from "./TimeTooltip";
+import { computeFactor, VarBrush } from "./VarBrush";
+
+type DataRow = { x: Date; y: number; [k: string]: number | Date };
 
 interface Props {
     keys: string[];
-    data: { x: Date; y: number; [k: string]: number | Date }[];
+    data: DataRow[];
     chartColor: string;
-    window?: number;
+    window: number;
     highligh?: string;
     onClick?: (v: string) => void;
+    onRangeChange?: (range: number) => void;
 }
 
 export default function StackedAreaBrush(props: Props) {
@@ -35,11 +39,38 @@ export default function StackedAreaBrush(props: Props) {
             : undefined;
     const min_dur =
         start && stop ? stop.getTime() - start.getTime() : undefined;
+    const newFactor = computeFactor(props.data.length, startIdx, endIdx);
+    let [factor, setFactor] = useState(newFactor);
+    if (newFactor !== factor && endIdx == null) {
+        factor = newFactor;
+        setFactor(newFactor);
+    }
+    const cleanData = useMemo(() => {
+        if (factor > 1) {
+            const reduced = [];
+            for (let i = props.data.length - 1; i >= 0; i -= factor) {
+                const row = {
+                    x: props.data[Math.max(0, i + 1 - factor)]!.x,
+                } as DataRow;
+                for (const key of [...props.keys, "y"]) {
+                    let sum = 0;
+                    for (let j = 0; j < factor && i - j >= 0; j++) {
+                        sum += props.data[i - j]![key]! as number;
+                    }
+                    row[key] = sum;
+                }
+                reduced.push(row);
+            }
+            return reduced.reverse();
+        } else {
+            return props.data;
+        }
+    }, [props.keys, props.data, factor]);
     const formatTick = (d: Date) => formatDate(d, 0, min_dur, min_dur);
     const formatTick2 = (d: Date) => formatDate(d, 0, min_dur, max_dur);
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={props.data}>
+            <AreaChart data={cleanData}>
                 <defs>
                     <linearGradient
                         id="colorGradient"
@@ -73,35 +104,24 @@ export default function StackedAreaBrush(props: Props) {
                 <Tooltip
                     content={
                         <TimeTooltip
-                            window={props.window}
+                            window={props.window * factor}
                             start={start}
                             stop={stop}
+                            small={false}
                         />
                     }
                 />
-                <Brush
-                    dataKey="x"
-                    tickFormatter={formatTick2}
-                    fill="var(--color-base-100)"
-                    stroke="var(--color-border)"
-                    startIndex={startIdx}
-                    endIndex={endIdx}
-                    onChange={e => {
-                        setStart(e.startIndex);
-                        setEnd(e.endIndex);
-                    }}
-                >
-                    <AreaChart>
-                        <Area
-                            type="monotone"
-                            dataKey="y"
-                            stroke={props.chartColor}
-                            fill="url(#colorGradient)"
-                            animationDuration={200}
-                            animationEasing="linear"
-                        />
-                    </AreaChart>
-                </Brush>
+                <VarBrush
+                    len={props.data.length}
+                    startIdx={startIdx}
+                    endIdx={endIdx}
+                    factor={factor}
+                    chartColor={props.chartColor}
+                    formatTicks={formatTick2}
+                    setStart={setStart}
+                    setEnd={setEnd}
+                    setFactor={setFactor}
+                />
                 {props.keys.sort().map(key => {
                     const opacity =
                         props.highligh && props.highligh !== key

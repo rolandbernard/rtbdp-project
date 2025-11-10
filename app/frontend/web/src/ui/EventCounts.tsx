@@ -40,7 +40,7 @@ function EventCounter(props: Props) {
     return (
         <Link
             to={"/event/" + props.kind}
-            className="rounded-box bg-base-300 block border border-border/50"
+            className="rounded-box bg-base-200 block border border-border/50"
         >
             <div
                 className="flex flex-row items-end rounded-box

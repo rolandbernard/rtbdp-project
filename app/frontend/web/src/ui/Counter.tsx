@@ -67,13 +67,13 @@ function numDigits(value: number) {
 }
 
 interface Props {
-    value: number;
+    value?: number;
     maxDigits?: number;
     className?: string;
 }
 
 export default function Counter(props: Props) {
-    const digits = props.maxDigits ?? numDigits(props.value) + 1;
+    const digits = props.maxDigits ?? numDigits(props.value ?? 0) + 1;
     return (
         <div className={"relative inline-block " + (props.className ?? "")}>
             <div className="absolute top-0 right-0 text-transparent">
@@ -87,8 +87,11 @@ export default function Counter(props: Props) {
                     .map((_, i) => (
                         <Digit
                             key={i}
-                            value={Math.trunc(props.value / 10 ** i)}
-                            leading={i != 0 && props.value < 10 ** i}
+                            value={Math.trunc((props.value ?? 0) / 10 ** i)}
+                            leading={
+                                !props.value ||
+                                (i != 0 && props.value < 10 ** i)
+                            }
                         />
                     ))
                     .reverse()}

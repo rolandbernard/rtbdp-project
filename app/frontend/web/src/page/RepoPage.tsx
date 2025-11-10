@@ -1,8 +1,19 @@
 import { Link, useParams } from "react-router";
 
 import { useLoadingTable, useTable } from "../api/hooks";
-import { repos, reposHistory, starsHistory, users } from "../api/tables";
+import {
+    repos,
+    reposHistory,
+    reposRanking,
+    starsHistory,
+    starsRanking,
+    users,
+    type WindowSize,
+} from "../api/tables";
+import type { RankingRow } from "../api/ranking";
+
 import HistoryLong from "../ui/HistoryLong";
+import Counter, { Letters } from "../ui/Counter";
 
 interface OwnerProps {
     id?: number;
@@ -15,7 +26,7 @@ function OwnerCard(props: OwnerProps) {
         : users.where("username", [props.name]);
     const user = useTable(table)[0];
     return user ? (
-        <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+        <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
             <div className="text-xs pb-1">Owner</div>
             <Link
                 to={"/user/" + user.id}
@@ -30,7 +41,7 @@ function OwnerCard(props: OwnerProps) {
             </Link>
         </div>
     ) : props.name ? (
-        <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+        <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
             <div className="text-xs pb-1">Owner</div>
             <div className="font-semibold">
                 <span className="font-bold">@</span>
@@ -59,7 +70,7 @@ function RepoDetails(props: DetailsProps) {
     return (
         <div className="flex flex-wrap gap-3">
             {props.reponame || props.fullname ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Repository Name</div>
                     {props.reponame ??
                         props.fullname?.substring(
@@ -81,7 +92,7 @@ function RepoDetails(props: DetailsProps) {
                 />
             ) : undefined}
             {props.html_url || props.fullname ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">GitHub URL</div>
                     <a
                         href={
@@ -97,7 +108,7 @@ function RepoDetails(props: DetailsProps) {
                 </div>
             ) : undefined}
             {props.homepage ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Homepage</div>
                     <a
                         href={props.homepage}
@@ -109,7 +120,7 @@ function RepoDetails(props: DetailsProps) {
                 </div>
             ) : undefined}
             {props.topics ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Topics</div>
                     {props.topics.split(" ").map(e => (
                         <span className="pe-1">{e}</span>
@@ -117,42 +128,137 @@ function RepoDetails(props: DetailsProps) {
                 </div>
             ) : undefined}
             {props.lang ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Language</div>
                     {props.lang}
                 </div>
             ) : undefined}
             {props.license ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">License</div>
                     {props.license}
                 </div>
             ) : undefined}
             {props.fork_count ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Forks</div>
                     {props.fork_count}
                 </div>
             ) : undefined}
             {props.issue_count ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Issues</div>
                     {props.issue_count}
                 </div>
             ) : undefined}
             {props.star_count ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Stars</div>
                     {props.star_count}
                 </div>
             ) : undefined}
             {props.descr ? (
-                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Description</div>
                     {props.descr}
                 </div>
             ) : undefined}
         </div>
+    );
+}
+
+const ORDINAL = ["st", "nd", "rd", "th"];
+
+interface CounterProps {
+    rows: RankingRow<{ window_size: WindowSize }>[];
+    windowSize: WindowSize;
+    kind: string;
+}
+
+function RepoRankingCounter(props: CounterProps) {
+    const row = props.rows.find(r => r.window_size === props.windowSize);
+    const inner = (
+        <>
+            <div className="text-xs">
+                {props.kind[0]?.toUpperCase() + props.kind.slice(1)}{" "}
+                {props.windowSize}
+            </div>
+            <div
+                className={
+                    "w-fill h-full flex flex-row justify-center items-center " +
+                    (["text-4xl", "text-3xl", "text-2xl"][row?.rank ?? 3] ??
+                        "text-xl")
+                }
+            >
+                <Counter value={row ? row.rank + 1 : undefined} />
+                <Letters
+                    value={
+                        row
+                            ? row.rank > 10 && row.rank <= 20
+                                ? "th"
+                                : ORDINAL[row.rank % 10] ?? "th"
+                            : "-"
+                    }
+                    options={[...ORDINAL, "-"]}
+                    className="text-xs w-3.5 h-4 mb-2 ml-0.25"
+                />
+            </div>
+        </>
+    );
+    return row ? (
+        <Link
+            to={`/?rrkind="${props.kind}"&rr${props.kind}${
+                props.windowSize
+            }=${Math.max(0, row?.row_number - 4)}&rrwin="${props.windowSize}"`}
+            className="m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80"
+        >
+            {inner}
+        </Link>
+    ) : (
+        <div className="m-2 p-2 border border-border/50 rounded-box min-w-0 block">
+            {inner}
+        </div>
+    );
+}
+
+interface RankingsProps {
+    id: number;
+}
+
+function RepoRankings(props: RankingsProps) {
+    const activityRank = useTable(reposRanking.where("repo_id", [props.id]));
+    const starsRank = useTable(starsRanking.where("repo_id", [props.id]));
+    return (
+        <>
+            <RepoRankingCounter
+                rows={activityRank}
+                windowSize="5m"
+                kind="activity"
+            />
+            <RepoRankingCounter
+                rows={activityRank}
+                windowSize="1h"
+                kind="activity"
+            />
+            <RepoRankingCounter
+                rows={activityRank}
+                windowSize="6h"
+                kind="activity"
+            />
+            <RepoRankingCounter
+                rows={activityRank}
+                windowSize="24h"
+                kind="activity"
+            />
+            <RepoRankingCounter rows={starsRank} windowSize="5m" kind="stars" />
+            <RepoRankingCounter rows={starsRank} windowSize="1h" kind="stars" />
+            <RepoRankingCounter rows={starsRank} windowSize="6h" kind="stars" />
+            <RepoRankingCounter
+                rows={starsRank}
+                windowSize="24h"
+                kind="stars"
+            />
+        </>
     );
 }
 
@@ -189,7 +295,9 @@ export default function RepoPage() {
                 <div className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                     <div className="text-xs">Rankings</div>
                     {repo ? (
-                        <></>
+                        <div className="w-fill h-full grid grid-cols-2 grid-rows-4 md:grid-cols-4 md:grid-rows-2">
+                            <RepoRankings id={repoId} />
+                        </div>
                     ) : (
                         <div className="w-full h-full flex justify-center items-center text-content/80">
                             Loading...

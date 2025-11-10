@@ -137,7 +137,11 @@ export default function GlobalSearch(props: Props) {
                 />
             </div>
             {query.length !== 0 ? (
-                <div className="absolute inset-y-full end-0 w-full hidden peer-focus-within:block z-50">
+                <div
+                    className="absolute inset-y-full end-0 w-full hidden focus-within:block
+                        peer-focus-within:block hover:block active:block z-50"
+                    onClick={() => setQuery("")}
+                >
                     <div className="flex flex-col w-full bg-base-300 rounded-box p-1 py-3 shadow-xl dark:shadow-2xl">
                         {trueResults.length ? (
                             trueResults.map(row => {
