@@ -8,6 +8,7 @@ import AreaBrush from "./charts/AreaBrush";
 
 interface Props<R> {
     table: NormalTable<R>;
+    chartColor?: string;
 }
 
 export default function HistoryLong<
@@ -20,8 +21,6 @@ export default function HistoryLong<
         if (!loaded) {
             // Avoid initial partial renders.
             return [];
-        } else if (rawHistory.length === 0) {
-            return [{ x: lastTime, y: 0 }];
         } else {
             const diff = 300_000;
             const sorted = sort(
@@ -54,7 +53,7 @@ export default function HistoryLong<
     return (
         <AreaBrush
             data={cleanHistory}
-            chartColor="var(--color-primary)"
+            chartColor={props.chartColor ?? "var(--color-primary)"}
             window={5 * 60}
         />
     );

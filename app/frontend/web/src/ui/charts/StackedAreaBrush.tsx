@@ -71,26 +71,6 @@ export default function StackedAreaBrush(props: Props) {
     return (
         <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={cleanData}>
-                <defs>
-                    <linearGradient
-                        id="colorGradient"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                    >
-                        <stop
-                            offset="10%"
-                            stopColor={props.chartColor}
-                            stopOpacity={0.5}
-                        />
-                        <stop
-                            offset="100%"
-                            stopColor={props.chartColor}
-                            stopOpacity={0.1}
-                        />
-                    </linearGradient>
-                </defs>
                 <CartesianGrid
                     strokeDasharray="3 3"
                     className="stroke-border"

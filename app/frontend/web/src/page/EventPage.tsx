@@ -6,6 +6,7 @@ import {
     EVENT_KINDS,
     type EventKind,
 } from "../api/tables";
+import { colorFor } from "../util";
 
 import HistoryLong from "../ui/HistoryLong";
 import Proportions from "../ui/Proportions";
@@ -36,7 +37,14 @@ export default function EventPage() {
             <div className="flex flex-col grow">
                 <div className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                     <div className="text-xs">Number of Events</div>
-                    <HistoryLong table={singleHistoryTable} />
+                    <HistoryLong
+                        table={singleHistoryTable}
+                        chartColor={
+                            kind !== "all"
+                                ? colorFor(EVENT_KINDS[kind])
+                                : undefined
+                        }
+                    />
                 </div>
                 <div className="flex flex-wrap grow">
                     <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">

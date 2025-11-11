@@ -309,6 +309,7 @@ export default function RepoPage() {
                         <div className="text-xs">Stars History</div>
                         <HistoryLong
                             table={starsHistory.where("repo_id", [repoId])}
+                            chartColor="#78b120"
                         />
                     </div>
                 </div>

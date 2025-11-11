@@ -65,7 +65,7 @@ function RepoRankRow(props: RepoRowProps) {
                 <Link
                     to={"/repo/" + props.repoId}
                     className={
-                        (repo?.fullname ?? repo?.reponame)
+                        repo?.fullname ?? repo?.reponame
                             ? ""
                             : "text-primary/50"
                     }
@@ -87,6 +87,13 @@ function RepoRankRow(props: RepoRowProps) {
                         table={history}
                         tableFine={historyFine}
                         windowSize={props.windowSize}
+                        chartColor={
+                            props.kind === "stars"
+                                ? "#78b120"
+                                : props.kind === "trending"
+                                ? "#d12eab"
+                                : undefined
+                        }
                     />
                 </div>
             </div>
@@ -101,8 +108,8 @@ export default function RepoRanking() {
         kind === "trending"
             ? trendingRanking
             : kind === "stars"
-              ? starsRanking.where("window_size", [windowSize])
-              : reposRanking.where("window_size", [windowSize])
+            ? starsRanking.where("window_size", [windowSize])
+            : reposRanking.where("window_size", [windowSize])
     ) as RankingTable<{
         repo_id: number;
         num_events?: number;

@@ -14,7 +14,7 @@ export default function Sparkline(props: Props) {
             <AreaChart data={props.data}>
                 <defs>
                     <linearGradient
-                        id="colorGradient"
+                        id={"colorGradient" + btoa(props.chartColor)}
                         x1="0"
                         y1="0"
                         x2="0"
@@ -41,7 +41,7 @@ export default function Sparkline(props: Props) {
                     dataKey="y"
                     stroke={props.chartColor}
                     strokeWidth={2}
-                    fill="url(#colorGradient)"
+                    fill={`url(#colorGradient${btoa(props.chartColor)})`}
                     animationDuration={200}
                     animationEasing="linear"
                 />

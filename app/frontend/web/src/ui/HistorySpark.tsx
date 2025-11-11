@@ -11,6 +11,7 @@ interface Props<R> {
     table: NormalTable<R>;
     tableFine: NormalTable<R>;
     windowSize: WindowSize;
+    chartColor?: string;
 }
 
 export default function HistorySpark<
@@ -73,7 +74,7 @@ export default function HistorySpark<
     return (
         <Sparkline
             data={cleanHistory}
-            chartColor="var(--color-primary)"
+            chartColor={props.chartColor ?? "var(--color-primary)"}
             window={
                 {
                     "5m": 10,

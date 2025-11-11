@@ -64,25 +64,7 @@ export default function AreaBrush(props: Props) {
             <AreaChart data={cleanData}>
                 <defs>
                     <linearGradient
-                        id="colorGradient"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                    >
-                        <stop
-                            offset="10%"
-                            stopColor={props.chartColor}
-                            stopOpacity={0.5}
-                        />
-                        <stop
-                            offset="100%"
-                            stopColor={props.chartColor}
-                            stopOpacity={0.1}
-                        />
-                    </linearGradient>
-                    <linearGradient
-                        id="colorGradient2"
+                        id={"colorGradient2" + btoa(props.chartColor)}
                         x1="0"
                         y1="0"
                         x2="0"
@@ -136,7 +118,7 @@ export default function AreaBrush(props: Props) {
                     dataKey="y"
                     stroke={props.chartColor}
                     strokeWidth={2}
-                    fill="url(#colorGradient2)"
+                    fill={`url(#colorGradient2${btoa(props.chartColor)})`}
                     animationDuration={200}
                     animationEasing="linear"
                 />

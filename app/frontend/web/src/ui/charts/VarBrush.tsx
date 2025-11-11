@@ -47,11 +47,31 @@ export function VarBrush(props: Props) {
             }}
         >
             <AreaChart>
+                <defs>
+                    <linearGradient
+                        id={"colorGradient" + btoa(props.chartColor)}
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                    >
+                        <stop
+                            offset="10%"
+                            stopColor={props.chartColor}
+                            stopOpacity={0.5}
+                        />
+                        <stop
+                            offset="100%"
+                            stopColor={props.chartColor}
+                            stopOpacity={0.1}
+                        />
+                    </linearGradient>
+                </defs>
                 <Area
                     type="monotone"
                     dataKey="y"
                     stroke={props.chartColor}
-                    fill="url(#colorGradient)"
+                    fill={`url(#colorGradient${btoa(props.chartColor)})`}
                     animationDuration={200}
                     animationEasing="linear"
                 />

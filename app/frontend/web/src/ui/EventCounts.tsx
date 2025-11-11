@@ -12,6 +12,7 @@ import {
 } from "../api/tables";
 import { useLatched, useParam } from "../hooks";
 import { EVENT_ICONS } from "../utils";
+import { colorFor } from "../util";
 
 import Counter from "./Counter";
 import Selector from "./Selector";
@@ -64,6 +65,11 @@ function EventCounter(props: Props) {
                         table={history}
                         tableFine={historyFine}
                         windowSize={props.windowSize}
+                        chartColor={
+                            props.kind !== "all"
+                                ? colorFor(EVENT_KINDS[props.kind])
+                                : undefined
+                        }
                     />
                 </div>
             </div>
