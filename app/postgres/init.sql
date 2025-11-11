@@ -202,12 +202,14 @@ SELECT window_size, user_id, num_events,
 		(SELECT MAX(seq_num) AS seq_num FROM users_live) AS seq_num,
         (SELECT COUNT(*)
             FROM users_live AS i
-            WHERE (i.num_events > o.num_events
-                OR (i.num_events = o.num_events
-                    AND i.user_id < o.user_id))) AS row_number,
+            WHERE i.window_size = o.window_size
+                AND (i.num_events > o.num_events
+                    OR (i.num_events = o.num_events
+                        AND i.user_id < o.user_id))) AS row_number,
         (SELECT COUNT(*)
             FROM users_live AS i
-            WHERE i.num_events > o.num_events) AS rank
+            WHERE i.window_size = o.window_size
+                AND i.num_events > o.num_events) AS rank
     FROM users_live AS o
     WHERE num_events > 0;
 

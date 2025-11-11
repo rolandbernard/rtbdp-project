@@ -185,7 +185,7 @@ function RepoRankingCounter(props: CounterProps) {
             </div>
             <div
                 className={
-                    "w-fill h-full flex flex-row justify-center items-center " +
+                    "w-fill h-full flex flex-row justify-center items-center pb-4 " +
                     (["text-4xl", "text-3xl", "text-2xl"][row?.rank ?? 3] ??
                         "text-xl")
                 }
@@ -197,9 +197,9 @@ function RepoRankingCounter(props: CounterProps) {
                             ? row.rank > 10 && row.rank <= 20
                                 ? "th"
                                 : ORDINAL[row.rank % 10] ?? "th"
-                            : "-"
+                            : ""
                     }
-                    options={[...ORDINAL, "-"]}
+                    options={[...ORDINAL, ""]}
                     className="text-xs w-3.5 h-4 mb-2 ml-0.25"
                 />
             </div>
@@ -215,7 +215,7 @@ function RepoRankingCounter(props: CounterProps) {
             {inner}
         </Link>
     ) : (
-        <div className="m-2 p-2 border border-border/50 rounded-box min-w-0 block">
+        <div className="m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80">
             {inner}
         </div>
     );
@@ -277,7 +277,7 @@ export default function RepoPage() {
         <div className="flex flex-col grow p-3">
             <div className="text-3xl font-semibold m-3 mt-0">
                 {repo ? (
-                    repo?.fullname ?? repo?.reponame
+                    repo.fullname ?? repo.reponame
                 ) : (
                     <span className="text-content/80">Loading...</span>
                 )}
@@ -294,15 +294,9 @@ export default function RepoPage() {
                 </div>
                 <div className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                     <div className="text-xs">Rankings</div>
-                    {repo ? (
-                        <div className="w-fill h-full grid grid-cols-2 grid-rows-4 md:grid-cols-4 md:grid-rows-2">
-                            <RepoRankings id={repoId} />
-                        </div>
-                    ) : (
-                        <div className="w-full h-full flex justify-center items-center text-content/80">
-                            Loading...
-                        </div>
-                    )}
+                    <div className="w-fill h-full grid grid-cols-2 grid-rows-4 md:grid-cols-4 md:grid-rows-2">
+                        <RepoRankings id={repoId} />
+                    </div>
                 </div>
                 <div className="flex flex-wrap grow">
                     <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">

@@ -27,7 +27,7 @@ export function Letters(props: LettersProps) {
 }
 
 interface DigitProps {
-    value: number;
+    value?: number;
     leading: boolean;
 }
 
@@ -40,7 +40,7 @@ export function Digit(props: DigitProps) {
                     key={i}
                     style={{
                         transform: `rotateX(${
-                            -36 * i + 36 * props.value
+                            -36 * i + 36 * (props.value ?? 0)
                         }deg) translateZ(2em)`,
                     }}
                     className={
@@ -50,7 +50,7 @@ export function Digit(props: DigitProps) {
                             : "opacity-100 ")
                     }
                 >
-                    {i}
+                    {props.value == null && i === 0 ? "–" : i}
                 </div>
             ))}
         </div>
@@ -87,11 +87,12 @@ export default function Counter(props: Props) {
                     .map((_, i) => (
                         <Digit
                             key={i}
-                            value={Math.trunc((props.value ?? 0) / 10 ** i)}
-                            leading={
-                                !props.value ||
-                                (i != 0 && props.value < 10 ** i)
+                            value={
+                                props.value != null
+                                    ? Math.trunc(props.value / 10 ** i)
+                                    : undefined
                             }
+                            leading={i != 0 && (props.value ?? 0) < 10 ** i}
                         />
                     ))
                     .reverse()}
