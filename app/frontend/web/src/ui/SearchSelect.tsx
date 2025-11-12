@@ -47,7 +47,7 @@ export default function SearchSelect<K extends Key, R, V>(
                 <label
                     key={props.id(row)}
                     htmlFor={props.ident + "-" + props.id(row)}
-                    className="flex flex-row items-center cursor-pointer select-none"
+                    className="flex flex-row items-center cursor-pointer select-none hover:bg-content/15 px-4 not-xl:px-2 py-0.25"
                 >
                     <input
                         id={props.ident + "-" + props.id(row)}
@@ -71,7 +71,7 @@ export default function SearchSelect<K extends Key, R, V>(
                     />
                     <div
                         className={
-                            "pl-2 overflow-hidden overflow-ellipsis whitespace-nowrap py-0.5" +
+                            "pl-2 overflow-hidden overflow-ellipsis whitespace-nowrap py-0.5 " +
                             (props.rtl ? " text-left" : "")
                         }
                         style={props.rtl ? { direction: "rtl" } : undefined}

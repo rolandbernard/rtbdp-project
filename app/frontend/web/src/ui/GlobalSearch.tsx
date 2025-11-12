@@ -37,7 +37,8 @@ function UserSearchRow(props: UserRowProps) {
             <Link
                 to={"/user/" + props.userId}
                 title={props.username}
-                className="min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis text-primary font-semibold"
+                className="min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
+                    text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
             >
                 <span className="font-bold">@</span>
                 {boldQuery(props.username, props.query)}
@@ -61,7 +62,8 @@ function RepoSearchRow(props: RepoRowProps) {
             <Link
                 to={"/repo/" + props.repoId}
                 title={props.reponame}
-                className="flex-1 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis text-primary font-semibold text-left"
+                className="flex-1 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
+                    text-primary font-semibold text-left dark:hover:text-primary/90 hover:text-primary/75"
                 style={{ direction: "rtl" }}
             >
                 {boldQuery(props.reponame, props.query)}

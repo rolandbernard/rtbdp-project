@@ -31,7 +31,7 @@ function OwnerCard(props: OwnerProps) {
             <Link
                 to={"/user/" + user.id}
                 className={
-                    "text-primary font-semibold " +
+                    "text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75 " +
                     (user?.username ? "" : "text-primary/50")
                 }
                 title={user?.username}
@@ -100,7 +100,7 @@ function RepoDetails(props: DetailsProps) {
                             "https://github.com/" + props.fullname
                         }
                         target="_blank"
-                        className="text-primary underline"
+                        className="text-primary underline dark:hover:text-primary/90 hover:text-primary/75"
                     >
                         {props.html_url ??
                             "https://github.com/" + props.fullname}
@@ -210,7 +210,8 @@ function RepoRankingCounter(props: CounterProps) {
             to={`/?rrkind="${props.kind}"&rr${props.kind}${
                 props.windowSize
             }=${Math.max(0, row?.row_number - 4)}&rrwin="${props.windowSize}"`}
-            className="m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80"
+            className="m-2 p-2 border border-border/50 rounded-box min-w-0 block
+                bg-base-200/80 hover:bg-content/7 hover:dark:bg-content/10"
         >
             {inner}
         </Link>

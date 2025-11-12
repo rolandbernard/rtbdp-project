@@ -34,7 +34,10 @@ function UserRankRow(props: UserRowProps) {
     );
     return (
         <div className="flex-1 min-w- min-w-0 flex flex-row items-center pl-4">
-            <div className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis text-primary font-semibold">
+            <div
+                className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
+                    text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
+            >
                 <Link
                     to={"/user/" + props.userId}
                     className={user?.username ? "" : "text-primary/50"}

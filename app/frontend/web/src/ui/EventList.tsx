@@ -34,7 +34,7 @@ function Description(props: DescriptionProps) {
                 <Link
                     key={i + 2}
                     to={"/user/" + split[i + 3]}
-                    className="text-primary font-semibold"
+                    className="text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
                 >
                     @{split[i + 2]}
                 </Link>
@@ -45,7 +45,7 @@ function Description(props: DescriptionProps) {
                 <Link
                     key={i + 4}
                     to={"/repo/" + split[i + 5]}
-                    className="text-primary font-semibold"
+                    className="text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
                 >
                     {split[i + 4]}
                 </Link>
@@ -78,7 +78,7 @@ function Description(props: DescriptionProps) {
                     key={i + 8}
                     target="_blank"
                     href={split[i + 9]}
-                    className="text-primary underline"
+                    className="text-primary underline dark:hover:text-primary/90 hover:text-primary/75"
                 >
                     {split[i + 8]}
                 </a>

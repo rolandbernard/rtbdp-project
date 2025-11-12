@@ -59,7 +59,8 @@ function RepoRankRow(props: RepoRowProps) {
     return (
         <div className="flex-1 min-w- min-w-0 flex flex-row items-center pl-4">
             <div
-                className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis text-primary font-semibold text-left"
+                className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
+                    text-primary font-semibold text-left dark:hover:text-primary/90 hover:text-primary/75"
                 style={{ direction: "rtl" }}
             >
                 <Link

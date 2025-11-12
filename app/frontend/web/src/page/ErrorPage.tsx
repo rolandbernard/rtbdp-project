@@ -34,7 +34,10 @@ export default function ErrorPage() {
                         "Unknown Error"
                     )}
                 </div>
-                <Link to="/" className="text-sm text-primary underline">
+                <Link
+                    to="/"
+                    className="text-sm text-primary underline dark:hover:text-primary/90 hover:text-primary/75"
+                >
                     Get Back to Home
                 </Link>
             </div>

@@ -45,7 +45,7 @@ function EventCounter(props: Props) {
         >
             <div
                 className="flex flex-row items-end rounded-box
-                    hover:bg-content/7 hover:dark:bg-content/10 p-1"
+                    hover:bg-content/5 hover:dark:bg-content/7 p-1"
             >
                 <div className="w-1/2 md:w-1/3 px-1 flex flex-col pe-3 pt-1">
                     <div className="text-xs whitespace-nowrap pb-2">
