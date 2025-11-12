@@ -124,10 +124,12 @@ const eventKinds = new ConstantTable(
         }))
 );
 
+const EMPTY: never[] = [];
+
 export default function EventList() {
-    const [kindIds, setKindIds] = useParam("elkind", [] as EventKind[]);
-    const [userIds, setUserIds] = useParam("eluser", [] as number[]);
-    const [repoIds, setRepoIds] = useParam("elrepo", [] as number[]);
+    const [kindIds, setKindIds] = useParam("elkind", EMPTY as EventKind[]);
+    const [userIds, setUserIds] = useParam("eluser", EMPTY as number[]);
+    const [repoIds, setRepoIds] = useParam("elrepo", EMPTY as number[]);
     const listRef = useRef<HTMLDivElement>(null);
     let filtered = events.limit(20);
     if (kindIds.length !== 0) {

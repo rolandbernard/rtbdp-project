@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router";
 
 export function useDebounce<T>(value: T, millis: number) {
     const [debounced, setDebounced] = useState(value);
@@ -111,12 +112,8 @@ function getParam<T>(name: string, def: T) {
 
 export function useParam<T>(name: string, def: T): [T, (v: T) => void] {
     let [value, setValue] = useState(getParam(name, def));
-    useEffect(() => {
-        setValue(getParam(name, def));
-        const handler = () => setValue(getParam(name, def));
-        addEventListener("hashchange", handler);
-        return () => removeEventListener("hashchange", handler);
-    }, [name]);
+    let location = useLocation();
+    useEffect(() => setValue(getParam(name, def)), [location, name, def]);
     const setInnerValue = useCallback(
         (v: T) => {
             const query = getQuery();
@@ -127,9 +124,12 @@ export function useParam<T>(name: string, def: T): [T, (v: T) => void] {
                 query.delete(name);
                 setValue(def);
             }
-            document.location.replace(getUrlWithQuery(query));
+            const newLocation = getUrlWithQuery(query);
+            if (document.location.href !== newLocation) {
+                document.location.replace(newLocation);
+            }
         },
-        [name]
+        [name, def]
     );
     return [value, setInnerValue];
 }
