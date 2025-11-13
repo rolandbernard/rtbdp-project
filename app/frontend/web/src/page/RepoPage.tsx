@@ -170,7 +170,11 @@ function RepoDetails(props: DetailsProps) {
 const ORDINAL = ["st", "nd", "rd", "th"];
 
 interface CounterProps {
-    rows: RankingRow<{ window_size: WindowSize }>[];
+    rows: RankingRow<{
+        window_size: WindowSize;
+        num_stars?: number;
+        num_events?: number;
+    }>[];
     windowSize: WindowSize;
     kind: string;
 }
@@ -185,23 +189,36 @@ function RepoRankingCounter(props: CounterProps) {
             </div>
             <div
                 className={
-                    "w-fill h-full flex flex-row justify-center items-center pb-4 " +
-                    (["text-4xl", "text-3xl", "text-2xl"][row?.rank ?? 3] ??
-                        "text-xl")
+                    "w-full h-full flex flex-col justify-center items-center"
                 }
             >
-                <Counter value={row ? row.rank + 1 : undefined} />
-                <Letters
-                    value={
-                        row
-                            ? row.rank > 10 && row.rank <= 20
-                                ? "th"
-                                : ORDINAL[row.rank % 10] ?? "th"
-                            : ""
+                <div
+                    className={
+                        "flex flex-row justify-center items-center " +
+                        (["text-4xl", "text-3xl", "text-2xl"][row?.rank ?? 3] ??
+                            "text-xl")
                     }
-                    options={[...ORDINAL, ""]}
-                    className="text-xs w-3.5 h-4 mb-2 ml-0.25"
-                />
+                >
+                    <Counter value={row ? row.rank + 1 : undefined} />
+                    <Letters
+                        value={
+                            row
+                                ? row.rank > 10 && row.rank <= 20
+                                    ? "th"
+                                    : ORDINAL[row.rank % 10] ?? "th"
+                                : ""
+                        }
+                        options={[...ORDINAL, ""]}
+                        className="text-xs w-3.5 h-4 mb-2 ml-0.25"
+                    />
+                </div>
+                <div className="flex flex-row justify-center items-center pt-1 text-content/70">
+                    <Counter
+                        value={row?.num_events ?? row?.num_stars ?? 0}
+                        className="pr-1"
+                    />
+                    {props.kind === "stars" ? "stars" : "events"}
+                </div>
             </div>
         </>
     );
