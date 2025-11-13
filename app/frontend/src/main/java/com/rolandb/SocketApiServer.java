@@ -1,12 +1,14 @@
 package com.rolandb;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -14,6 +16,9 @@ import java.util.function.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.java_websocket.WebSocket;
+import org.java_websocket.drafts.Draft;
+import org.java_websocket.drafts.Draft_6455;
+import org.java_websocket.extensions.permessage_deflate.PerMessageDeflateExtension;
 import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -135,6 +140,8 @@ public class SocketApiServer extends WebSocketServer {
     private final Map<String, Table> tables = new HashMap<>();
     private final Scheduler rxScheduler = Schedulers.from(Executors.newFixedThreadPool(8));
 
+    private static final Draft perMessageDeflateDraft = new Draft_6455(new PerMessageDeflateExtension());
+
     /**
      * Initialize a new socket server to listen on the given address.
      *
@@ -143,7 +150,7 @@ public class SocketApiServer extends WebSocketServer {
      */
     public SocketApiServer(
             InetSocketAddress address, String bootstrapServer, String groupId, String jdbcUrl, String secret) {
-        super(address);
+        super(address, List.of(perMessageDeflateDraft));
         this.secret = secret;
         kafkaProperties = new Properties();
         kafkaProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
@@ -376,9 +383,22 @@ public class SocketApiServer extends WebSocketServer {
      * @param id
      *            The id of the replay that was finished.
      */
-    private void sendReplayComplete(WebSocket socket, String table, long id) {
+    private void sendReplayComplete(WebSocket socket, long id, List<Map<String, ?>> rows) {
         try {
-            socket.send(objectMapper.writeValueAsString(Map.of("table", table, "replayed", Long.valueOf(id))));
+            if (!rows.isEmpty()) {
+                Map<String, List<Object>> columnRows = new HashMap<>();
+                for (Map<String, ?> row : rows) {
+                    for (Entry<String, ?> e : row.entrySet()) {
+                        if (!columnRows.containsKey(e.getKey())) {
+                            columnRows.put(e.getKey(), new ArrayList<>());
+                        }
+                        columnRows.get(e.getKey()).add(e.getValue());
+                    }
+                }
+                socket.send(objectMapper.writeValueAsString(Map.of("rows", columnRows, "replayed", Long.valueOf(id))));
+            } else {
+                socket.send(objectMapper.writeValueAsString(Map.of("replayed", Long.valueOf(id))));
+            }
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize replay completion", e);
         }
@@ -408,16 +428,17 @@ public class SocketApiServer extends WebSocketServer {
             for (Subscription replay : message.replay) {
                 Table table = tables.get(replay.tableName);
                 if (table != null && replay.applicableTo(table, true)) {
+                    List<Map<String, ?>> rows = new ArrayList<>();
                     table.getReplayObservable(replay, connections)
                             .subscribeOn(rxScheduler)
                             .doOnError(error -> {
                                 LOGGER.error("Error in table replay", error);
                             })
                             .doOnComplete(() -> {
-                                sendReplayComplete(socket, table.name, replay.id);
+                                sendReplayComplete(socket, replay.id, rows);
                             })
                             .subscribe(row -> {
-                                sendRow(socket, table.name, row);
+                                rows.add(row);
                             });
                 } else {
                     LOGGER.warn("Client sent a non-applicable replay request");

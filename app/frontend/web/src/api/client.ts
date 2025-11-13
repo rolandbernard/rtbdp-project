@@ -2,15 +2,16 @@ import { webSocket, WebSocketSubject } from "rxjs/webSocket";
 import { catchError, retry } from "rxjs/operators";
 
 export type Row<R> = R & { seq_num: number };
+export type MultiRow<R> = { [K in keyof Row<R>]: Row<R>[K][] };
 export type RowMessage<R> = {
     table: string;
     row: Row<R>;
 };
-export type ReplayMessage = {
-    table: string;
+export type ReplayMessage<R> = {
     replayed: number;
+    rows?: MultiRow<R>;
 };
-export type ServerMessage<R> = ReplayMessage | RowMessage<R>;
+export type ServerMessage<R> = ReplayMessage<R> | RowMessage<R>;
 
 export type Subscription<R> = {
     id: number;

@@ -306,12 +306,12 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                 }),
                 () => ({ unsubscribe: [subscriptionId] }),
                 message =>
-                    message.table == this.name &&
-                    ("row" in message
-                        ? "old_row_number" in message.row
-                            ? acceptsRowWith(message.row, subscriptionFilter)
-                            : acceptsRowWith(message.row, this.filters)
-                        : message.replayed == subscriptionId)
+                    "row" in message
+                        ? message.table == this.name &&
+                          ("old_row_number" in message.row
+                              ? acceptsRowWith(message.row, subscriptionFilter)
+                              : acceptsRowWith(message.row, this.filters))
+                        : message.replayed == subscriptionId
             )
             .pipe(
                 retry({ delay: 1000 }),
@@ -329,6 +329,17 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                             return true;
                         }
                     } else {
+                        if (message.rows) {
+                            message.rows.seq_num.forEach((_, i) => {
+                                const row = Object.fromEntries(
+                                    Object.keys(message.rows!).map(k => [
+                                        k,
+                                        message.rows![k as keyof Row<R>][i],
+                                    ])
+                                ) as Row<RankingRow<R>>;
+                                view.set(this.groupKey(row), row);
+                            });
+                        }
                         replaySeqNum = [...view.values()]
                             .map(r => r.seq_num)
                             .reduce((a, b) => Math.max(a, b), 1);

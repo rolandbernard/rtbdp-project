@@ -202,6 +202,19 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
                     if ("row" in message) {
                         return this.mergeIntoView(view, message.row);
                     } else {
+                        if (message.rows) {
+                            message.rows.seq_num.forEach((_, i) => {
+                                this.mergeIntoView(
+                                    view,
+                                    Object.fromEntries(
+                                        Object.keys(message.rows!).map(k => [
+                                            k,
+                                            message.rows![k as keyof Row<R>][i],
+                                        ])
+                                    ) as Row<R>
+                                );
+                            });
+                        }
                         replayed = true;
                         return true;
                     }
@@ -256,7 +269,7 @@ export class UpdateTable<K, R> extends NormalTable<K & UpdateRow<R>> {
 
 export class UnionTable<
     V extends unknown[],
-    R extends { [K in keyof V]: unknown },
+    R extends { [K in keyof V]: unknown }
 > extends Table<R[keyof V], V> {
     tables: { [K in keyof V]: Table<R[K], V[K]> };
 
