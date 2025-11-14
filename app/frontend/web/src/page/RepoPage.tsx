@@ -213,10 +213,11 @@ function RepoRankingCounter(props: CounterProps) {
                     />
                 </div>
                 <div className="flex flex-row justify-center items-center pt-1 text-content/70">
-                    <Counter
-                        value={row?.num_events ?? row?.num_stars ?? 0}
-                        className="pr-1"
-                    />
+                    <span className="pr-1">
+                        <Counter
+                            value={row?.num_events ?? row?.num_stars ?? 0}
+                        />
+                    </span>
                     {props.kind === "stars" ? "stars" : "events"}
                 </div>
             </div>
@@ -294,11 +295,13 @@ export default function RepoPage() {
     return (
         <div className="flex flex-col grow p-3">
             <div className="text-3xl font-semibold m-3 mt-0">
-                {repo ? (
-                    repo.fullname ?? repo.reponame
-                ) : (
-                    <span className="text-content/80">Loading...</span>
-                )}
+                <span>
+                    {repo ? (
+                        repo.fullname ?? repo.reponame
+                    ) : (
+                        <span className="text-content/80">Loading...</span>
+                    )}
+                </span>
             </div>
             <div className="flex flex-col grow">
                 <div className="m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0 min-h-20">
@@ -319,16 +322,20 @@ export default function RepoPage() {
                 <div className="flex flex-wrap grow">
                     <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                         <div className="text-xs">Activity History</div>
-                        <HistoryLong
-                            table={reposHistory.where("repo_id", [repoId])}
-                        />
+                        <div className="w-full h-full">
+                            <HistoryLong
+                                table={reposHistory.where("repo_id", [repoId])}
+                            />
+                        </div>
                     </div>
                     <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                         <div className="text-xs">Stars History</div>
-                        <HistoryLong
-                            table={starsHistory.where("repo_id", [repoId])}
-                            chartColor="#78b120"
-                        />
+                        <div className="w-full h-full">
+                            <HistoryLong
+                                table={starsHistory.where("repo_id", [repoId])}
+                                chartColor="#78b120"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

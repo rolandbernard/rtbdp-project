@@ -210,7 +210,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                             return false;
                         }
                     }
-                    view.delete(key);
+                    this.viewDelete(view, key);
                 }
                 for (const row of view.values()) {
                     if (
@@ -246,7 +246,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                         }
                     }
                 }
-                view.set(key, update as Row<RankingRow<R>>);
+                this.viewSet(view, key, update as Row<RankingRow<R>>);
             }
             return true;
         };
@@ -325,7 +325,11 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                                 return false;
                             }
                         } else {
-                            view.set(this.groupKey(message.row), message.row);
+                            this.viewSet(
+                                view,
+                                this.groupKey(message.row),
+                                message.row
+                            );
                             return true;
                         }
                     } else {
@@ -337,7 +341,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                                         message.rows![k as keyof Row<R>][i],
                                     ])
                                 ) as Row<RankingRow<R>>;
-                                view.set(this.groupKey(row), row);
+                                this.viewSet(view, this.groupKey(row), row);
                             });
                         }
                         replaySeqNum = [...view.values()]

@@ -34,6 +34,8 @@ export abstract class Table<R, V> {
     abstract dependencies(): unknown[];
 }
 
+const GLOBAL_CACHE = new Map<string, Map<string, unknown>>();
+
 export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
     name: string;
     keys: (keyof R)[];
@@ -66,8 +68,35 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         ) as this;
     }
 
+    globalView(): Map<string, Row<R>> {
+        if (!GLOBAL_CACHE.has(this.name)) {
+            GLOBAL_CACHE.set(this.name, new Map());
+        }
+        return GLOBAL_CACHE.get(this.name)! as Map<string, Row<R>>;
+    }
+
+    viewSet(view: Map<string, Row<R>>, key: string, row: Row<R>) {
+        view.set(key, row);
+        const globalView = this.globalView();
+        globalView.set(key, row);
+        if (globalView.size > 100_000) {
+            globalView.clear();
+        }
+    }
+
+    viewDelete(view: Map<string, Row<R>>, key: string) {
+        view.delete(key);
+        this.globalView().delete(key);
+    }
+
     createView(): Map<string, Row<R>> {
-        return new Map();
+        const view = new Map();
+        for (const [key, row] of this.globalView().entries()) {
+            if (acceptsRowWith(row, this.filters)) {
+                view.set(key, row);
+            }
+        }
+        return view;
     }
 
     dependencies(): unknown[] {
@@ -168,7 +197,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         const oldRow = view.get(rowKey);
         const row = this.mergeRows(newRow, oldRow);
         if (row !== oldRow) {
-            view.set(rowKey, row);
+            this.viewSet(view, rowKey, row);
             return true;
         } else {
             return false;

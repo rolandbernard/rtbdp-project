@@ -20,7 +20,7 @@ export default function Proportions<
     const [loaded, rawData] = useLoadingTable(table);
     const lastTime = useHistoryTime(false);
     const cleanData = useMemo(() => {
-        if (!loaded || rawData.length === 0) {
+        if (!loaded && rawData.length < 10) {
             // Avoid initial partial renders.
             return [];
         } else {

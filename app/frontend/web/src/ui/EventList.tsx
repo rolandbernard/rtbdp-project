@@ -36,7 +36,7 @@ function Description(props: DescriptionProps) {
                     to={"/user/" + split[i + 3]}
                     className="text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
                 >
-                    @{split[i + 2]}
+                    <span>@{split[i + 2]}</span>
                 </Link>
             );
         }
@@ -47,7 +47,7 @@ function Description(props: DescriptionProps) {
                     to={"/repo/" + split[i + 5]}
                     className="text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
                 >
-                    {split[i + 4]}
+                    <span>{split[i + 4]}</span>
                 </Link>
             );
         }

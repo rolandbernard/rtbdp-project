@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import type { RankingRow, RankingTable } from "../api/ranking";
@@ -12,6 +18,7 @@ import Counter, { Letters } from "./Counter";
 interface RowProps {
     rank: number;
     children?: ReactNode;
+    style?: CSSProperties;
 }
 
 const ORDINAL = ["th", "st", "nd", "rd", "th"];
@@ -25,6 +32,7 @@ export function RankingRow(props: RowProps) {
                     "flex flex-row justify-end items-center " +
                     (["text-2xl", "text-xl", "text-lg"][props.rank] ?? "")
                 }
+                style={props.style}
             >
                 <Counter value={rank} />
                 <Letters

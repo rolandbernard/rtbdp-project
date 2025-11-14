@@ -25,7 +25,7 @@ export default function HistorySpark<
     const [loaded, rawHistory] = useLoadingTable(historyTable.limit(limit));
     const lastTime = useHistoryTime(useFine);
     const cleanHistory = useMemo(() => {
-        if (!loaded) {
+        if (!loaded && rawHistory.length < 10) {
             // Avoid initial partial renders.
             return [];
         } else {
