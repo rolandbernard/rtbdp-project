@@ -18,7 +18,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.java_websocket.WebSocket;
 import org.java_websocket.drafts.Draft;
 import org.java_websocket.drafts.Draft_6455;
-import org.java_websocket.extensions.permessage_deflate.PerMessageDeflateExtension;
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.java_websocket.framing.CloseFrame;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -365,9 +365,14 @@ public class SocketApiServer extends WebSocketServer {
      */
     private void sendRow(WebSocket socket, String table, Map<String, ?> row) {
         try {
-            socket.send(objectMapper.writeValueAsString(Map.of("table", table, "row", row)));
+            String json = objectMapper.writeValueAsString(Map.of("table", table, "row", row));
+            synchronized (socket) {
+                socket.send(json);
+            }
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize row update", e);
+        } catch (WebsocketNotConnectedException e) {
+            // If the client is no longer connected, we can ignore the message all together.
         }
     }
 
@@ -385,6 +390,7 @@ public class SocketApiServer extends WebSocketServer {
      */
     private void sendReplayComplete(WebSocket socket, long id, List<Map<String, ?>> rows) {
         try {
+            String json;
             if (!rows.isEmpty()) {
                 Map<String, List<Object>> columnRows = new HashMap<>();
                 for (Map<String, ?> row : rows) {
@@ -395,12 +401,17 @@ public class SocketApiServer extends WebSocketServer {
                         columnRows.get(e.getKey()).add(e.getValue());
                     }
                 }
-                socket.send(objectMapper.writeValueAsString(Map.of("rows", columnRows, "replayed", Long.valueOf(id))));
+                json = objectMapper.writeValueAsString(Map.of("rows", columnRows, "replayed", Long.valueOf(id)));
             } else {
-                socket.send(objectMapper.writeValueAsString(Map.of("replayed", Long.valueOf(id))));
+                json = objectMapper.writeValueAsString(Map.of("replayed", Long.valueOf(id)));
+            }
+            synchronized (socket) {
+                socket.send(json);
             }
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize replay completion", e);
+        } catch (WebsocketNotConnectedException e) {
+            // If the client is no longer connected, we can ignore the message all together.
         }
     }
 

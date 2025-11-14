@@ -63,6 +63,8 @@ export function getConnection() {
                             loginUrl +
                             "?url=" +
                             encodeURIComponent(location.href);
+                    } else {
+                        console.error(e);
                     }
                 }),
                 retry({ delay: 1000 })
