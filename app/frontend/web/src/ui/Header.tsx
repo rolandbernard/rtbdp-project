@@ -15,7 +15,7 @@ export default function Header() {
             <div className="w-full h-16 shrink-0 grow-0" />
             <nav
                 id="header"
-                className="bg-base-200/60 backdrop-blur-md fixed w-full z-20 top-0 start-0"
+                className="bg-base-200 fixed w-full z-20 top-0 start-0"
             >
                 <div className="max-w-screen-xl flex items-center justify-between mx-auto">
                     <Link to="/" className="flex items-center space-x-3 ps-4">
