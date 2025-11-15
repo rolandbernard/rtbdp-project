@@ -34,10 +34,9 @@ export default function PieChart(props: Props) {
                     type="monotone"
                     dataKey="y"
                     nameKey="x"
-                    animationDuration={200}
-                    animationEasing="linear"
                     label={labels}
                     labelLine={false}
+                    isAnimationActive={false}
                 >
                     {data.map(entry => {
                         const opacity =

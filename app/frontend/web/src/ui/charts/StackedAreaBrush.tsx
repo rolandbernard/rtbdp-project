@@ -115,11 +115,10 @@ export default function StackedAreaBrush(props: Props) {
                             fill={colorFor(key, opacity)}
                             stroke={colorFor(key, opacity)}
                             strokeWidth={opacity == "0.4" ? 1 : 2}
-                            animationDuration={200}
-                            animationEasing="linear"
                             stackId="1"
                             onClick={() => props.onClick?.(key)}
                             className="cursor-pointer"
+                            isAnimationActive={false}
                         />
                     );
                 })}

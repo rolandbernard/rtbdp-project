@@ -42,8 +42,7 @@ export default function Sparkline(props: Props) {
                     stroke={props.chartColor}
                     strokeWidth={2}
                     fill={`url(#colorGradient${btoa(props.chartColor)})`}
-                    animationDuration={200}
-                    animationEasing="linear"
+                    isAnimationActive={false}
                 />
             </AreaChart>
         </ResponsiveContainer>

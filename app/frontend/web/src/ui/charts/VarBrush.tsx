@@ -72,8 +72,7 @@ export function VarBrush(props: Props) {
                     dataKey="y"
                     stroke={props.chartColor}
                     fill={`url(#colorGradient${btoa(props.chartColor)})`}
-                    animationDuration={200}
-                    animationEasing="linear"
+                    isAnimationActive={false}
                 />
             </AreaChart>
         </Brush>

@@ -119,8 +119,7 @@ export default function AreaBrush(props: Props) {
                     stroke={props.chartColor}
                     strokeWidth={2}
                     fill={`url(#colorGradient2${btoa(props.chartColor)})`}
-                    animationDuration={200}
-                    animationEasing="linear"
+                    isAnimationActive={false}
                 />
             </AreaChart>
         </ResponsiveContainer>
