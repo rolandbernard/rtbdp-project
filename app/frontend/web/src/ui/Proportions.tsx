@@ -43,7 +43,8 @@ export default function Proportions<
                             ? "all"
                             : Object.entries(EVENT_KINDS).find(
                                   ([_, n]) => n === k
-                              )![0])
+                              )![0]),
+                    { replace: true, viewTransition: true }
                 )
             }
         />

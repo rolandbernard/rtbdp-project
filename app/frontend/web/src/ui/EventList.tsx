@@ -1,5 +1,5 @@
 import { createElement, useMemo, useRef } from "react";
-import { Link } from "react-router";
+import { Link, useViewTransitionState } from "react-router";
 import { ArrowUpToLine } from "lucide-react";
 
 import { useLoadingTable } from "../api/hooks";
@@ -17,10 +17,45 @@ import { useParam } from "../hooks";
 
 import SearchSelect from "./SearchSelect";
 
+interface LinkProps {
+    id: number;
+    to: string;
+    name: string;
+    text?: string;
+}
+
+function TransitionLink(props: LinkProps) {
+    const inTransition = useViewTransitionState(props.to);
+    return (
+        <Link
+            viewTransition
+            to={props.to}
+            state={{ from: "events" + props.id, name: props.name }}
+            className="text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
+            style={{
+                viewTransitionName: inTransition
+                    ? "pageevents" + props.id
+                    : "none",
+            }}
+        >
+            <span
+                style={{
+                    viewTransitionName: inTransition
+                        ? "nameevents" + props.id
+                        : "none",
+                }}
+            >
+                {props.text ?? props.name}
+            </span>
+        </Link>
+    );
+}
+
 const DESC_REGEX =
     /<(user\{(.*?)\}\{(.*?)\}|repo\{(.*?)\}\{(.*?)\}|code\{(.*?)\}|quote\{(.*?)\}|link\{(.*?)\}\{(.*?)\})>/gs;
 
 interface DescriptionProps {
+    id: number;
     desc: string;
 }
 
@@ -31,24 +66,23 @@ function Description(props: DescriptionProps) {
         parts.push(<span key={i}>{split[i]}</span>);
         if (split[i + 2] && split[i + 3]) {
             parts.push(
-                <Link
+                <TransitionLink
                     key={i + 2}
+                    id={props.id}
                     to={"/user/" + split[i + 3]}
-                    className="text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
-                >
-                    <span>@{split[i + 2]}</span>
-                </Link>
+                    text={"@" + split[i + 2]}
+                    name={split[i + 2]!}
+                />
             );
         }
         if (split[i + 4] && split[i + 5]) {
             parts.push(
-                <Link
+                <TransitionLink
                     key={i + 4}
+                    id={props.id}
                     to={"/repo/" + split[i + 5]}
-                    className="text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
-                >
-                    <span>{split[i + 4]}</span>
-                </Link>
+                    name={split[i + 4]!}
+                />
             );
         }
         if (split[i + 6]) {
@@ -92,6 +126,7 @@ interface EventProps {
     created_at: string;
     kind: EventKind;
     desc: string;
+    id: number;
 }
 
 function Event(props: EventProps) {
@@ -109,7 +144,7 @@ function Event(props: EventProps) {
                 </div>
             </div>
             <div className="pt-2 pb-1 px-2 break-words">
-                <Description desc={props.desc} />
+                <Description desc={props.desc} id={props.id} />
             </div>
         </div>
     );
@@ -251,6 +286,7 @@ export default function EventList() {
                             created_at={row.created_at}
                             kind={row.kind}
                             desc={row.details}
+                            id={row.id}
                         />
                     ))
                 ) : (

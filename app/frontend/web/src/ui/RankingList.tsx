@@ -10,7 +10,6 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { RankingRow, RankingTable } from "../api/ranking";
 import type { Row } from "../api/client";
 import { useLoadingTable } from "../api/hooks";
-import { sort } from "../util";
 import { useParam } from "../hooks";
 
 import Counter, { Letters } from "./Counter";
@@ -29,7 +28,7 @@ export function RankingRow(props: RowProps) {
         <>
             <div
                 className={
-                    "flex flex-row justify-end items-center " +
+                    "min-h-0 flex flex-row justify-end items-center " +
                     (["text-2xl", "text-xl", "text-lg"][props.rank] ?? "")
                 }
                 style={props.style}
@@ -61,13 +60,20 @@ interface ViewProps<R> {
 export function RankingView<R>(props: ViewProps<R>) {
     const len = props.to - props.from;
     const [loaded, rawResults] = useLoadingTable(
-        props.table.desiredRows(props.from, props.to)
+        props.table.desiredRows(props.from, props.to + 1)
     );
-    const results = useMemo(
-        () => sort(rawResults, [a => a.row_number]),
-        [rawResults]
-    );
-    const atEnd = rawResults.length < len;
+    const [atEnd, results] = useMemo(() => {
+        let atEnd = true;
+        const rows = [...Array(len)];
+        for (const row of rawResults) {
+            if (row.row_number >= props.from && row.row_number < props.to) {
+                rows[row.row_number - props.from] = row;
+            } else if (row.row_number >= props.to) {
+                atEnd = false;
+            }
+        }
+        return [atEnd, rows];
+    }, [rawResults, props.from, props.to]);
     const { onAtEnd } = props;
     useEffect(() => {
         if (loaded || !atEnd) {
@@ -76,18 +82,25 @@ export function RankingView<R>(props: ViewProps<R>) {
     }, [loaded, atEnd, onAtEnd]);
     return (
         <>
-            {[...results, ...Array(len)].slice(0, len).map((r, i) =>
+            {results.map((r, i) =>
                 r ? (
                     props.rows(r)
                 ) : (
                     <div
                         key={i}
-                        className="flex-1 flex justify-center items-center text-content/80 col-span-2"
+                        className="flex justify-center items-center text-content/80 col-span-2"
                     >
-                        {i === Math.trunc((results.length + len - 1) / 2)
-                            ? loaded
+                        {loaded
+                            ? (i === 0 || results[i - 1]) &&
+                              results.slice(i + 1).every(r => !r)
                                 ? "At the end."
-                                : "Loading..."
+                                : ""
+                            : i ==
+                              Math.trunc(
+                                  results.length -
+                                      results.filter(r => !r).length / 2
+                              )
+                            ? "Loading..."
                             : ""}
                     </div>
                 )
@@ -103,7 +116,7 @@ interface Props<R> {
 }
 
 export default function RankingList<R>(props: Props<R>) {
-    const [start, setStart] = useParam(props.name, 0);
+    const [start, setStart] = useParam<number>(props.name, 0);
     const [pageInput, setPageInput] = useState<string | null>(null);
     const [atEnd, setAtEnd] = useState(false);
     return (

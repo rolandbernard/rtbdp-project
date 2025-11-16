@@ -27,6 +27,8 @@ import {
 export abstract class Table<R, V> {
     abstract createView(): V;
 
+    abstract fillFromGlobal(view: V): void;
+
     abstract extractFromView(view: V): Row<R>[];
 
     abstract connect(view: V): Observable<boolean>;
@@ -89,14 +91,16 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         this.globalView().delete(key);
     }
 
-    createView(): Map<string, Row<R>> {
-        const view = new Map();
+    fillFromGlobal(view: Map<string, Row<R>>) {
         for (const [key, row] of this.globalView().entries()) {
             if (acceptsRowWith(row, this.filters)) {
                 view.set(key, row);
             }
         }
-        return view;
+    }
+
+    createView(): Map<string, Row<R>> {
+        return new Map();
     }
 
     dependencies(): unknown[] {
@@ -311,6 +315,10 @@ export class UnionTable<
         return this.tables.map(table => table.createView()) as V;
     }
 
+    fillFromGlobal(view: V): void {
+        view.map((v, i) => this.tables[i]?.fillFromGlobal(v));
+    }
+
     extractFromView(view: V): Row<R[keyof V]>[] {
         return this.tables.flatMap((table, i) =>
             table.extractFromView(view[i])
@@ -343,6 +351,10 @@ export class ConstantTable<R> extends Table<R, void> {
 
     createView() {
         return undefined;
+    }
+
+    fillFromGlobal(_view: void): void {
+        // nothing to do here.
     }
 
     extractFromView(): Row<R>[] {

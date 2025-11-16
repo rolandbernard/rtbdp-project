@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router";
 
 export function useDebounce<T>(value: T, millis: number) {
@@ -71,13 +71,35 @@ export function useTheme(): [string, (v: string) => void] {
     return [selected, setupTheme];
 }
 
-function getQuery() {
-    const hash = document.location.hash;
-    const idx = hash.indexOf("?");
-    if (idx >= 0) {
-        return new URLSearchParams(hash.slice(idx + 1));
+type ParamType = string[] | number[] | string | number;
+
+function encodeParam<T extends ParamType>(obj: T) {
+    if (obj instanceof Array) {
+        return "[" + obj.map(e => e.toString()).join(",") + "]";
     } else {
-        return new URLSearchParams();
+        return obj.toString();
+    }
+}
+
+function isNumber(str: string) {
+    for (let i = 0; i < str.length; i++) {
+        if (str.codePointAt(i)! < 48 || str.codePointAt(i)! > 57) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function decodeParam<T extends ParamType>(val: string) {
+    if (val[0] === "[") {
+        const array = val
+            .substring(1, val.length - 1)
+            .split(",")
+            .filter(e => e.length !== 0)
+            .map(e => (isNumber(e) ? parseInt(e) : e));
+        return array as T;
+    } else {
+        return (isNumber(val) ? parseInt(val) : val) as T;
     }
 }
 
@@ -98,38 +120,51 @@ function getUrlWithQuery(q: URLSearchParams) {
     }
 }
 
-function getParam<T>(name: string, def: T) {
-    const query = getQuery();
-    if (query.has(name)) {
-        try {
-            return JSON.parse(query.get(name)!) as T;
-        } catch {
-            // Do nothing, use the normal default.
+function getCurrentQuery() {
+    const href = document.location.href;
+    const hashIdx = href.indexOf("#");
+    if (hashIdx >= 0) {
+        const idx = href.indexOf("?", hashIdx);
+        if (idx >= 0) {
+            return new URLSearchParams(href.slice(idx));
+        } else {
+            return new URLSearchParams();
         }
+    } else {
+        return new URLSearchParams();
     }
-    return def;
 }
 
-export function useParam<T>(name: string, def: T): [T, (v: T) => void] {
-    let [value, setValue] = useState(getParam(name, def));
-    let location = useLocation();
-    useEffect(() => setValue(getParam(name, def)), [location, name, def]);
-    const setInnerValue = useCallback(
+export function useParam<T extends ParamType>(
+    name: string,
+    def: T
+): [T, (v: T) => void] {
+    const location = useLocation();
+    const defValue = useMemo(() => encodeParam(def), [def]);
+    const [value, setInnerValue] = useState(() =>
+        decodeParam<T>(getCurrentQuery().get(name) ?? defValue)
+    );
+    useEffect(() => {
+        setInnerValue(decodeParam<T>(getCurrentQuery().get(name) ?? defValue));
+    }, [location.search]);
+    const setValue = useCallback(
         (v: T) => {
-            const query = getQuery();
-            if (JSON.stringify(def) !== JSON.stringify(v)) {
-                query.set(name, JSON.stringify(v));
-                setValue(v);
-            } else {
-                query.delete(name);
-                setValue(def);
+            let newValue: string | null = encodeParam(v);
+            if (newValue == defValue) {
+                newValue = null;
             }
-            const newLocation = getUrlWithQuery(query);
-            if (document.location.href !== newLocation) {
-                document.location.replace(newLocation);
+            const query = getCurrentQuery();
+            if (query.get(name) != newValue) {
+                setInnerValue(v);
+                if (newValue) {
+                    query.set(name, newValue);
+                } else {
+                    query.delete(name);
+                }
+                document.location.replace(getUrlWithQuery(query));
             }
         },
-        [name, def]
+        [name, defValue]
     );
-    return [value, setInnerValue];
+    return [value, setValue];
 }

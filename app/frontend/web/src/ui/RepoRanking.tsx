@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useViewTransitionState } from "react-router";
 
 import {
     repos,
@@ -37,6 +37,7 @@ type TableType = NormalTable<{
 }>;
 
 function RepoRankRow(props: RepoRowProps) {
+    const inTransition = useViewTransitionState("/repo/" + props.repoId);
     const repo = useTable(repos.where("id", [props.repoId]))[0];
     const history = useMemo(
         () =>
@@ -57,13 +58,19 @@ function RepoRankRow(props: RepoRowProps) {
         [props.repoId, props.kind]
     );
     return (
-        <div className="flex-1 min-w- min-w-0 flex flex-row items-center pl-4">
+        <div
+            className="flex-1 min-h-0 min-w-0 flex flex-row items-center pl-4"
+            style={{
+                viewTransitionName: inTransition ? "pageranking" : "none",
+            }}
+        >
             <div
                 className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
                     text-primary font-semibold text-left dark:hover:text-primary/90 hover:text-primary/75"
                 style={{ direction: "rtl" }}
             >
                 <Link
+                    viewTransition
                     to={"/repo/" + props.repoId}
                     className={
                         repo?.fullname ?? repo?.reponame
@@ -71,19 +78,38 @@ function RepoRankRow(props: RepoRowProps) {
                             : "text-primary/50"
                     }
                     title={repo?.fullname ?? repo?.reponame}
+                    state={{
+                        from: "ranking",
+                        name: repo?.fullname ?? repo?.reponame,
+                    }}
+                    style={{
+                        viewTransitionName: inTransition
+                            ? "nameranking"
+                            : "none",
+                    }}
                 >
                     {repo?.fullname ?? repo?.reponame}
                 </Link>
             </div>
             <div className="flex-3 min-w-0 min-h-0 h-full flex flex-row items-center">
-                <div className="w-18 pr-1 flex flex-col">
+                <div
+                    className="w-18 pr-1 flex flex-col"
+                    style={{
+                        viewTransitionName: inTransition ? "ranking" : "none",
+                    }}
+                >
                     <Counter
                         value={props.value}
                         className="text-lg"
                         maxDigits={5}
                     />
                 </div>
-                <div className="w-full h-full">
+                <div
+                    className="w-full h-full"
+                    style={{
+                        viewTransitionName: inTransition ? "chart" : "none",
+                    }}
+                >
                     <HistorySpark
                         table={history}
                         tableFine={historyFine}
@@ -103,7 +129,10 @@ function RepoRankRow(props: RepoRowProps) {
 }
 
 export default function RepoRanking() {
-    const [kind, setKind] = useParam("rrkind", "trending");
+    const [kind, setKind] = useParam<"trending" | "stars" | "activity">(
+        "rrkind",
+        "trending"
+    );
     const [windowSize, setWindowSize] = useParam<WindowSize>("rrwin", "24h");
     const table = (
         kind === "trending"

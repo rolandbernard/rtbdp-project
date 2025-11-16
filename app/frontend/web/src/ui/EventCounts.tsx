@@ -1,5 +1,5 @@
 import { createElement, useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useViewTransitionState } from "react-router";
 
 import { useLoadingTable } from "../api/hooks";
 import {
@@ -24,6 +24,7 @@ interface Props {
 }
 
 function EventCounter(props: Props) {
+    const inTransition = useViewTransitionState("/event/" + props.kind);
     const [loaded, rawTotal] = useLoadingTable(
         countsLive
             .where("kind", [props.kind])
@@ -40,8 +41,12 @@ function EventCounter(props: Props) {
     );
     return (
         <Link
+            viewTransition
             to={"/event/" + props.kind}
             className="rounded-box bg-base-200 block border border-border/50"
+            style={{
+                viewTransitionName: inTransition ? "page" : "none",
+            }}
         >
             <div
                 className="flex flex-row items-end rounded-box
@@ -52,7 +57,15 @@ function EventCounter(props: Props) {
                         {createElement(EVENT_ICONS[props.kind], {
                             className: "inline w-5 h-5 pe-1",
                         })}
-                        {EVENT_KINDS[props.kind]}
+                        <span
+                            style={{
+                                viewTransitionName: inTransition
+                                    ? "name"
+                                    : "none",
+                            }}
+                        >
+                            {EVENT_KINDS[props.kind]}
+                        </span>
                     </div>
                     <Counter
                         value={total}
@@ -60,7 +73,12 @@ function EventCounter(props: Props) {
                         maxDigits={7}
                     />
                 </div>
-                <div className="w-1/2 md:w-2/3 h-16">
+                <div
+                    className="w-1/2 md:w-2/3 h-16"
+                    style={{
+                        viewTransitionName: inTransition ? "chart" : "none",
+                    }}
+                >
                     <HistorySpark
                         table={history}
                         tableFine={historyFine}
@@ -78,7 +96,7 @@ function EventCounter(props: Props) {
 }
 
 export default function EventCounts() {
-    const [windowSize, setWindowSize] = useParam("ecwin", "24h");
+    const [windowSize, setWindowSize] = useParam<WindowSize>("ecwin", "24h");
     return (
         <div className="flex flex-col flex-auto grow-0 mx-1">
             <div className="flex flex-row justify-end">

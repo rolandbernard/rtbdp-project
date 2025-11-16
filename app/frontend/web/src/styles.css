@@ -6,9 +6,32 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+    view-transition-name: none;
+}
+
 * {
-    transition-property: color, background, border, transform, opacity, fill, stroke;
+    transition-property: color, background, border, transform, opacity, fill,
+        stroke;
     transition-duration: 200ms;
+}
+
+::view-transition {
+    pointer-events: none;
+}
+
+::view-transition-group(*) {
+    animation-duration: 500ms;
+}
+
+::view-transition-group(name) {
+    z-index: 50;
+}
+
+::view-transition-old(*),
+::view-transition-new(*) {
+    width: 100%;
+    height: 100%;
 }
 
 @theme {

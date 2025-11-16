@@ -1,4 +1,4 @@
-import { useParams } from "react-router";
+import { useParams, useViewTransitionState } from "react-router";
 
 import {
     countsHistory,
@@ -13,6 +13,7 @@ import Proportions from "../ui/Proportions";
 import HistoryMulti from "../ui/HistoryMulti";
 
 export default function EventPage() {
+    const fromRoot = useViewTransitionState("/");
     const params = useParams();
     const kind = params["kind"]! as EventKind;
     if (!(kind in EVENT_KINDS)) {
@@ -30,12 +31,26 @@ export default function EventPage() {
         .where("window_size", ["1h"])
         .where("kind", allButAll);
     return (
-        <div className="flex flex-col grow p-3">
+        <div
+            className="flex flex-col grow p-3"
+            style={{ viewTransitionName: fromRoot ? "page" : "none" }}
+        >
             <div className="text-3xl font-semibold m-3 mt-0">
-                {EVENT_KINDS[kind]} Events
+                <span style={{ viewTransitionName: "name" }}>
+                    {EVENT_KINDS[kind]}
+                </span>
+                <span
+                    style={{ viewTransitionName: fromRoot ? "none" : "events" }}
+                >
+                    {" "}
+                    Events
+                </span>
             </div>
             <div className="flex flex-col grow">
-                <div className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div
+                    className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
+                    style={{ viewTransitionName: "chart" }}
+                >
                     <div className="text-xs">Number of Events</div>
                     <HistoryLong
                         table={singleHistoryTable}

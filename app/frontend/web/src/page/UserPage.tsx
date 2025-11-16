@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 
 import { useLoadingTable, useTable } from "../api/hooks";
 import {
@@ -11,12 +11,14 @@ import type { RankingRow } from "../api/ranking";
 
 import HistoryLong from "../ui/HistoryLong";
 import Counter, { Letters } from "../ui/Counter";
+import { useState } from "react";
 
 interface DetailsProps {
     username?: string;
     avatar_url?: string;
     html_url?: string;
     user_type?: string;
+    from: string;
 }
 
 function UserDetails(props: DetailsProps) {
@@ -26,6 +28,11 @@ function UserDetails(props: DetailsProps) {
                 <img
                     src={props.avatar_url}
                     className="rounded-box bg-white w-35 h-35 mr-4"
+                    style={{
+                        viewTransitionName: props.from.startsWith("search")
+                            ? "avatar" + props.from
+                            : "none",
+                    }}
                 />
             ) : undefined}
             <div className="flex flex-wrap gap-3 min-h-16">
@@ -67,6 +74,7 @@ const ORDINAL = ["st", "nd", "rd", "th"];
 interface CounterProps {
     rows: RankingRow<{ window_size: WindowSize; num_events: number }>[];
     windowSize: WindowSize;
+    onNavigate: (to: string) => void;
 }
 
 function UserRankingCounter(props: CounterProps) {
@@ -107,16 +115,20 @@ function UserRankingCounter(props: CounterProps) {
         </>
     );
     return row ? (
-        <Link
-            to={`/?ur${props.windowSize}=${Math.max(
-                0,
-                row?.row_number - 4
-            )}&urwin="${props.windowSize}"&ranking="user"`}
-            className="m-2 p-2 border border-border/50 rounded-box min-w-0 block
+        <div
+            className="m-2 p-2 border border-border/50 rounded-box min-w-0 cursor-pointer
                 bg-base-200/80 hover:bg-content/7 hover:dark:bg-content/10"
+            onClick={() =>
+                props.onNavigate(
+                    `/?ur${props.windowSize}=${Math.max(
+                        0,
+                        row?.row_number - 4
+                    )}&urwin=${props.windowSize}&ranking=user`
+                )
+            }
         >
             {inner}
-        </Link>
+        </div>
     ) : (
         <div className="m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80">
             {inner}
@@ -126,21 +138,41 @@ function UserRankingCounter(props: CounterProps) {
 
 interface RankingsProps {
     id: number;
+    onNavigate: (to: string) => void;
 }
 
 function UserRankings(props: RankingsProps) {
     const activityRank = useTable(usersRanking.where("user_id", [props.id]));
     return (
         <>
-            <UserRankingCounter rows={activityRank} windowSize="5m" />
-            <UserRankingCounter rows={activityRank} windowSize="1h" />
-            <UserRankingCounter rows={activityRank} windowSize="6h" />
-            <UserRankingCounter rows={activityRank} windowSize="24h" />
+            <UserRankingCounter
+                rows={activityRank}
+                windowSize="5m"
+                onNavigate={props.onNavigate}
+            />
+            <UserRankingCounter
+                rows={activityRank}
+                windowSize="1h"
+                onNavigate={props.onNavigate}
+            />
+            <UserRankingCounter
+                rows={activityRank}
+                windowSize="6h"
+                onNavigate={props.onNavigate}
+            />
+            <UserRankingCounter
+                rows={activityRank}
+                windowSize="24h"
+                onNavigate={props.onNavigate}
+            />
         </>
     );
 }
 
 export default function UserPage() {
+    const navigate = useNavigate();
+    const [navigating, setNavigating] = useState(false);
+    const location = useLocation();
     const params = useParams();
     const userId = parseInt(params["userId"]!);
     const [loaded, userData] = useLoadingTable(users.where("id", [userId]));
@@ -152,34 +184,73 @@ export default function UserPage() {
         });
     }
     return (
-        <div className="flex flex-col grow p-3">
+        <div
+            className="flex flex-col grow p-3"
+            style={{
+                viewTransitionName:
+                    "page" + (navigating ? "ranking" : location.state?.from),
+            }}
+        >
             <div className="text-3xl font-semibold m-3 mt-0">
-                {user ? (
-                    <>
-                        <span className="font-bold">@</span>
-                        {user?.username}
-                    </>
-                ) : (
-                    <span className="text-content/80">Loading...</span>
-                )}
+                <span
+                    style={{
+                        viewTransitionName:
+                            "name" +
+                            (navigating ? "ranking" : location.state?.from),
+                    }}
+                >
+                    {user || location.state?.name ? (
+                        <>
+                            <span className="font-bold">@</span>
+                            {user?.username ?? location.state?.name}
+                        </>
+                    ) : (
+                        <span className="text-content/80">Loading...</span>
+                    )}
+                </span>
             </div>
             <div className="flex flex-col grow">
                 <div className="m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0 min-h-40">
                     {user ? (
-                        <UserDetails {...user} />
+                        <UserDetails
+                            {...user}
+                            from={location.state?.from ?? ""}
+                        />
                     ) : (
                         <div className="w-full h-full flex justify-center items-center text-content/80">
                             Loading...
                         </div>
                     )}
                 </div>
-                <div className="md:flex-1 not-md:h-[30dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div
+                    className="md:flex-1 not-md:h-[30dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
+                    style={{
+                        viewTransitionName:
+                            navigating || location.state?.from === "ranking"
+                                ? "ranking"
+                                : "none",
+                    }}
+                >
                     <div className="text-xs">Rankings</div>
                     <div className="w-fill h-full grid grid-cols-2 grid-rows-2 md:grid-cols-4 md:grid-rows-1">
-                        <UserRankings id={userId} />
+                        <UserRankings
+                            id={userId}
+                            onNavigate={to => {
+                                setNavigating(true);
+                                navigate(to, { viewTransition: true });
+                            }}
+                        />
                     </div>
                 </div>
-                <div className="md:flex-2 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div
+                    className="md:flex-2 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
+                    style={{
+                        viewTransitionName:
+                            navigating || location.state?.from === "ranking"
+                                ? "chart"
+                                : "none",
+                    }}
+                >
                     <div className="text-xs">Activity History</div>
                     <HistoryLong
                         table={usersHistory.where("user_id", [userId])}

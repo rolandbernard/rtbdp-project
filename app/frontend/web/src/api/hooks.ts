@@ -21,6 +21,7 @@ export function useLoadingTable<R, V>(
     ) {
         lastDep.current = dep;
         // Initial build of snapshot reusing rows that we already know about.
+        table.fillFromGlobal(view.current);
         let snapshot: [boolean, Row<R>[]] = [
             suppress,
             table.extractFromView(view.current),

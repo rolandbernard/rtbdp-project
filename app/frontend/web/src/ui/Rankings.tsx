@@ -5,7 +5,7 @@ import UserRanking from "./UserRanking";
 import Selector from "./Selector";
 
 export default function Rankings() {
-    const [kind, setKind] = useParam("ranking", "repo");
+    const [kind, setKind] = useParam<"repo" | "user">("ranking", "repo");
     return (
         <div className="flex-1 xl:flex-2 md:w-full m-2 mr-0 p-2 xl:pt-0 flex flex-col border border-border/50 rounded-box min-w-0">
             <div className="text-sm flex flex-row items-center justify-end pt-0.5 px-1 xl:hidden">

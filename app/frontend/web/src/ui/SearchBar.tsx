@@ -77,7 +77,7 @@ export default function SearchBar<R, V>(props: Props<R, V>) {
                                 props.output(row, lowerQuery)
                             )
                         ) : (
-                            <div className="text-content/80">
+                            <div className="text-content/80 px-4 not-xl:px-2 py-0.25">
                                 {query !== debounced || !complete
                                     ? "Searching..."
                                     : "No results found."}

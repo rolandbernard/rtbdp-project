@@ -1,4 +1,10 @@
-import { Link, useParams } from "react-router";
+import {
+    Link,
+    useLocation,
+    useNavigate,
+    useParams,
+    useViewTransitionState,
+} from "react-router";
 
 import { useLoadingTable, useTable } from "../api/hooks";
 import {
@@ -14,6 +20,7 @@ import type { RankingRow } from "../api/ranking";
 
 import HistoryLong from "../ui/HistoryLong";
 import Counter, { Letters } from "../ui/Counter";
+import { useState } from "react";
 
 interface OwnerProps {
     id?: number;
@@ -25,19 +32,35 @@ function OwnerCard(props: OwnerProps) {
         ? users.where("id", [props.id])
         : users.where("username", [props.name]);
     const user = useTable(table)[0];
+    const inTransition = useViewTransitionState(
+        "/user/" + (user?.id ?? props.id)
+    );
     return user ? (
-        <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
+        <div
+            className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200"
+            style={{
+                viewTransitionName: inTransition ? "pagerepo" : "none",
+            }}
+        >
             <div className="text-xs pb-1">Owner</div>
             <Link
+                viewTransition
                 to={"/user/" + user.id}
+                state={{ from: "repo", name: user?.username }}
                 className={
                     "text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75 " +
                     (user?.username ? "" : "text-primary/50")
                 }
                 title={user?.username}
             >
-                <span className="font-bold">@</span>
-                {user?.username}
+                <span
+                    style={{
+                        viewTransitionName: inTransition ? "namerepo" : "none",
+                    }}
+                >
+                    <span className="font-bold">@</span>
+                    {user?.username}
+                </span>
             </Link>
         </div>
     ) : props.name ? (
@@ -177,6 +200,7 @@ interface CounterProps {
     }>[];
     windowSize: WindowSize;
     kind: string;
+    onNavigate: (to: string) => void;
 }
 
 function RepoRankingCounter(props: CounterProps) {
@@ -224,15 +248,21 @@ function RepoRankingCounter(props: CounterProps) {
         </>
     );
     return row ? (
-        <Link
-            to={`/?rrkind="${props.kind}"&rr${props.kind}${
-                props.windowSize
-            }=${Math.max(0, row?.row_number - 4)}&rrwin="${props.windowSize}"`}
-            className="m-2 p-2 border border-border/50 rounded-box min-w-0 block
+        <div
+            className="m-2 p-2 border border-border/50 rounded-box min-w-0 cursor-pointer
                 bg-base-200/80 hover:bg-content/7 hover:dark:bg-content/10"
+            onClick={() =>
+                props.onNavigate(
+                    `/?rrkind=${props.kind}&rr${props.kind}${
+                        props.windowSize
+                    }=${Math.max(0, row?.row_number - 4)}&rrwin=${
+                        props.windowSize
+                    }`
+                )
+            }
         >
             {inner}
-        </Link>
+        </div>
     ) : (
         <div className="m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80">
             {inner}
@@ -242,6 +272,7 @@ function RepoRankingCounter(props: CounterProps) {
 
 interface RankingsProps {
     id: number;
+    onNavigate: (to: string) => void;
 }
 
 function RepoRankings(props: RankingsProps) {
@@ -253,35 +284,58 @@ function RepoRankings(props: RankingsProps) {
                 rows={activityRank}
                 windowSize="5m"
                 kind="activity"
+                onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={activityRank}
                 windowSize="1h"
                 kind="activity"
+                onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={activityRank}
                 windowSize="6h"
                 kind="activity"
+                onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={activityRank}
                 windowSize="24h"
                 kind="activity"
+                onNavigate={props.onNavigate}
             />
-            <RepoRankingCounter rows={starsRank} windowSize="5m" kind="stars" />
-            <RepoRankingCounter rows={starsRank} windowSize="1h" kind="stars" />
-            <RepoRankingCounter rows={starsRank} windowSize="6h" kind="stars" />
+            <RepoRankingCounter
+                rows={starsRank}
+                windowSize="5m"
+                kind="stars"
+                onNavigate={props.onNavigate}
+            />
+            <RepoRankingCounter
+                rows={starsRank}
+                windowSize="1h"
+                kind="stars"
+                onNavigate={props.onNavigate}
+            />
+            <RepoRankingCounter
+                rows={starsRank}
+                windowSize="6h"
+                kind="stars"
+                onNavigate={props.onNavigate}
+            />
             <RepoRankingCounter
                 rows={starsRank}
                 windowSize="24h"
                 kind="stars"
+                onNavigate={props.onNavigate}
             />
         </>
     );
 }
 
 export default function RepoPage() {
+    const navigate = useNavigate();
+    const [navigating, setNavigating] = useState(false);
+    const location = useLocation();
     const params = useParams();
     const repoId = parseInt(params["repoId"]!);
     const [loaded, repoData] = useLoadingTable(repos.where("id", [repoId]));
@@ -293,11 +347,23 @@ export default function RepoPage() {
         });
     }
     return (
-        <div className="flex flex-col grow p-3">
+        <div
+            className="flex flex-col grow p-3"
+            style={{
+                viewTransitionName:
+                    "page" + (navigating ? "ranking" : location.state?.from),
+            }}
+        >
             <div className="text-3xl font-semibold m-3 mt-0">
-                <span>
-                    {repo ? (
-                        repo.fullname ?? repo.reponame
+                <span
+                    style={{
+                        viewTransitionName:
+                            "name" +
+                            (navigating ? "ranking" : location.state?.from),
+                    }}
+                >
+                    {repo || location.state?.name ? (
+                        repo?.fullname ?? repo?.reponame ?? location.state.name
                     ) : (
                         <span className="text-content/80">Loading...</span>
                     )}
@@ -313,13 +379,35 @@ export default function RepoPage() {
                         </div>
                     )}
                 </div>
-                <div className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                <div
+                    className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
+                    style={{
+                        viewTransitionName:
+                            navigating || location.state?.from === "ranking"
+                                ? "ranking"
+                                : "none",
+                    }}
+                >
                     <div className="text-xs">Rankings</div>
                     <div className="w-fill h-full grid grid-cols-2 grid-rows-4 md:grid-cols-4 md:grid-rows-2">
-                        <RepoRankings id={repoId} />
+                        <RepoRankings
+                            id={repoId}
+                            onNavigate={to => {
+                                setNavigating(true);
+                                navigate(to, { viewTransition: true });
+                            }}
+                        />
                     </div>
                 </div>
-                <div className="flex flex-wrap grow">
+                <div
+                    className="flex flex-wrap grow"
+                    style={{
+                        viewTransitionName:
+                            navigating || location.state?.from === "ranking"
+                                ? "chart"
+                                : "none",
+                    }}
+                >
                     <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                         <div className="text-xs">Activity History</div>
                         <div className="w-full h-full">

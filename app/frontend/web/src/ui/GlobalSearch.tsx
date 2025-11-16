@@ -1,5 +1,10 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import {
+    Link,
+    useLocation,
+    useMatch,
+    useViewTransitionState,
+} from "react-router";
 import { Bot, Building2, FolderGit2, Search, User } from "lucide-react";
 
 import { users, repos } from "../api/tables";
@@ -17,31 +22,58 @@ interface UserRowProps {
 }
 
 function UserSearchRow(props: UserRowProps) {
+    const match = useMatch("/user/" + props.userId);
+    const inTransition = useViewTransitionState("/user/" + props.userId);
     const kindIcon = {
         Bot: <Bot />,
         User: <User />,
         Organization: <Building2 />,
     }[props.kind] ?? <User />;
     return (
-        <div className="p-1 flex flex-row items-center">
+        <div
+            className="p-1 flex flex-row items-center"
+            style={{
+                viewTransitionName:
+                    inTransition && !match
+                        ? "pagesearch" + props.userId
+                        : "none",
+            }}
+        >
             <div className="w-12 h-6 inline-flex items-center justify-center shrink-0">
                 {props.avatarUrl ? (
                     <img
                         src={props.avatarUrl}
                         className="w-6 h-6 rounded-box bg-white"
+                        style={{
+                            viewTransitionName:
+                                inTransition && !match
+                                    ? "avatarsearch" + props.userId
+                                    : "none",
+                        }}
                     />
                 ) : (
                     kindIcon
                 )}
             </div>
             <Link
+                viewTransition
                 to={"/user/" + props.userId}
+                state={{ from: "search" + props.userId, name: props.username }}
                 title={props.username}
                 className="min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
                     text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
             >
-                <span className="font-bold">@</span>
-                {boldQuery(props.username, props.query)}
+                <span
+                    style={{
+                        viewTransitionName:
+                            inTransition && !match
+                                ? "namesearch" + props.userId
+                                : "none",
+                    }}
+                >
+                    <span className="font-bold">@</span>
+                    {boldQuery(props.username, props.query)}
+                </span>
             </Link>
         </div>
     );
@@ -54,19 +86,39 @@ interface RepoRowProps {
 }
 
 function RepoSearchRow(props: RepoRowProps) {
+    const match = useMatch("/repo/" + props.repoId);
+    const inTransition = useViewTransitionState("/repo/" + props.repoId);
     return (
-        <div className="p-1 flex flex-row items-center">
+        <div
+            className="p-1 flex flex-row items-center"
+            style={{
+                viewTransitionName:
+                    inTransition && !match
+                        ? "pagesearch" + props.repoId
+                        : "none",
+            }}
+        >
             <div className="w-12 inline-flex items-center justify-center shrink-0">
                 <FolderGit2 />
             </div>
             <Link
+                viewTransition
                 to={"/repo/" + props.repoId}
+                state={{ from: "search" + props.repoId, name: props.reponame }}
                 title={props.reponame}
                 className="flex-1 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
                     text-primary font-semibold text-left dark:hover:text-primary/90 hover:text-primary/75"
-                style={{ direction: "rtl" }}
             >
-                {boldQuery(props.reponame, props.query)}
+                <span
+                    style={{
+                        viewTransitionName:
+                            inTransition && !match
+                                ? "namesearch" + props.repoId
+                                : "none",
+                    }}
+                >
+                    {boldQuery(props.reponame, props.query)}
+                </span>
             </Link>
         </div>
     );
@@ -77,7 +129,9 @@ interface Props {
 }
 
 export default function GlobalSearch(props: Props) {
+    const location = useLocation();
     const [query, setQuery] = useState("");
+    useEffect(() => setQuery(""), [location]);
     const debounced = useDebounce(query.toLowerCase(), 250);
     const [userComplete, userResults] = useLoadingTable(
         users
@@ -142,7 +196,6 @@ export default function GlobalSearch(props: Props) {
                 <div
                     className="absolute inset-y-full end-0 w-full hidden focus-within:block
                         peer-focus-within:block hover:block active:block z-50"
-                    onClick={() => setQuery("")}
                 >
                     <div className="flex flex-col w-full bg-base-300 rounded-box p-1 py-3 shadow-xl dark:shadow-2xl">
                         {trueResults.length ? (

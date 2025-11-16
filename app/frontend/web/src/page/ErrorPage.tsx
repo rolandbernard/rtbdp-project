@@ -35,6 +35,7 @@ export default function ErrorPage() {
                     )}
                 </div>
                 <Link
+                    viewTransition
                     to="/"
                     className="text-sm text-primary underline dark:hover:text-primary/90 hover:text-primary/75"
                 >

@@ -101,7 +101,8 @@ export default function HistoryMulti<
                             ? "all"
                             : Object.entries(EVENT_KINDS).find(
                                   ([_, n]) => n === k
-                              )![0])
+                              )![0]),
+                    { replace: true, viewTransition: true }
                 )
             }
             window={5 * 60}
