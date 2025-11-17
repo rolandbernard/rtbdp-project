@@ -97,11 +97,12 @@ export function formatDate(date: Date | undefined, window: number = 0, min_dur =
     if (max_dur > 24 * 60 * 60 * 1000 && min_dur < 7 * 31 * 24 * 60 * 60 * 1000) {
         result += " " + date.getDate();
     }
-    if (window !== 0 || (max_dur > 60 * 60 * 1000 && min_dur < 7 * 24 * 60 * 60 * 1000)) {
-        result += " " + twoDigitString(date.getHours());
-    }
-    if (window !== 0 || (max_dur > 60 * 1000 && min_dur < 5 * 60 * 60 * 1000)) {
-        result += ":" + twoDigitString(date.getMinutes());
+    if (window !== 0 || (max_dur > 60 * 1000 && min_dur < 7 * 24 * 60 * 60 * 1000)) {
+        result +=
+            " " +
+            twoDigitString(date.getHours()) +
+            ":" +
+            twoDigitString(date.getMinutes());
     }
     if ((window !== 0 && window < 60) || min_dur < 5 * 60 * 1000) {
         result += ":" + twoDigitString(date.getSeconds());
@@ -187,7 +188,7 @@ function hashString(str: string) {
     return hash % 359;
 }
 
-export function colorFor(val: string, opacity?: string) {
+export function colorFor(val: string, opacity?: number) {
     const hue = hashString(val);
     if (opacity) {
         return `oklch(60% 80% ${hue} / ${opacity})`;

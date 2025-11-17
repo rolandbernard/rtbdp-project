@@ -146,7 +146,7 @@ export function useParam<T extends ParamType>(
     );
     useEffect(() => {
         setInnerValue(decodeParam<T>(getCurrentQuery().get(name) ?? defValue));
-    }, [location.search]);
+    }, [location.search, defValue, name]);
     const setValue = useCallback(
         (v: T) => {
             let newValue: string | null = encodeParam(v);

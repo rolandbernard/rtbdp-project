@@ -28,9 +28,10 @@ interface Props {
 }
 
 export default function StackedAreaBrush(props: Props) {
-    const [startIdx, setStart] = useState(0);
+    const [startIdx, setStart] = useState<number | undefined>(undefined);
     const [endIdx, setEnd] = useState<number | undefined>(undefined);
-    const start = props.data[startIdx]?.x;
+    const start =
+        props.data[startIdx ?? Math.max(0, props.data.length - 288)]?.x;
     const stop = props.data[endIdx ?? props.data.length - 1]?.x;
     const max_dur =
         props.data.length > 0
@@ -40,7 +41,8 @@ export default function StackedAreaBrush(props: Props) {
     const min_dur =
         start && stop ? stop.getTime() - start.getTime() : undefined;
     const newFactor = computeFactor(props.data.length, startIdx, endIdx);
-    let [factor, setFactor] = useState(newFactor);
+    const [f, setFactor] = useState(newFactor);
+    let factor = f;
     if (newFactor !== factor && endIdx == null) {
         factor = newFactor;
         setFactor(newFactor);
@@ -104,9 +106,7 @@ export default function StackedAreaBrush(props: Props) {
                 />
                 {props.keys.sort().map(key => {
                     const opacity =
-                        props.highligh && props.highligh !== key
-                            ? "0.4"
-                            : "1.0";
+                        props.highligh && props.highligh !== key ? 0.4 : 1.0;
                     return (
                         <Area
                             key={key}
@@ -114,7 +114,7 @@ export default function StackedAreaBrush(props: Props) {
                             dataKey={key}
                             fill={colorFor(key, opacity)}
                             stroke={colorFor(key, opacity)}
-                            strokeWidth={opacity == "0.4" ? 1 : 2}
+                            strokeWidth={opacity == 0.4 ? 1 : 2}
                             stackId="1"
                             onClick={() => props.onClick?.(key)}
                             className="cursor-pointer"

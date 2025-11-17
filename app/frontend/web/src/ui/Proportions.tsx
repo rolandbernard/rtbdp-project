@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 
-import { useHistoryTime, useLoadingTable } from "../api/hooks";
+import { useLoadingTable } from "../api/hooks";
 import { EVENT_KINDS, type EventKind } from "../api/tables";
 import type { NormalTable } from "../api/table";
 
@@ -18,7 +18,6 @@ export default function Proportions<
     const navigate = useNavigate();
     const table = props.table;
     const [loaded, rawData] = useLoadingTable(table);
-    const lastTime = useHistoryTime(false);
     const cleanData = useMemo(() => {
         if (!loaded && rawData.length < 10) {
             // Avoid initial partial renders.
@@ -29,7 +28,7 @@ export default function Proportions<
                 y: row.num_events,
             }));
         }
-    }, [loaded, rawData, lastTime]);
+    }, [loaded, rawData]);
     return (
         <PieChart
             data={cleanData}

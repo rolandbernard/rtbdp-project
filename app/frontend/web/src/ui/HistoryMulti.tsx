@@ -85,7 +85,7 @@ export default function HistoryMulti<
             }
             return [keys, result];
         }
-    }, [loaded, rawHistory]);
+    }, [loaded, rawHistory, lastTime]);
     return (
         <StackedAreaBrush
             keys={keys}

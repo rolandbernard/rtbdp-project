@@ -1,13 +1,19 @@
 import { AreaChart, Area, Brush } from "recharts";
 import type { BrushStartEndIndex } from "recharts/types/context/brushUpdateContext";
 
-export function computeFactor(len: number, startIdx: number, endIdx?: number) {
-    return Math.max(1, Math.ceil(((endIdx ?? len - 1) - startIdx + 1) / 100));
+export function computeFactor(len: number, startIdx?: number, endIdx?: number) {
+    return Math.max(
+        1,
+        Math.ceil(
+            ((endIdx ?? len - 1) - (startIdx ?? Math.max(0, len - 288)) + 1) /
+                100
+        )
+    );
 }
 
 interface Props {
     len: number;
-    startIdx: number;
+    startIdx?: number;
     endIdx?: number;
     factor: number;
     chartColor: string;
@@ -34,7 +40,11 @@ export function VarBrush(props: Props) {
             tickFormatter={props.formatTicks}
             fill="var(--color-base-100)"
             stroke="var(--color-border)"
-            startIndex={Math.trunc(props.startIdx / props.factor)}
+            startIndex={
+                props.startIdx
+                    ? Math.trunc(props.startIdx / props.factor)
+                    : Math.max(0, props.len - 288)
+            }
             endIndex={
                 props.endIdx
                     ? Math.trunc(props.endIdx / props.factor)

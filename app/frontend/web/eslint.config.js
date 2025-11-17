@@ -3,23 +3,27 @@ import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
-import { globalIgnores } from "eslint/config";
+import reactCompiler from "eslint-plugin-react-compiler";
 
 export default tseslint.config([
-    globalIgnores(["dist"]),
+    {
+        ignores: ["dist/**/*"],
+    },
     {
         files: ["**/*.{ts,tsx}"],
         extends: [
             js.configs.recommended,
-            tseslint.configs.recommended,
+            ...tseslint.configs.recommended,
             reactHooks.configs["recommended-latest"],
-            reactRefresh.configs.vite,
         ],
         languageOptions: {
             ecmaVersion: 2020,
             globals: globals.browser,
         },
-        plugins: ["eslint-plugin-react-compiler", "react-refresh"],
+        plugins: {
+            "react-compiler": reactCompiler,
+            "react-refresh": reactRefresh,
+        },
         rules: {
             "react-compiler/react-compiler": "error",
             "@typescript-eslint/no-unused-vars": [

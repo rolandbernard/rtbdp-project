@@ -73,7 +73,7 @@ export function RankingView<R>(props: ViewProps<R>) {
             }
         }
         return [atEnd, rows];
-    }, [rawResults, props.from, props.to]);
+    }, [rawResults, props.from, props.to, len]);
     const { onAtEnd } = props;
     useEffect(() => {
         if (loaded || !atEnd) {

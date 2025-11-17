@@ -14,6 +14,7 @@
     transition-property: color, background, border, transform, opacity, fill,
         stroke;
     transition-duration: 200ms;
+    outline: none;
 }
 
 ::view-transition {
