@@ -3,6 +3,10 @@ package com.rolandb;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import static java.util.zip.Deflater.NO_FLUSH;
+import static java.util.zip.Deflater.SYNC_FLUSH;
+
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -16,6 +20,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Map;
+import java.util.zip.Deflater;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -104,6 +109,35 @@ public class StaticFileHandler implements HttpHandler {
                     // Return HTTP 304 in case of matching tags
                     exchange.sendResponseHeaders(304, -1);
                     return;
+                }
+                // Check if we can use compression, and if so use it.
+                String encodings = exchange.getRequestHeaders().getFirst("Accept-Encoding");
+                if (encodings != null) {
+                    boolean hasDeflate = false;
+                    for (String enc : encodings.split(",")) {
+                        if (enc.trim().equalsIgnoreCase("deflate")) {
+                            hasDeflate = true;
+                        }
+                    }
+                    if (hasDeflate) {
+                        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+                        Deflater compressor = new Deflater(Deflater.DEFAULT_COMPRESSION);
+                        compressor.setInput(content);
+                        int flush = NO_FLUSH;
+                        byte[] chunk = new byte[8192];
+                        while (!compressor.finished()) {
+                            int length = compressor.deflate(chunk, 0, chunk.length, flush);
+                            if (length > 0) {
+                                compressed.write(chunk, 0, length);
+                            } else if (flush == NO_FLUSH) {
+                                flush = SYNC_FLUSH;
+                            } else {
+                                break;
+                            }
+                        }
+                        content = compressed.toByteArray();
+                        exchange.getResponseHeaders().set("Content-Encoding", "deflate");
+                    }
                 }
                 // Add some cache control headers.
                 exchange.getResponseHeaders().set("Cache-Control", "public, max-age=86400");
