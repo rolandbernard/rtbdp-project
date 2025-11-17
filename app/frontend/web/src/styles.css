@@ -35,6 +35,24 @@
     height: 100%;
 }
 
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    display: none;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 8px;
+    border: 2px solid var(--color-base-300);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
+
 @theme {
     --font-sans: "Noto Sans Variable", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "Noto Sans Mono Variable", ui-monospace, monospace;
