@@ -6,6 +6,7 @@ import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.config.TopicConfig;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.slf4j.Logger;
@@ -51,31 +52,29 @@ public class KafkaUtil {
             throws ExecutionException, InterruptedException {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        AdminClient client = AdminClient.create(props);
         boolean created = false;
-        try {
-            // Try creating the specified topic
-            NewTopic t = new NewTopic(topic, numPartitions, (short) replicationFactor);
-            t.configs(Map.of(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(retentionMs)));
-            CreateTopicsResult result = client.createTopics(Arrays.asList(t));
-            result.all().get();
-            created = true;
-        } catch (ExecutionException ex) {
-            // We handle only TopicExistsException
-            if (!(ex.getCause() instanceof TopicExistsException)) {
-                throw ex;
+        try (AdminClient client = AdminClient.create(props)) {
+            try {
+                // Try creating the specified topic
+                NewTopic t = new NewTopic(topic, numPartitions, (short) replicationFactor);
+                t.configs(Map.of(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(retentionMs)));
+                CreateTopicsResult result = client.createTopics(Arrays.asList(t));
+                result.all().get();
+                created = true;
+            } catch (ExecutionException ex) {
+                // We handle only TopicExistsException
+                if (!(ex.getCause() instanceof TopicExistsException)) {
+                    throw ex;
+                }
+                // Check that the topic already exists with the desired configuration
+                DescribeTopicsResult result = client.describeTopics(Arrays.asList(topic));
+                TopicDescription td = result.allTopicNames().get().get(topic);
+                if (td.partitions().size() != numPartitions
+                        || td.partitions().get(0).replicas().size() != replicationFactor) {
+                    throw new IllegalStateException("Expected topic '" + topic + "' with " + numPartitions
+                            + " partitions and replication factor " + replicationFactor);
+                }
             }
-            // Check that the topic already exists with the desired configuration
-            DescribeTopicsResult result = client.describeTopics(Arrays.asList(topic));
-            TopicDescription td = result.allTopicNames().get().get(topic);
-            if (td.partitions().size() != numPartitions
-                    || td.partitions().get(0).replicas().size() != replicationFactor) {
-                throw new IllegalStateException("Expected topic '" + topic + "' with " + numPartitions
-                        + " partitions and replication factor " + replicationFactor);
-            }
-        } finally {
-            // Always close the AdminClient
-            client.close();
         }
         LOGGER.info("{} topic '{}' with {} partitions and replication factor {}",
                 created ? "Created" : "Found", topic, numPartitions, replicationFactor);
@@ -100,15 +99,20 @@ public class KafkaUtil {
         Set<String> expectedTopics = Set.of(topics);
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        try (AdminClient client = AdminClient.create(props)) {
-            while (true) {
-                Set<String> existingTopics = client.listTopics().names().get();
-                if (existingTopics.containsAll(expectedTopics)) {
-                    LOGGER.info("Found topics {}", expectedTopics);
-                    return;
+        while (true) {
+            try (AdminClient client = AdminClient.create(props)) {
+                while (true) {
+                    Set<String> existingTopics = client.listTopics().names().get();
+                    if (existingTopics.containsAll(expectedTopics)) {
+                        LOGGER.info("Found topics {}", expectedTopics);
+                        return;
+                    }
+                    LOGGER.info("Waiting for topics {}", expectedTopics);
+                    Thread.sleep(1000);
                 }
-                LOGGER.info("Waiting for topics {}", expectedTopics);
-                Thread.sleep(1000); // wait 1 seconds
+            } catch (KafkaException ex) {
+                LOGGER.error("Unable to connect to Kafka", ex);
+                Thread.sleep(5000);
             }
         }
     }

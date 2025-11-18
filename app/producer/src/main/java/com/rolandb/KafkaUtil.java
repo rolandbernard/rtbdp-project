@@ -50,31 +50,29 @@ public class KafkaUtil {
             throws ExecutionException, InterruptedException {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        AdminClient client = AdminClient.create(props);
         boolean created = false;
-        try {
-            // Try creating the specified topic
-            NewTopic t = new NewTopic(topic, numPartitions, (short) replicationFactor);
-            t.configs(Map.of(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(retentionMs)));
-            CreateTopicsResult result = client.createTopics(Arrays.asList(t));
-            result.all().get();
-            created = true;
-        } catch (ExecutionException ex) {
-            // We handle only TopicExistsException
-            if (!(ex.getCause() instanceof TopicExistsException)) {
-                throw ex;
+        try (AdminClient client = AdminClient.create(props)) {
+            try {
+                // Try creating the specified topic
+                NewTopic t = new NewTopic(topic, numPartitions, (short) replicationFactor);
+                t.configs(Map.of(TopicConfig.RETENTION_MS_CONFIG, String.valueOf(retentionMs)));
+                CreateTopicsResult result = client.createTopics(Arrays.asList(t));
+                result.all().get();
+                created = true;
+            } catch (ExecutionException ex) {
+                // We handle only TopicExistsException
+                if (!(ex.getCause() instanceof TopicExistsException)) {
+                    throw ex;
+                }
+                // Check that the topic already exists with the desired configuration
+                DescribeTopicsResult result = client.describeTopics(Arrays.asList(topic));
+                TopicDescription td = result.allTopicNames().get().get(topic);
+                if (td.partitions().size() != numPartitions
+                        || td.partitions().get(0).replicas().size() != replicationFactor) {
+                    throw new IllegalStateException("Expected topic '" + topic + "' with " + numPartitions
+                            + " partitions and replication factor " + replicationFactor);
+                }
             }
-            // Check that the topic already exists with the desired configuration
-            DescribeTopicsResult result = client.describeTopics(Arrays.asList(topic));
-            TopicDescription td = result.allTopicNames().get().get(topic);
-            if (td.partitions().size() != numPartitions
-                    || td.partitions().get(0).replicas().size() != replicationFactor) {
-                throw new IllegalStateException("Expected topic '" + topic + "' with " + numPartitions
-                        + " partitions and replication factor " + replicationFactor);
-            }
-        } finally {
-            // Always close the AdminClient
-            client.close();
         }
         LOGGER.info("{} topic '{}' with {} partitions and replication factor {}",
                 created ? "Created" : "Found", topic, numPartitions, replicationFactor);

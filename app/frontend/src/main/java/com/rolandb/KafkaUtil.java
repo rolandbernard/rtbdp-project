@@ -2,6 +2,7 @@ package com.rolandb;
 
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.KafkaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,15 +35,20 @@ public class KafkaUtil {
         Set<String> expectedTopics = Set.of(topics);
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        try (AdminClient client = AdminClient.create(props)) {
-            while (true) {
-                Set<String> existingTopics = client.listTopics().names().get();
-                if (existingTopics.containsAll(expectedTopics)) {
-                    LOGGER.info("Found topics {}", expectedTopics);
-                    return;
+        while (true) {
+            try (AdminClient client = AdminClient.create(props)) {
+                while (true) {
+                    Set<String> existingTopics = client.listTopics().names().get();
+                    if (existingTopics.containsAll(expectedTopics)) {
+                        LOGGER.info("Found topics {}", expectedTopics);
+                        return;
+                    }
+                    LOGGER.info("Waiting for topics {}", expectedTopics);
+                    Thread.sleep(1000);
                 }
-                LOGGER.info("Waiting for topics {}", expectedTopics);
-                Thread.sleep(1000); // wait 1 seconds
+            } catch (KafkaException ex) {
+                LOGGER.error("Unable to connect to Kafka", ex);
+                Thread.sleep(5000);
             }
         }
     }

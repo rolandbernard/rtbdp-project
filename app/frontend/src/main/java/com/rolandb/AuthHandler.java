@@ -30,9 +30,9 @@ public class AuthHandler implements HttpHandler {
     private final HttpHandler wrapped;
 
     public AuthHandler(String password, HttpHandler wrapped) {
-        this.password = password;
+        this.password = password.trim();
         this.wrapped = wrapped;
-        if (password != null) {
+        if (password != null && !password.isEmpty()) {
             try {
                 byte[] salt = new byte[64];
                 SecureRandom.getInstanceStrong().nextBytes(salt);
