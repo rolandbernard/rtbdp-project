@@ -40,7 +40,7 @@ export function boldQuery(
     style: string = "font-bold underline"
 ) {
     const index = text.toLowerCase().indexOf(query.toLowerCase());
-    if (index == -1) {
+    if (index == -1 || query.length === 0) {
         return <span key="query-highlight">{text}</span>;
     } else {
         return (
