@@ -389,7 +389,8 @@ public class DummyData {
                 }
             }
         }
-        return allEvents.subList((page - 1) * perPage, Integer.min(len, allEvents.size()));
+        return allEvents.subList(
+                Integer.min((page - 1) * perPage, allEvents.size()), Integer.min(len, allEvents.size()));
     }
 
     /**

@@ -12,7 +12,4 @@ WORKDIR /app
 COPY --from=build /app/target/processor.jar ./processor.jar
 
 # Submit to Flink Cluster
-ENTRYPOINT ["flink", "run", \
-    "-m", "${PROCESSOR_JOBMANAGER:-localhost:8081}", \
-    "-c", "com.rolandb.Processor", \
-    "/app/processor-java.jar"]
+ENTRYPOINT [ "flink", "run" ]

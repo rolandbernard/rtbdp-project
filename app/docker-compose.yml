@@ -1,6 +1,6 @@
 services:
 
-  # Kafka Containers (broker + UI)
+  # Kafka Containers (Broker + UI)
   broker:
     image: confluentinc/cp-kafka:7.9.0
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-broker"
@@ -62,7 +62,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:9.3
-    container_name: "${COMPOSE_PROJECT_NAME:-lfc}-pgadmin"
+    container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-pgadmin"
     depends_on:
       - postgres
     ports:
@@ -76,6 +76,35 @@ services:
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_DISABLE_POSTFIX: "true"
       GUNICORN_ACCESS_LOGFILE: "/dev/null"
+
+  # Flink Containers (Job Manager + Task Manager)
+  flink-jobmanager:
+    image: flink:2.1.0-java17
+    container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-flink-jobmanager"
+    profiles:
+      - processor
+    ports:
+      - "${PORT_FLINK:-8081}:8081"
+    command: jobmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+    restart: always
+
+  flink-taskmanager:
+    image: flink:2.1.0-java17
+    container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-flink-taskmanager"
+    depends_on:
+      - flink-jobmanager
+    profiles:
+      - processor
+    command: taskmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: ${FLINK_TASK_SLOTS:-4}
+        parallelism.default: ${FLINK_DEFAULT_PARALLELISM:-1}
+    restart: always
 
   # Container useful for exposing the application to the internet.
   cloudflared:
@@ -114,6 +143,27 @@ services:
       "--gh-token", "${GITHUB_TOKEN}",
       "--poll-ms", "${GITHUB_POLL_MS:-2250}",
       "--poll-depth", "${GITHUB_POLL_DEPTH:-300}"
+    ]
+    restart: always
+
+  processor:
+    build: processor
+    image: "${COMPOSE_PROJECT_NAME:-rtgh}-processor:latest"
+    container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-processor"
+    depends_on:
+      - flink-jobmanager
+      - broker
+      - postgres
+    profiles:
+      - processor
+    command: [
+      "-m", "flink-jobmanager:8081",
+      "-c", "com.rolandb.Processor",
+      "/app/processor.jar",
+      "--bootstrap-servers", "broker:9092",
+      "--db-url", "jdbc:postgresql://postgres:5432/db",
+      "--db-username", "${USERID:-user}",
+      "--db-password", "${USERPWD:-user}"
     ]
     restart: always
 

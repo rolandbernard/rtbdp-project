@@ -177,11 +177,11 @@ public class DummyServer {
         int port = cmd.getInt("port");
         float speedUp = cmd.getFloat("speed_up");
         String dataDir = cmd.getString("data_dir");
-        if (dataDir.isBlank()) {
+        if (dataDir != null && dataDir.isBlank()) {
             dataDir = null;
         }
         String archiveUrl = cmd.getString("archive_url");
-        if (archiveUrl.isBlank()) {
+        if (archiveUrl != null && archiveUrl.isBlank()) {
             archiveUrl = null;
         }
         Duration archiveDelay = Duration.ofHours(cmd.getInt("archive_delay"));
