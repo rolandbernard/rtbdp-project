@@ -149,6 +149,7 @@ public class Frontend {
         // Configures logging
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
+        loggerContext.getLogger("com.rolandb").setLevel(Level.toLevel(logLevel));
         // Create and start HTTP server
         try {
             Frontend server = new Frontend(

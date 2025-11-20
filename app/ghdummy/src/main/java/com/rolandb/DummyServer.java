@@ -39,6 +39,22 @@ public class DummyServer {
     private HttpServer server;
 
     /**
+     * Handle a given request by returning simple {@code OK}.
+     *
+     * @param exchange
+     *            The HTTP request to handle.
+     * @throws IOException
+     */
+    private void handleStatusRequest(HttpExchange exchange) throws IOException {
+        String response = "OK";
+        exchange.getResponseHeaders().set("Content-Type", "text/plain");
+        exchange.sendResponseHeaders(200, response.length());
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(response.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    /**
      * Handle a given request by returning a list of events.
      *
      * @param exchange
@@ -126,6 +142,7 @@ public class DummyServer {
      */
     public void startListen() throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.createContext("/ok", this::handleStatusRequest);
         server.createContext("/events", this::handleDataRequest);
         server.start();
         data.startWorker();
@@ -189,6 +206,7 @@ public class DummyServer {
         // Configures logging
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
+        loggerContext.getLogger("com.rolandb").setLevel(Level.toLevel(logLevel));
         // Create and start HTTP server
         try {
             DummyData data = new DummyData(speedUp, archiveDelay, archiveUrl, dataDir);

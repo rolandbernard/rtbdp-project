@@ -30,7 +30,11 @@ services:
         kafka.log.LogCleaner=WARN,\
         state.change.logger=WARN,\
         kafka.producer.async.DefaultEventHandler=WARN"
-    restart: always
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "broker:9092"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
@@ -38,7 +42,8 @@ services:
     ports:
       - "${PORT_KAFKA_UI:-28080}:8080"
     depends_on:
-      - broker
+      broker:
+        condition: service_healthy
     environment:
       KAFKA_CLUSTERS_0_NAME: "rtgh" # name shown in UI (Kafka UI can display multiple clusters)
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "broker:9092"
@@ -58,13 +63,18 @@ services:
       POSTGRES_DB: "db"
       POSTGRES_USER: "${USERID:-user}"
       POSTGRES_PASSWORD: "${USERPWD:-user}"
-    restart: always
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${USERID:-user}", "-d", "db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4:9.3
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-pgadmin"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "${PORT_PGADMIN:-20080}:80"
     volumes:
@@ -85,26 +95,36 @@ services:
       - processor
     ports:
       - "${PORT_FLINK:-8081}:8081"
+    volumes:
+      - ./flink/log4j-console.properties:/opt/flink/conf/log4j-console.properties
     command: jobmanager
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
-    restart: always
+      ROOT_LOG_LEVEL: WARN
+    healthcheck:
+      test: ["CMD", "curl", "-f", "localhost:8081/overview"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   flink-taskmanager:
     image: flink:2.1.0-java17
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-flink-taskmanager"
     depends_on:
-      - flink-jobmanager
+      flink-jobmanager:
+        condition: service_healthy
     profiles:
       - processor
+    volumes:
+      - ./flink/log4j-console.properties:/opt/flink/conf/log4j-console.properties
     command: taskmanager
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: ${FLINK_TASK_SLOTS:-4}
         parallelism.default: ${FLINK_DEFAULT_PARALLELISM:-1}
-    restart: always
+      ROOT_LOG_LEVEL: WARN
 
   # Container useful for exposing the application to the internet.
   cloudflared:
@@ -115,7 +135,6 @@ services:
     command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARED_TOKEN}"]
     extra_hosts:
       - "host.docker.internal:host-gateway" # this is so the frontend can run outside docker
-    restart: always
 
   # Project-developed Containers (API Dummy + Producer + Processor + Frontend)
   ghdummy:
@@ -126,15 +145,25 @@ services:
       - "${PORT_GHDUMMY:-8889}:${PORT_GHDUMMY:-8889}"
     profiles:
       - ghdummy
-    command: ["--port", "${PORT_GHDUMMY:-8889}"]
+    command: [
+      "--port", "${PORT_GHDUMMY:-8889}",
+      "--log-level", "warn"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "localhost:${PORT_GHDUMMY:-8889}/ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   producer:
     build: producer
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-producer:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-producer"
     depends_on:
-      - broker
-      - ghdummy
+      ghdummy:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
     profiles:
       - producer
     command: [
@@ -142,18 +171,21 @@ services:
       "--url", "${GITHUB_URL:-http://ghdummy:${PORT_GHDUMMY:-8889}}",
       "--gh-token", "${GITHUB_TOKEN}",
       "--poll-ms", "${GITHUB_POLL_MS:-2250}",
-      "--poll-depth", "${GITHUB_POLL_DEPTH:-300}"
+      "--poll-depth", "${GITHUB_POLL_DEPTH:-300}",
+      "--log-level", "warn"
     ]
-    restart: always
 
   processor:
     build: processor
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-processor:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-processor"
     depends_on:
-      - flink-jobmanager
-      - broker
-      - postgres
+      flink-jobmanager:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     profiles:
       - processor
     command: [
@@ -165,15 +197,16 @@ services:
       "--db-username", "${USERID:-user}",
       "--db-password", "${USERPWD:-user}"
     ]
-    restart: always
 
   frontend:
     build: frontend
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-frontend:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-frontend"
     depends_on:
-      - broker
-      - postgres
+      broker:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     ports:
       - "${PORT_FRONTEND:-8888}:${PORT_FRONTEND:-8888}"
       - "${PORT_FRONTEND_WS:-8887}:${PORT_FRONTEND_WS:-8887}"
@@ -186,9 +219,14 @@ services:
       "--db-url", "jdbc:postgresql://postgres:5432/db",
       "--db-username", "${USERID:-user}",
       "--db-password", "${USERPWD:-user}",
-      "--secret", "${FRONTEND_PWD}"
+      "--secret", "${FRONTEND_PWD}",
+      "--log-level", "warn"
     ]
-    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "localhost:${PORT_FRONTEND:-8888}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   broker-data:

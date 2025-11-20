@@ -442,15 +442,10 @@ public class SocketApiServer extends WebSocketServer {
                     List<Map<String, ?>> rows = new ArrayList<>();
                     table.getReplayObservable(replay, connections)
                             .subscribeOn(rxScheduler)
-                            .doOnError(error -> {
-                                LOGGER.error("Error in table replay", error);
-                            })
-                            .doOnComplete(() -> {
-                                sendReplayComplete(socket, replay.id, rows);
-                            })
-                            .subscribe(row -> {
-                                rows.add(row);
-                            });
+                            .subscribe(
+                                    row -> rows.add(row),
+                                    error -> LOGGER.error("Error in table replay", error),
+                                    () -> sendReplayComplete(socket, replay.id, rows));
                 } else {
                     LOGGER.warn("Client sent a non-applicable replay request");
                 }
