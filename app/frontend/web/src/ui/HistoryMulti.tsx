@@ -37,7 +37,14 @@ export default function HistoryMulti<
                 );
                 const complete = [];
                 let last = {
-                    x: new Date(lastTime.getTime() - 60 * 60 * 1000),
+                    x: new Date(
+                        (
+                            lastTime ??
+                            sorted[sorted.length - 1]?.x ??
+                            new Date()
+                        ).getTime() -
+                            60 * 60 * 1000
+                    ),
                     y: 0,
                 };
                 for (const row of sorted) {
@@ -48,9 +55,11 @@ export default function HistoryMulti<
                     complete.push(row);
                     last = row;
                 }
-                while (last.x < lastTime) {
-                    last = { x: new Date(last.x.getTime() + diff), y: 0 };
-                    complete.push(last);
+                if (lastTime) {
+                    while (last.x < lastTime) {
+                        last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                        complete.push(last);
+                    }
                 }
                 return { name: EVENT_KINDS[rows[0]!.kind], data: complete };
             });

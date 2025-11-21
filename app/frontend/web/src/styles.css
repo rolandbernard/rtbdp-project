@@ -17,12 +17,20 @@
     outline: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-property: none;
+        transition-duration: 0;
+        view-transition-name: none !important;
+    }
+}
+
 ::view-transition {
     pointer-events: none;
 }
 
 ::view-transition-group(*) {
-    animation-duration: 500ms;
+    animation-duration: 400ms;
 }
 
 ::view-transition-group(name) {

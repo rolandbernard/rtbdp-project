@@ -28,7 +28,7 @@ export function RankingRow(props: RowProps) {
         <>
             <div
                 className={
-                    "min-h-0 flex flex-row justify-end items-center " +
+                    "min-h-0 flex flex-row justify-end items-center contain-strict " +
                     (["text-2xl", "text-xl", "text-lg"][props.rank] ?? "")
                 }
                 style={props.style}
@@ -41,7 +41,7 @@ export function RankingRow(props: RowProps) {
                             : ORDINAL[rank % 10] ?? "th"
                     }
                     options={ORDINAL}
-                    className="text-xs w-3.5 h-4 mb-2 ml-0.25"
+                    className="text-xs w-3.5 h-4 mb-2 ml-px"
                 />
             </div>
             {props.children}

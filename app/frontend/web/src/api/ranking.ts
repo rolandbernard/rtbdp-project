@@ -79,15 +79,17 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
     }
 
     filterView(view: Map<string, Row<RankingRow<R>>>) {
-        const newestPerRow = new Map<number, number>();
+        const newestPerRow = new Map<string, number>();
         for (const row of view.values()) {
-            if ((newestPerRow.get(row.row_number) ?? 0) < row.seq_num) {
-                newestPerRow.set(row.row_number, row.seq_num);
+            const rkey = groupKey(row, [...this.rankingKeys, "row_number"]);
+            if ((newestPerRow.get(rkey) ?? 0) < row.seq_num) {
+                newestPerRow.set(rkey, row.seq_num);
             }
         }
         for (const [key, row] of [...view.entries()]) {
+            const rkey = groupKey(row, [...this.rankingKeys, "row_number"]);
             if (
-                row.seq_num < (newestPerRow.get(row.row_number) ?? 0) ||
+                row.seq_num < (newestPerRow.get(rkey) ?? 0) ||
                 !key.startsWith(this.name + ":") ||
                 !acceptsRowWith(row, this.filters)
             ) {

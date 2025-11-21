@@ -55,7 +55,7 @@ export function useTable<R, V>(table: Table<R, V>, suppress = false): Row<R>[] {
     return results;
 }
 
-let latestCoarseHistoryTime = new Date();
+let latestCoarseHistoryTime: Date | undefined = undefined;
 const coarseListeners = new Set();
 const coarseView = new Map();
 countsHistory
@@ -78,7 +78,7 @@ function getCoarse() {
     return latestCoarseHistoryTime;
 }
 
-let latestFineHistoryTime = new Date();
+let latestFineHistoryTime: Date | undefined = undefined;
 const fineListeners = new Set<() => void>();
 const fineView = new Map();
 countsHistoryFine

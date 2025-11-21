@@ -16,6 +16,40 @@ import Selector from "./Selector";
 import HistorySpark from "./HistorySpark";
 import Counter from "./Counter";
 
+interface UserNameProps {
+    userId: number;
+    inTransition: boolean;
+}
+
+function UserName(props: UserNameProps) {
+    const user = useTable(users.where("id", [props.userId]))[0];
+    return (
+        <div
+            className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis contain-content
+                    text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
+        >
+            <Link
+                viewTransition
+                to={"/user/" + props.userId}
+                className={user?.username ? "" : "text-primary/50"}
+                title={user?.username}
+                state={{
+                    from: "ranking",
+                    name: user?.username,
+                }}
+                style={{
+                    viewTransitionName: props.inTransition
+                        ? "nameranking"
+                        : "none",
+                }}
+            >
+                <span className="font-bold">@</span>
+                {user?.username}
+            </Link>
+        </div>
+    );
+}
+
 interface UserRowProps {
     userId: number;
     value: number;
@@ -24,7 +58,6 @@ interface UserRowProps {
 
 function UserRankRow(props: UserRowProps) {
     const inTransition = useViewTransitionState("/user/" + props.userId);
-    const user = useTable(users.where("id", [props.userId]))[0];
     const history = useMemo(
         () => usersHistory.where("user_id", [props.userId]),
         [props.userId]
@@ -35,34 +68,12 @@ function UserRankRow(props: UserRowProps) {
     );
     return (
         <div
-            className="flex-1 min-w- min-w-0 flex flex-row items-center pl-4"
+            className="flex-1 min-w- min-w-0 flex flex-row items-center pl-4 contain-strict"
             style={{
                 viewTransitionName: inTransition ? "pageranking" : "none",
             }}
         >
-            <div
-                className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
-                    text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
-            >
-                <Link
-                    viewTransition
-                    to={"/user/" + props.userId}
-                    className={user?.username ? "" : "text-primary/50"}
-                    title={user?.username}
-                    state={{
-                        from: "ranking",
-                        name: user?.username,
-                    }}
-                    style={{
-                        viewTransitionName: inTransition
-                            ? "nameranking"
-                            : "none",
-                    }}
-                >
-                    <span className="font-bold">@</span>
-                    {user?.username}
-                </Link>
-            </div>
+            <UserName userId={props.userId} inTransition={inTransition} />
             <div className="flex-3 min-w-0 min-h-0 h-full flex flex-row items-center">
                 <div
                     className="w-18 pr-1 flex flex-col"

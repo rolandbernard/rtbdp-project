@@ -22,11 +22,40 @@ import Selector from "./Selector";
 import Counter from "./Counter";
 import HistorySpark from "./HistorySpark";
 
-interface RepoRowProps {
+interface RepoNameProps {
     repoId: number;
-    value: number;
-    kind: "trending" | "stars" | "activity";
-    windowSize: WindowSize;
+    transitionName: boolean;
+}
+
+function RepoName(props: RepoNameProps) {
+    const repo = useTable(repos.where("id", [props.repoId]))[0];
+    return (
+        <div
+            className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis contain-content
+                    text-primary font-semibold text-left dark:hover:text-primary/90 hover:text-primary/75"
+            style={{ direction: "rtl" }}
+        >
+            <Link
+                viewTransition
+                to={"/repo/" + props.repoId}
+                className={
+                    repo?.fullname ?? repo?.reponame ? "" : "text-primary/50"
+                }
+                title={repo?.fullname ?? repo?.reponame}
+                state={{
+                    from: "ranking",
+                    name: repo?.fullname ?? repo?.reponame,
+                }}
+                style={{
+                    viewTransitionName: props.transitionName
+                        ? "nameranking"
+                        : "none",
+                }}
+            >
+                {repo?.fullname ?? repo?.reponame}
+            </Link>
+        </div>
+    );
 }
 
 type TableType = NormalTable<{
@@ -36,9 +65,15 @@ type TableType = NormalTable<{
     num_stars?: number;
 }>;
 
+interface RepoRowProps {
+    repoId: number;
+    value: number;
+    kind: "trending" | "stars" | "activity";
+    windowSize: WindowSize;
+}
+
 function RepoRankRow(props: RepoRowProps) {
     const inTransition = useViewTransitionState("/repo/" + props.repoId);
-    const repo = useTable(repos.where("id", [props.repoId]))[0];
     const history = useMemo(
         () =>
             (
@@ -59,38 +94,12 @@ function RepoRankRow(props: RepoRowProps) {
     );
     return (
         <div
-            className="flex-1 min-h-0 min-w-0 flex flex-row items-center pl-4"
+            className="flex-1 min-h-0 min-w-0 flex flex-row items-center pl-4 contain-strict"
             style={{
                 viewTransitionName: inTransition ? "pageranking" : "none",
             }}
         >
-            <div
-                className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis
-                    text-primary font-semibold text-left dark:hover:text-primary/90 hover:text-primary/75"
-                style={{ direction: "rtl" }}
-            >
-                <Link
-                    viewTransition
-                    to={"/repo/" + props.repoId}
-                    className={
-                        repo?.fullname ?? repo?.reponame
-                            ? ""
-                            : "text-primary/50"
-                    }
-                    title={repo?.fullname ?? repo?.reponame}
-                    state={{
-                        from: "ranking",
-                        name: repo?.fullname ?? repo?.reponame,
-                    }}
-                    style={{
-                        viewTransitionName: inTransition
-                            ? "nameranking"
-                            : "none",
-                    }}
-                >
-                    {repo?.fullname ?? repo?.reponame}
-                </Link>
-            </div>
+            <RepoName repoId={props.repoId} transitionName={inTransition} />
             <div className="flex-3 min-w-0 min-h-0 h-full flex flex-row items-center">
                 <div
                     className="w-18 pr-1 flex flex-col"

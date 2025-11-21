@@ -254,7 +254,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
                 }),
                 filter(e => e),
                 map(() => replayed),
-                auditTime(50)
+                auditTime(100)
             );
     }
 }

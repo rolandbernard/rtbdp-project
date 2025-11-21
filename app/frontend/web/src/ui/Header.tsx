@@ -17,7 +17,7 @@ export default function Header() {
                 id="header"
                 className="bg-base-300 fixed w-full z-20 top-0 start-0"
             >
-                <div className="max-w-screen-xl flex items-center justify-between mx-auto">
+                <div className="max-w-7xl flex items-center justify-between mx-auto">
                     <Link
                         viewTransition
                         to="/"

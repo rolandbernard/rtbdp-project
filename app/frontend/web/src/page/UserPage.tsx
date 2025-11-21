@@ -104,7 +104,7 @@ function UserRankingCounter(props: CounterProps) {
                                 : ""
                         }
                         options={[...ORDINAL, ""]}
-                        className="text-xs w-3.5 h-4 mb-2 ml-0.25"
+                        className="text-xs w-3.5 h-4 mb-2 ml-px"
                     />
                 </div>
                 <div className="flex flex-row justify-center items-center pt-1 text-content/70">

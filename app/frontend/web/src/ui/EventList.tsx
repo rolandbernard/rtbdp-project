@@ -1,4 +1,4 @@
-import { createElement, useMemo, useRef } from "react";
+import { createElement, useMemo, useRef, type RefObject } from "react";
 import { Link, useViewTransitionState } from "react-router";
 import { ArrowUpToLine } from "lucide-react";
 
@@ -102,7 +102,9 @@ function Description(props: DescriptionProps) {
                     className="relative ps-3 text-sm before:bg-border before:absolute
                         before:top-1 before:left-0 before:h-full before:w-1 max-h-32 overflow-hidden"
                 >
-                    {split[i + 7]}
+                    {split[i + 7]!.length > 256
+                        ? split[i + 7]!.substring(0, 256)
+                        : split[i + 7]}
                 </blockquote>
             );
         }
@@ -131,7 +133,7 @@ interface EventProps {
 
 function Event(props: EventProps) {
     return (
-        <div className="bg-base-200 rounded-box my-2 p-2 flex flex-col border border-border/50">
+        <div className="bg-base-200 rounded-box my-2 p-2 flex flex-col border border-border/50 contain-content">
             <div className="flex flex-row justify-between">
                 <div className="text-xs flex flex-row items-center">
                     {createElement(EVENT_ICONS[props.kind], {
@@ -143,9 +145,55 @@ function Event(props: EventProps) {
                     {new Date(props.created_at).toLocaleString()}
                 </div>
             </div>
-            <div className="pt-2 pb-1 px-2 break-words">
+            <div className="pt-2 pb-1 px-2 wrap-break-word">
                 <Description desc={props.desc} id={props.id} />
             </div>
+        </div>
+    );
+}
+
+interface Props {
+    kindIds: EventKind[];
+    userIds: number[];
+    repoIds: number[];
+    listRef?: RefObject<HTMLDivElement | null>;
+}
+
+function BasicEventList(props: Props) {
+    let filtered = events.limit(20);
+    if (props.kindIds.length !== 0) {
+        filtered = filtered.where("kind", props.kindIds);
+    }
+    if (props.userIds.length !== 0) {
+        filtered = filtered.where("user_id", props.userIds);
+    }
+    if (props.repoIds.length !== 0) {
+        filtered = filtered.where("repo_id", props.repoIds);
+    }
+    const [loaded, rawResults] = useLoadingTable(filtered);
+    const results = useMemo(() => {
+        return sort(rawResults, [e => e.created_at, e => e.id], true);
+    }, [rawResults]);
+    return (
+        <div
+            className="grow overflow-y-scroll overflow-x-hidden not-md:h-[50dvh] min-w-0"
+            ref={props.listRef}
+        >
+            {results.length !== 0 ? (
+                results.map(row => (
+                    <Event
+                        key={row.id}
+                        created_at={row.created_at}
+                        kind={row.kind}
+                        desc={row.details}
+                        id={row.id}
+                    />
+                ))
+            ) : (
+                <div className="w-full h-full flex justify-center items-center text-content/80">
+                    {loaded ? "No such events." : "Loading..."}
+                </div>
+            )}
         </div>
     );
 }
@@ -166,20 +214,6 @@ export default function EventList() {
     const [userIds, setUserIds] = useParam("eluser", EMPTY as number[]);
     const [repoIds, setRepoIds] = useParam("elrepo", EMPTY as number[]);
     const listRef = useRef<HTMLDivElement>(null);
-    let filtered = events.limit(20);
-    if (kindIds.length !== 0) {
-        filtered = filtered.where("kind", kindIds);
-    }
-    if (userIds.length !== 0) {
-        filtered = filtered.where("user_id", userIds);
-    }
-    if (repoIds.length !== 0) {
-        filtered = filtered.where("repo_id", repoIds);
-    }
-    const [loaded, rawResults] = useLoadingTable(filtered);
-    const results = useMemo(() => {
-        return sort(rawResults, [e => e.created_at, e => e.id], true);
-    }, [rawResults]);
     return (
         <div className="flex-1 md:w-full m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
             <div className="flex flex-row gap-1 pt-0.5">
@@ -275,26 +309,12 @@ export default function EventList() {
                     <ArrowUpToLine className="inline w-4" />
                 </button>
             </div>
-            <div
-                className="grow overflow-y-scroll overflow-x-hidden not-md:h-[50dvh] min-w-0"
-                ref={listRef}
-            >
-                {results.length !== 0 ? (
-                    results.map(row => (
-                        <Event
-                            key={row.id}
-                            created_at={row.created_at}
-                            kind={row.kind}
-                            desc={row.details}
-                            id={row.id}
-                        />
-                    ))
-                ) : (
-                    <div className="w-full h-full flex justify-center items-center text-content/80">
-                        {loaded ? "No such events." : "Loading..."}
-                    </div>
-                )}
-            </div>
+            <BasicEventList
+                kindIds={kindIds}
+                repoIds={repoIds}
+                userIds={userIds}
+                listRef={listRef}
+            />
         </div>
     );
 }

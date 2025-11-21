@@ -19,7 +19,7 @@ export default function Selector<O extends string>(props: Props<O>) {
             }
         >
             {Object.entries(props.options).map(([key, node], i) => (
-                <div key={key} className="w-full has-checked:z-1 ml-[-2px]">
+                <div key={key} className="w-full has-checked:z-1 -ml-0.5">
                     <input
                         type="radio"
                         id={

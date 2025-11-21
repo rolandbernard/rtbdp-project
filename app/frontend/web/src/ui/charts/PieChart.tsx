@@ -46,7 +46,7 @@ export default function PieChart(props: Props) {
                                 key={entry.x}
                                 stroke={opacity ? "none" : "#ffffff"}
                                 fill={colorFor(entry.x, opacity ? 0.5 : 1.0)}
-                                className="cursor-pointer hover:transform-[scale(1.05)] active:transform-[scale(1.05)] origin-center transform-[scale(1)] transform-stroke"
+                                className="cursor-pointer"
                                 onClick={() => props.onClick?.(entry.x)}
                             />
                         );

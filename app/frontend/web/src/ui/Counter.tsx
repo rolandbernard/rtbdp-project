@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 interface LettersProps {
     value: string;
     options: string[];
@@ -13,6 +15,7 @@ export function Letters(props: LettersProps) {
                 <div
                     key={i}
                     style={{
+                        willChange: "transform",
                         transform: `rotateX(${
                             ((idx - i) * 360) / len
                         }deg) translateZ(2em)`,
@@ -31,14 +34,15 @@ interface DigitProps {
     leading: boolean;
 }
 
-export function Digit(props: DigitProps) {
+function Digit(props: DigitProps) {
     return (
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden contain-content">
             <div className="invisible">0</div>
             {[...Array(10)].map((_, i) => (
                 <div
                     key={i}
                     style={{
+                        willChange: "transform",
                         transform: `rotateX(${
                             -36 * i + 36 * (props.value ?? 0)
                         }deg) translateZ(2em)`,
@@ -56,6 +60,8 @@ export function Digit(props: DigitProps) {
         </div>
     );
 }
+
+const MemoDigit = memo(Digit);
 
 function numDigits(value: number) {
     let cnt = 1;
@@ -75,7 +81,12 @@ interface Props {
 export default function Counter(props: Props) {
     const digits = props.maxDigits ?? numDigits(props.value ?? 0) + 1;
     return (
-        <div className={"relative inline-block " + (props.className ?? "")}>
+        <div
+            className={
+                "relative inline-block contain-content " +
+                (props.className ?? "")
+            }
+        >
             <div className="absolute top-0 right-0 text-transparent">
                 {props.value}
             </div>
@@ -85,7 +96,7 @@ export default function Counter(props: Props) {
             >
                 {[...Array(digits)]
                     .map((_, i) => (
-                        <Digit
+                        <MemoDigit
                             key={i}
                             value={
                                 props.value != null

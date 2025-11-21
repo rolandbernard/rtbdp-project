@@ -47,11 +47,11 @@ export default function SearchSelect<K extends Key, R, V>(
                 <label
                     key={props.id(row)}
                     htmlFor={props.ident + "-" + props.id(row)}
-                    className="flex flex-row items-center cursor-pointer select-none hover:bg-content/15 px-4 not-xl:px-2 py-0.25"
+                    className="flex flex-row items-center cursor-pointer select-none hover:bg-content/15 px-4 not-xl:px-2 py-px"
                 >
                     <input
                         id={props.ident + "-" + props.id(row)}
-                        className="w-4 h-4 appearance-none border-1 border-border bg-base-200
+                        className="w-4 h-4 appearance-none border border-border bg-base-200
                             checked:bg-primary cursor-pointer shrink-0"
                         type="checkbox"
                         checked={props.selected.some(r => r === props.id(row))}

@@ -23,14 +23,18 @@ interface Props {
     kind: EventKind;
 }
 
-function EventCounter(props: Props) {
-    const inTransition = useViewTransitionState("/event/" + props.kind);
+function EventCounterOnly(props: Props) {
     const [loaded, rawTotal] = useLoadingTable(
         countsLive
             .where("kind", [props.kind])
             .where("window_size", [props.windowSize])
     );
     const total = useLatched(rawTotal[0]?.num_events ?? 0, loaded);
+    return <Counter value={total} className="text-lg pb-2" maxDigits={7} />;
+}
+
+function EventCounter(props: Props) {
+    const inTransition = useViewTransitionState("/event/" + props.kind);
     const history = useMemo(
         () => countsHistory.where("kind", [props.kind]),
         [props.kind]
@@ -67,10 +71,9 @@ function EventCounter(props: Props) {
                             {EVENT_KINDS[props.kind]}
                         </span>
                     </div>
-                    <Counter
-                        value={total}
-                        className="text-lg pb-2"
-                        maxDigits={7}
+                    <EventCounterOnly
+                        kind={props.kind}
+                        windowSize={props.windowSize}
                     />
                 </div>
                 <div

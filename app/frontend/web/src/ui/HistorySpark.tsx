@@ -19,7 +19,7 @@ export default function HistorySpark<
 >(props: Props<R>) {
     const useFine = props.windowSize === "5m" || props.windowSize === "1h";
     const historyTable = useFine ? props.tableFine : props.table;
-    const limit = { "5m": 5 * 6, "1h": 60 * 6, "6h": 6 * 12, "24h": 24 * 6 }[
+    const limit = { "5m": 5 * 6, "1h": 60 * 6, "6h": 6 * 12, "24h": 24 * 12 }[
         props.windowSize
     ];
     const [loaded, rawHistory] = useLoadingTable(historyTable.limit(limit));
@@ -38,7 +38,17 @@ export default function HistorySpark<
                 [r => r.x]
             );
             const complete = [];
-            let last = { x: new Date(lastTime.getTime() - limit * diff), y: 0 };
+            let last = {
+                x: new Date(
+                    (
+                        lastTime ??
+                        sorted[sorted.length - 1]?.x ??
+                        new Date()
+                    ).getTime() -
+                        limit * diff
+                ),
+                y: 0,
+            };
             for (const row of sorted) {
                 while (last.x.getTime() + diff < row.x.getTime()) {
                     last = { x: new Date(last.x.getTime() + diff), y: 0 };

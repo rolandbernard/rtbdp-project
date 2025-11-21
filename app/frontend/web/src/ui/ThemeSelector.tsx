@@ -16,7 +16,7 @@ export default function ThemeSelector() {
     return (
         <div
             id="theme-select"
-            className="relative max-w-screen-xl flex items-center justify-between mx-auto p-3"
+            className="relative max-w-7xl flex items-center justify-between mx-auto p-3"
         >
             <button
                 type="button"
