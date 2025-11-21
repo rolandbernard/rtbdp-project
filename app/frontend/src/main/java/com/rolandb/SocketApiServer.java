@@ -99,13 +99,19 @@ public class SocketApiServer extends WebSocketServer {
                     Disposable disposable = table.getLiveObservable()
                             .subscribeOn(rxScheduler)
                             .subscribe(row -> {
-                                if (sameTable.stream().anyMatch(s -> s.accept(row))) {
+                                boolean isSubscribed;
+                                synchronized (sameTable) {
+                                    isSubscribed = sameTable.stream().anyMatch(s -> s.accept(row));
+                                }
+                                if (isSubscribed) {
                                     consumer.accept(row);
                                 }
                             });
                     disposables.put(newSubscription.tableName, disposable);
                 }
-                sameTable.add(newSubscription);
+                synchronized (sameTable) {
+                    sameTable.add(newSubscription);
+                }
             }
         }
 

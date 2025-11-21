@@ -56,7 +56,7 @@ export function useTable<R, V>(table: Table<R, V>, suppress = false): Row<R>[] {
 }
 
 let latestCoarseHistoryTime: Date | undefined = undefined;
-const coarseListeners = new Set();
+const coarseListeners = new Set<() => void>();
 const coarseView = new Map();
 countsHistory
     .where("kind", ["all"])
@@ -66,12 +66,18 @@ countsHistory
         const row = countsHistory.extractFromView(coarseView)[0];
         if (row) {
             latestCoarseHistoryTime = new Date(row.ts_start);
+            for (const l of coarseListeners) {
+                l();
+            }
         }
     });
 
 function subscribeCoarse(onChange: () => void) {
-    coarseListeners.add(onChange);
-    return () => coarseListeners.delete(onChange);
+    // Create a new function to ensure that everything works properly even if
+    // a user passes the same `onChange` function multiple times.
+    const listener = () => onChange();
+    coarseListeners.add(listener);
+    return () => coarseListeners.delete(listener);
 }
 
 function getCoarse() {
@@ -96,8 +102,11 @@ countsHistoryFine
     });
 
 function subscribeFine(onChange: () => void) {
-    fineListeners.add(onChange);
-    return () => fineListeners.delete(onChange);
+    // Create a new function to ensure that everything works properly even if
+    // a user passes the same `onChange` function multiple times.
+    const listener = () => onChange();
+    fineListeners.add(listener);
+    return () => fineListeners.delete(listener);
 }
 
 function getFine() {

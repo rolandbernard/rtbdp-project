@@ -15,7 +15,6 @@ export function Letters(props: LettersProps) {
                 <div
                     key={i}
                     style={{
-                        willChange: "transform",
                         transform: `rotateX(${
                             ((idx - i) * 360) / len
                         }deg) translateZ(2em)`,
@@ -42,16 +41,21 @@ function Digit(props: DigitProps) {
                 <div
                     key={i}
                     style={{
-                        willChange: "transform",
+                        willChange:
+                            !props.leading && (props.value ?? 0) >= 10
+                                ? "transform"
+                                : undefined,
                         transform: `rotateX(${
                             -36 * i + 36 * (props.value ?? 0)
                         }deg) translateZ(2em)`,
                     }}
                     className={
                         "top-0 left-0 absolute backface-hidden " +
-                        (i === 0 && props.leading
-                            ? "opacity-0 "
-                            : "opacity-100 ")
+                        (i === 0
+                            ? props.leading
+                                ? "opacity-0 "
+                                : "opacity-100 "
+                            : "")
                     }
                 >
                     {props.value == null && i === 0 ? "–" : i}
