@@ -6,6 +6,7 @@ services:
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-broker"
     ports:
       - "${PORT_BROKER:-29092}:29092"
+    profiles: []
     volumes:
       - broker-data:/var/lib/kafka/data:z
     environment:
@@ -41,6 +42,8 @@ services:
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-kafka-ui"
     ports:
       - "${PORT_KAFKA_UI:-28080}:8080"
+    profiles:
+      - dbui
     depends_on:
       broker:
         condition: service_healthy
@@ -56,6 +59,7 @@ services:
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-postgres"
     ports:
       - "${PORT_POSTGRES:-25432}:5432"
+    profiles: []
     volumes:
       - ./postgres:/docker-entrypoint-initdb.d:z
       - postgres-data:/var/lib/postgresql/data:z
@@ -75,6 +79,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    profiles:
+      - dbui
     ports:
       - "${PORT_PGADMIN:-20080}:80"
     volumes:
@@ -91,8 +97,7 @@ services:
   flink-jobmanager:
     image: flink:2.1.0-java17
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-flink-jobmanager"
-    profiles:
-      - processor
+    profiles: []
     ports:
       - "${PORT_FLINK:-8081}:8081"
     volumes:
@@ -114,8 +119,7 @@ services:
     depends_on:
       flink-jobmanager:
         condition: service_healthy
-    profiles:
-      - processor
+    profiles: []
     volumes:
       - ./flink/log4j-console.properties:/opt/flink/conf/log4j-console.properties
     command: taskmanager
@@ -125,16 +129,6 @@ services:
         taskmanager.numberOfTaskSlots: ${FLINK_TASK_SLOTS:-4}
         parallelism.default: ${FLINK_DEFAULT_PARALLELISM:-1}
       ROOT_LOG_LEVEL: WARN
-
-  # Container useful for exposing the application to the internet.
-  cloudflared:
-    image: "cloudflare/cloudflared:latest"
-    container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-cloudflared"
-    profiles:
-      - cloudflared
-    command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARED_TOKEN}"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # this is so the frontend can run outside docker
 
   # Project-developed Containers (API Dummy + Producer + Processor + Frontend)
   ghdummy:
