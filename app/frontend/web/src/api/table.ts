@@ -1,14 +1,5 @@
 import type { WebSocketSubject } from "rxjs/webSocket";
-import {
-    auditTime,
-    combineLatest,
-    filter,
-    from,
-    map,
-    Observable,
-    retry,
-    startWith,
-} from "rxjs";
+import { auditTime, filter, from, map, Observable, retry } from "rxjs";
 
 import { groupKey, sort } from "../util";
 import {
@@ -20,7 +11,6 @@ import {
     type InFilter,
     type RangeFilter,
     type Row,
-    type RowMessage,
     type ServerMessage,
 } from "./client";
 
@@ -93,7 +83,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
 
     fillFromGlobal(view: Map<string, Row<R>>) {
         for (const [key, row] of this.globalView().entries()) {
-            if (acceptsRowWith(row, this.filters)) {
+            if (this.acceptsRow(row)) {
                 view.set(key, row);
             }
         }
@@ -107,11 +97,8 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         return this.deps;
     }
 
-    acceptsMessage(message: RowMessage<R>) {
-        return (
-            message.table == this.name &&
-            acceptsRowWith(message.row, this.filters)
-        );
+    acceptsRow(row: Row<R>) {
+        return acceptsRowWith(row, this.filters);
     }
 
     where<C extends keyof R>(column: C, options: InFilter<R[C]>): this;
@@ -162,10 +149,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
 
     filterView(view: Map<string, Row<R>>) {
         for (const [key, row] of [...view.entries()]) {
-            if (
-                !key.startsWith(this.name + ":") ||
-                !acceptsRowWith(row, this.filters)
-            ) {
+            if (!key.startsWith(this.name + ":") || !this.acceptsRow(row)) {
                 view.delete(key);
             }
         }
@@ -225,36 +209,48 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
                 }),
                 () => ({ unsubscribe: [subscriptionId] }),
                 message =>
-                    "row" in message
-                        ? this.acceptsMessage(message)
-                        : message.replayed == subscriptionId
+                    "replayed" in message
+                        ? message.replayed == subscriptionId
+                        : message.table === this.name
             )
             .pipe(
                 retry({ delay: 1000 }),
                 map(message => {
-                    if ("row" in message) {
-                        return this.mergeIntoView(view, message.row);
-                    } else {
-                        if (message.rows) {
-                            message.rows.seq_num.forEach((_, i) => {
-                                this.mergeIntoView(
-                                    view,
-                                    Object.fromEntries(
-                                        Object.keys(message.rows!).map(k => [
-                                            k,
-                                            message.rows![k as keyof Row<R>][i],
-                                        ])
-                                    ) as Row<R>
-                                );
-                            });
-                        }
+                    if ("replayed" in message) {
                         replayed = true;
                         return true;
+                    } else {
+                        let changed = false;
+                        if (message.row) {
+                            if (
+                                this.acceptsRow(message.row) &&
+                                this.mergeIntoView(view, message.row)
+                            ) {
+                                changed = true;
+                            }
+                        }
+                        if (message.rows) {
+                            message.rows.seq_num.forEach((_, i) => {
+                                const row = Object.fromEntries(
+                                    Object.keys(message.rows!).map(k => [
+                                        k,
+                                        message.rows![k as keyof Row<R>][i],
+                                    ])
+                                ) as Row<R>;
+                                if (
+                                    this.acceptsRow(row) &&
+                                    this.mergeIntoView(view, row)
+                                ) {
+                                    changed = true;
+                                }
+                            });
+                        }
+                        return changed;
                     }
                 }),
                 filter(e => e),
                 map(() => replayed),
-                auditTime(100)
+                auditTime(50)
             );
     }
 }
@@ -297,47 +293,6 @@ export class UpdateTable<K, R> extends NormalTable<K & UpdateRow<R>> {
         } else {
             return newRow;
         }
-    }
-}
-
-export class UnionTable<
-    V extends unknown[],
-    R extends { [K in keyof V]: unknown }
-> extends Table<R[keyof V], V> {
-    tables: { [K in keyof V]: Table<R[K], V[K]> };
-
-    constructor(tables: { [K in keyof V]: Table<R[K], V[K]> }) {
-        super();
-        this.tables = tables;
-    }
-
-    createView(): V {
-        return this.tables.map(table => table.createView()) as V;
-    }
-
-    fillFromGlobal(view: V): void {
-        view.map((v, i) => this.tables[i]?.fillFromGlobal(v));
-    }
-
-    extractFromView(view: V): Row<R[keyof V]>[] {
-        return this.tables.flatMap((table, i) =>
-            table.extractFromView(view[i])
-        );
-    }
-
-    connect(view: V): Observable<boolean> {
-        return combineLatest(
-            this.tables.map((table, i) =>
-                table.connect(view[i]).pipe(startWith(false))
-            )
-        ).pipe(
-            map(values => values.every(e => e)),
-            auditTime(50)
-        );
-    }
-
-    dependencies(): unknown[] {
-        return this.tables.flatMap(table => table.dependencies());
     }
 }
 

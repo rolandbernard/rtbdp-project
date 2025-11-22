@@ -91,7 +91,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
             if (
                 row.seq_num < (newestPerRow.get(rkey) ?? 0) ||
                 !key.startsWith(this.name + ":") ||
-                !acceptsRowWith(row, this.filters)
+                !this.acceptsRow(row)
             ) {
                 view.delete(key);
             }
@@ -300,6 +300,28 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                 return false;
             }
         };
+        const acceptsRowOrUpdate = (
+            row: Row<RankingUpdateRow<R>> | Row<RankingRow<R>>
+        ) => {
+            return "old_row_number" in row
+                ? acceptsRowWith(row, subscriptionFilter)
+                : this.acceptsRow(row);
+        };
+        const handleRow = (
+            row: Row<RankingUpdateRow<R>> | Row<RankingRow<R>>
+        ) => {
+            if ("old_row_number" in row) {
+                if (replaySeqNum) {
+                    return applyUpdate(row);
+                } else {
+                    bufferedUpdates.push(row);
+                    return false;
+                }
+            } else {
+                this.viewSet(view, this.groupKey(row), row);
+                return true;
+            }
+        };
         return (connection as WebSocketSubject<ServerMessage<RankingMsgRow<R>>>)
             .multiplex(
                 () => ({
@@ -308,44 +330,14 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                 }),
                 () => ({ unsubscribe: [subscriptionId] }),
                 message =>
-                    "row" in message
-                        ? message.table == this.name &&
-                          ("old_row_number" in message.row
-                              ? acceptsRowWith(message.row, subscriptionFilter)
-                              : acceptsRowWith(message.row, this.filters))
-                        : message.replayed == subscriptionId
+                    "replayed" in message
+                        ? message.replayed == subscriptionId
+                        : message.table === this.name
             )
             .pipe(
                 retry({ delay: 1000 }),
                 map(message => {
-                    if ("row" in message) {
-                        if ("old_row_number" in message.row) {
-                            if (replaySeqNum) {
-                                return applyUpdate(message.row);
-                            } else {
-                                bufferedUpdates.push(message.row);
-                                return false;
-                            }
-                        } else {
-                            this.viewSet(
-                                view,
-                                this.groupKey(message.row),
-                                message.row
-                            );
-                            return true;
-                        }
-                    } else {
-                        if (message.rows) {
-                            message.rows.seq_num.forEach((_, i) => {
-                                const row = Object.fromEntries(
-                                    Object.keys(message.rows!).map(k => [
-                                        k,
-                                        message.rows![k as keyof Row<R>][i],
-                                    ])
-                                ) as Row<RankingRow<R>>;
-                                this.viewSet(view, this.groupKey(row), row);
-                            });
-                        }
+                    if ("replayed" in message) {
                         replaySeqNum = [...view.values()]
                             .map(r => r.seq_num)
                             .reduce((a, b) => Math.max(a, b), 1);
@@ -356,6 +348,30 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                         }
                         bufferedUpdates.length = 0;
                         return true;
+                    } else {
+                        let changed = false;
+                        if (message.row) {
+                            if (
+                                acceptsRowOrUpdate(message.row) &&
+                                handleRow(message.row)
+                            ) {
+                                changed = true;
+                            }
+                        }
+                        if (message.rows) {
+                            message.rows.seq_num.forEach((_, i) => {
+                                const row = Object.fromEntries(
+                                    Object.keys(message.rows!).map(k => [
+                                        k,
+                                        message.rows![k as keyof Row<R>][i],
+                                    ])
+                                ) as Row<RankingRow<R>>;
+                                if (acceptsRowOrUpdate(row) && handleRow(row)) {
+                                    changed = true;
+                                }
+                            });
+                        }
+                        return changed;
                     }
                 }),
                 filter(e => e),

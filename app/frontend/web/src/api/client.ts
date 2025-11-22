@@ -5,13 +5,13 @@ export type Row<R> = R & { seq_num: number };
 export type MultiRow<R> = { [K in keyof Row<R>]: Row<R>[K][] };
 export type RowMessage<R> = {
     table: string;
-    row: Row<R>;
-};
-export type ReplayMessage<R> = {
-    replayed: number;
+    row?: Row<R>;
     rows?: MultiRow<R>;
 };
-export type ServerMessage<R> = ReplayMessage<R> | RowMessage<R>;
+export type ReplayMessage = {
+    replayed: number;
+};
+export type ServerMessage<R> = ReplayMessage | RowMessage<R>;
 
 export type Subscription<R> = {
     id: number;

@@ -237,7 +237,7 @@ public class Table {
                     con -> Observable.create(emitter -> {
                         try (Statement st = con.createStatement(
                                 ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
-                            st.setFetchSize(1_000);
+                            st.setFetchSize(1024);
                             String query = asSqlQuery(subscription) + " WHERE " + subscription.asSqlQueryCondition();
                             if (subscription.isSorted()) {
                                 query += asSqlQueryOrder() + subscription.asSqlQueryLimit();
