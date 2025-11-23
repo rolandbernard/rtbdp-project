@@ -10,7 +10,11 @@ export function Letters(props: LettersProps) {
     const len = props.options.length;
     const idx = props.options.indexOf(props.value);
     return (
-        <div className={"relative overflow-hidden " + props.className}>
+        <div
+            className={
+                "relative overflow-hidden contain-content " + props.className
+            }
+        >
             {props.options.map((v, i) => (
                 <div
                     key={i}
@@ -35,7 +39,7 @@ interface DigitProps {
 
 function Digit(props: DigitProps) {
     return (
-        <div className="relative overflow-hidden contain-content">
+        <div className="relative overflow-hidden contain-paint">
             <div className="invisible">0</div>
             {[...Array(10)].map((_, i) => (
                 <div
@@ -87,8 +91,7 @@ export default function Counter(props: Props) {
     return (
         <div
             className={
-                "relative inline-block contain-content " +
-                (props.className ?? "")
+                "relative inline-block contain-paint " + (props.className ?? "")
             }
         >
             <div className="absolute top-0 right-0 text-transparent">

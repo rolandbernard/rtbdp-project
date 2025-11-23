@@ -71,7 +71,11 @@ export default function StackedAreaBrush(props: Props) {
     const formatTick = (d: Date) => formatDate(d, 0, min_dur, min_dur);
     const formatTick2 = (d: Date) => formatDate(d, 0, min_dur, max_dur);
     return (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+            width="100%"
+            height="100%"
+            className="contain-strict"
+        >
             <AreaChart data={cleanData}>
                 <CartesianGrid
                     strokeDasharray="3 3"

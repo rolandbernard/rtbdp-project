@@ -102,7 +102,7 @@ public class SocketApiServer extends WebSocketServer {
                                     return sameTable.stream().anyMatch(s -> s.accept(row));
                                 }
                             })
-                            .buffer(50, TimeUnit.MILLISECONDS)
+                            .buffer(50, TimeUnit.MILLISECONDS, 1024)
                             .subscribe(rows -> {
                                 sendRows(socket, table.name, rows);
                             });

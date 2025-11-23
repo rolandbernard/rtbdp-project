@@ -47,7 +47,7 @@ export default function SearchSelect<K extends Key, R, V>(
                 <label
                     key={props.id(row)}
                     htmlFor={props.ident + "-" + props.id(row)}
-                    className="flex flex-row items-center cursor-pointer select-none hover:bg-content/15 px-4 not-xl:px-2 py-px"
+                    className="flex flex-row items-center cursor-pointer select-none hover:bg-content/15 px-2 not-xl:px-2 py-px"
                 >
                     <input
                         id={props.ident + "-" + props.id(row)}

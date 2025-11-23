@@ -26,7 +26,11 @@ interface Props {
 export default function PieChart(props: Props) {
     const data = sort(props.data, [e => e.x]);
     return (
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+            width="100%"
+            height="100%"
+            className="contain-strict"
+        >
             <RePieChart data={data}>
                 <Tooltip content={<CatTooltip />} />
                 <Legend />

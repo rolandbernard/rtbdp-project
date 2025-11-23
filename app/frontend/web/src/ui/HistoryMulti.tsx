@@ -22,7 +22,7 @@ export default function HistoryMulti<
     const [loaded, rawHistory] = useLoadingTable(historyTable);
     const lastTime = useHistoryTime(false);
     const [keys, cleanHistory] = useMemo(() => {
-        if (!loaded && rawHistory.length < 10) {
+        if ((!loaded && rawHistory.length < 10) || rawHistory.length === 0) {
             // Avoid initial partial renders.
             return [[], []];
         } else {
