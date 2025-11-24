@@ -42,6 +42,7 @@ public class ReposLiveTable extends AbstractTable<ReposLiveTable.RepoEventCounts
                             return new RepoEventCounts(key, winSpec, count);
                         }))
                 .returns(RepoEventCounts.class)
+                .uid("live-repo-counts-01")
                 .name("Live per Repo Counts");
     }
 

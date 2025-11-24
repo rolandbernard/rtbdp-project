@@ -28,6 +28,7 @@ public class TrendingLiveTable extends AbstractTable<TrendingLiveTable.RepoTrend
                 .keyBy(e -> e.repoId)
                 .map(new TrendingScoreFunction())
                 .returns(RepoTrendingScore.class)
+                .uid("live-trending-01")
                 .name("Live per Repo Trending Score");
     }
 

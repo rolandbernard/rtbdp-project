@@ -143,6 +143,7 @@ public class UsersTable extends AbstractUpdateTable<UsersTable.UserUpdateEvent> 
                     }
                 })
                 .returns(UserUpdateEvent.class)
+                .uid("user-updates-01")
                 .name("User Update Stream");
     }
 

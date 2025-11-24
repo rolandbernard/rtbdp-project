@@ -1,6 +1,7 @@
+#!/bin/bash
 # A small script for running the processor outside of the Flink cluster using
 # the mini cluster instead. The JAR file should have been generated beforehand
-# using `mvn package`.
+# using `mvn package`. This is NOT used in the docker container.
 
 # Write class path.
 mvn dependency:build-classpath -Dmdep.includeScope=provided -Dmdep.outputFile=.cp.txt

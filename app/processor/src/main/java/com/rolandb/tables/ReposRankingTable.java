@@ -44,8 +44,9 @@ public class ReposRankingTable extends AbstractRankingTable<ReposRankingTable.Re
                                     return event;
                                 },
                                 Long.class, Long.class))
-                .setParallelism(4)
+                .setParallelism(Integer.min(4, env.getParallelism()))
                 .returns(RepoCountsRank.class)
+                .uid("ranking-repo-counts-01")
                 .name("Per Repo Count Rankings");
     }
 

@@ -208,6 +208,7 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
                     }
                 })
                 .returns(RepoUpdateEvent.class)
+                .uid("repo-updates-01")
                 .name("Repository Update Stream");
     }
 

@@ -56,6 +56,7 @@ public class UsersHistoryTable extends AbstractTable<UsersHistoryTable.UserEvent
                                     key, count));
                         })
                 .returns(UserEventCounts.class)
+                .uid("historical-user-counts-01-" + window.getSeconds())
                 .name("Historical Counts by User");
     }
 

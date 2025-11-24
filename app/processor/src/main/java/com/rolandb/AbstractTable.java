@@ -179,6 +179,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                             WatermarkStrategy
                                     .<GithubEvent>forBoundedOutOfOrderness(Duration.ofSeconds(10))
                                     .withTimestampAssigner((event, timestamp) -> event.createdAt.toEpochMilli()))
+                    .uid("event-stream-01")
                     .name("Event Stream");
         });
     }
@@ -195,6 +196,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                                 GithubEventType.ALL, event.createdAt, event.userId, event.repoId, event.seqNum));
                     })
                     .returns(GithubEvent.class)
+                    .uid("event-stream-with-all-01")
                     .name("Add 'all' Events");
         });
     }
@@ -215,6 +217,8 @@ public abstract class AbstractTable<E extends SequencedRow> {
         return getStream("starsByRepo", () -> {
             return getEventStream()
                     .filter(e -> e.eventType == GithubEventType.WATCH)
+                    .uid("star-events-01")
+                    .name("Filter Star Events")
                     .keyBy(event -> event.repoId);
         });
     }
@@ -385,6 +389,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .keyBy(row -> "dummyKey")
                 .process(buildJdbcSinkAndContinue())
                 .returns(getOutputType())
+                .uid("postgres-sink-01-" + tableName)
                 .name("PostgreSQL Sink")
                 // One writer per-table/topic should be sufficient. Also, we
                 // key by a dummy, so there is no parallelism anyway.
@@ -393,7 +398,9 @@ public abstract class AbstractTable<E extends SequencedRow> {
 
     protected void sinkToKafka(DataStream<E> stream) throws ExecutionException, InterruptedException {
         KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor, retentionMs);
-        stream.sinkTo(buildKafkaSink()).name("Kafka Sink");
+        stream.sinkTo(buildKafkaSink())
+                .uid("kafka-sink-01-" + tableName)
+                .name("Kafka Sink");
     }
 
     public void build() throws ExecutionException, InterruptedException {

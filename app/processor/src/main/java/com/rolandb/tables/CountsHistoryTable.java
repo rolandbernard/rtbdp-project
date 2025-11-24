@@ -61,6 +61,7 @@ public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCo
                                     GithubEventType.fromString(key), count));
                         })
                 .returns(EventCounts.class)
+                .uid("historical-event-counts-01-" + window.getSeconds())
                 .name("Historical Event Counts");
     }
 

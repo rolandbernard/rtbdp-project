@@ -56,6 +56,7 @@ public class ReposHistoryTable extends AbstractTable<ReposHistoryTable.RepoEvent
                                     key, count));
                         })
                 .returns(RepoEventCounts.class)
+                .uid("historical-repo-counts-01-" + window.getSeconds())
                 .name("Historical Counts by Repository");
     }
 

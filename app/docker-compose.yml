@@ -4,6 +4,7 @@ services:
   broker:
     image: confluentinc/cp-kafka:7.9.0
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-broker"
+    restart: always
     ports:
       - "${PORT_BROKER:-29092}:29092"
     profiles: []
@@ -57,6 +58,7 @@ services:
   postgres:
     image: timescale/timescaledb:2.23.1-pg17
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-postgres"
+    restart: always
     ports:
       - "${PORT_POSTGRES:-25432}:5432"
     profiles: []
@@ -93,19 +95,57 @@ services:
       PGADMIN_DISABLE_POSTFIX: "true"
       GUNICORN_ACCESS_LOGFILE: "/dev/null"
 
+  # ZooKeeper for enabling Flink High Availability
+  zookeeper:
+    image: zookeeper:3.9.4-jre-17
+    container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-zookeeper"
+    restart: always
+    profiles: []
+    volumes:
+      - ./flink/logback.xml:/conf/logback.xml:z
+    environment:
+      ZOO_4LW_COMMANDS_WHITELIST: "ruok"
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep imok"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Flink Containers (Job Manager + Task Manager)
   flink-jobmanager:
-    image: flink:2.1.0-java17
+    build: flink
+    image: "${COMPOSE_PROJECT_NAME:-rtgh}-flink:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-flink-jobmanager"
+    restart: always
+    depends_on:
+      zookeeper:
+        condition: service_healthy
     profiles: []
     ports:
       - "${PORT_FLINK:-8081}:8081"
     volumes:
-      - ./flink/log4j-console.properties:/opt/flink/conf/log4j-console.properties
+      - flink-checkpoints:/opt/flink/checkpoints:z
+      - flink-savepoints:/opt/flink/savepoints:z
+      - flink-ha-metadata:/opt/flink/ha-metadata:z
     command: jobmanager
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
+        # Fault Tolerance Config
+        state.backend: rocksdb
+        state.backend.incremental: true
+        execution.checkpointing.storage: filesystem
+        execution.checkpointing.dir: file:///opt/flink/checkpoints
+        execution.checkpointing.savepoint-dir: file:///opt/flink/savepoints
+        # Restart Strategy for the Jobs
+        restart-strategy.type: fixed-delay
+        restart-strategy.fixed-delay.attempts: 10
+        restart-strategy.fixed-delay.delay: 10s
+        # High Availability Configuration
+        high-availability.type: zookeeper
+        high-availability.storageDir: file:///opt/flink/ha-metadata
+        high-availability.zookeeper.quorum: zookeeper:2181
+        zookeeper.sasl.disable: true
       ROOT_LOG_LEVEL: WARN
     healthcheck:
       test: ["CMD", "curl", "-f", "localhost:8081/overview"]
@@ -114,20 +154,37 @@ services:
       retries: 5
 
   flink-taskmanager:
-    image: flink:2.1.0-java17
+    build: flink
+    image: "${COMPOSE_PROJECT_NAME:-rtgh}-flink:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-flink-taskmanager"
+    restart: always
     depends_on:
       flink-jobmanager:
         condition: service_healthy
     profiles: []
     volumes:
-      - ./flink/log4j-console.properties:/opt/flink/conf/log4j-console.properties
+      - flink-checkpoints:/opt/flink/checkpoints:z
+      - flink-savepoints:/opt/flink/savepoints:z
+      - flink-ha-metadata:/opt/flink/ha-metadata:z
+      - flink-rocksdb-local:/opt/flink/rocksdb-data:z
     command: taskmanager
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: ${FLINK_TASK_SLOTS:-4}
         parallelism.default: ${FLINK_DEFAULT_PARALLELISM:-1}
+        # Fault Tolerance Config
+        state.backend: rocksdb
+        state.backend.incremental: true
+        state.backend.rocksdb.localdir: /opt/flink/rocksdb-data
+        execution.checkpointing.storage: filesystem
+        execution.checkpointing.dir: file:///opt/flink/checkpoints
+        execution.checkpointing.savepoint-dir: file:///opt/flink/savepoints
+        # High Availability Configuration
+        high-availability.type: zookeeper
+        high-availability.storageDir: file:///opt/flink/ha-metadata
+        high-availability.zookeeper.quorum: zookeeper:2181
+        zookeeper.sasl.disable: true
       ROOT_LOG_LEVEL: WARN
 
   # Project-developed Containers (API Dummy + Producer + Processor + Frontend)
@@ -153,6 +210,7 @@ services:
     build: producer
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-producer:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-producer"
+    restart: always
     depends_on:
       ghdummy:
         condition: service_healthy
@@ -173,6 +231,11 @@ services:
     build: processor
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-processor:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-processor"
+    restart: on-failure
+    volumes:
+      - flink-checkpoints:/opt/flink/checkpoints:z
+      - flink-savepoints:/opt/flink/savepoints:z
+      - flink-ha-metadata:/opt/flink/ha-metadata:z
     depends_on:
       flink-jobmanager:
         condition: service_healthy
@@ -183,7 +246,6 @@ services:
     profiles:
       - processor
     command: [
-      "-m", "flink-jobmanager:8081",
       "-c", "com.rolandb.Processor",
       "/app/processor.jar",
       "--bootstrap-servers", "broker:9092",
@@ -196,6 +258,7 @@ services:
     build: frontend
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-frontend:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-frontend"
+    restart: always
     depends_on:
       broker:
         condition: service_healthy
@@ -226,3 +289,7 @@ volumes:
   broker-data:
   postgres-data:
   pgadmin-data:
+  flink-checkpoints:
+  flink-savepoints:
+  flink-rocksdb-local:
+  flink-ha-metadata:

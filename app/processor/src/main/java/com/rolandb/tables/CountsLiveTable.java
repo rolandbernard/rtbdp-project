@@ -83,6 +83,7 @@ public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> 
                             return new EventCounts(GithubEventType.fromString(key), winSpec, count);
                         }))
                 .returns(EventCounts.class)
+                .uid("live-event-counts-01")
                 .name("Live Event Counts");
     }
 

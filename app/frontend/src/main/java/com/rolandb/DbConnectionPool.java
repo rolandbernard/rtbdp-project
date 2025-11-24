@@ -26,10 +26,25 @@ public class DbConnectionPool implements AutoCloseable {
      * @throws SQLException
      */
     public synchronized Connection getConnection() throws SQLException {
-        if (connections.isEmpty()) {
-            return DriverManager.getConnection(jdbcUrl);
-        } else {
-            return connections.remove(connections.size() - 1);
+        while (true) {
+            if (connections.isEmpty()) {
+                return DriverManager.getConnection(jdbcUrl);
+            } else {
+                Connection connection = connections.remove(connections.size() - 1);
+                try {
+                    if (connection.isValid(5)) {
+                        return connection;
+                    }
+                } catch (SQLException ex) {
+                    // This connection is no longer valid. We should get another one.
+                    try {
+                        connection.close();
+                    } catch (SQLException e) {
+                        // Ignore the error. We are closing the connection new.
+                    }
+                }
+
+            }
         }
     }
 

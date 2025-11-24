@@ -42,6 +42,7 @@ public class UsersLiveTable extends AbstractTable<UsersLiveTable.UserEventCounts
                             return new UserEventCounts(key, winSpec, count);
                         }))
                 .returns(UserEventCounts.class)
+                .uid("live-user-counts-01")
                 .name("Live per User Counts");
     }
 

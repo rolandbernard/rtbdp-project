@@ -42,6 +42,7 @@ public class StarsLiveTable extends AbstractTable<StarsLiveTable.RepoStarCounts>
                             return new RepoStarCounts(key, winSpec, count);
                         }))
                 .returns(RepoStarCounts.class)
+                .uid("live-star-counts-01")
                 .name("Live per Repo Stars");
         streams.put("liveStarCounts", stream);
         return stream;

@@ -56,6 +56,7 @@ public class StarsHistoryTable extends AbstractTable<StarsHistoryTable.RepoStarC
                                     key, count));
                         })
                 .returns(RepoStarCounts.class)
+                .uid("historical-star-counts-01-" + window.getSeconds())
                 .name("Historical Stars by Repository");
     }
 

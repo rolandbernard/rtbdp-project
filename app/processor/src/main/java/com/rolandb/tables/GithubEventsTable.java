@@ -370,6 +370,7 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
     @Override
     protected DataStream<DetailedGithubEvent> computeTable() {
         return getRawEventStream().map(jsonNode -> new DetailedGithubEvent(jsonNode))
+                .uid("detailed-events-01")
                 .name("Detailed Event Stream");
     }
 

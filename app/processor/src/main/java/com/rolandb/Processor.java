@@ -9,6 +9,7 @@ import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ExternalizedCheckpointRetention;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.StateBackendOptions;
@@ -116,10 +117,14 @@ public class Processor {
         // Set RocksDB as state backend to allow large and more durable state.
         conf.set(StateBackendOptions.STATE_BACKEND, "rocksdb");
         conf.set(CheckpointingOptions.INCREMENTAL_CHECKPOINTS, true);
+        conf.set(CheckpointingOptions.EXTERNALIZED_CHECKPOINT_RETENTION,
+                ExternalizedCheckpointRetention.RETAIN_ON_CANCELLATION);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         // Enable checkpointing. At-least-once semantics are fine because we basically
         // always use upserts with a primary key.
         env.enableCheckpointing(60_000, CheckpointingMode.AT_LEAST_ONCE);
+        env.getCheckpointConfig()
+                .setExternalizedCheckpointRetention(ExternalizedCheckpointRetention.RETAIN_ON_CANCELLATION);
         // Define Kafka source.
         @SuppressWarnings("deprecation") // Ignoring the warning because there seems to be no alternative.
         KafkaSource<JsonNode> kafkaSource = KafkaSource.<JsonNode>builder()
@@ -158,10 +163,13 @@ public class Processor {
                                         .parse(event.at("/created_at").asText())
                                         .toEpochMilli()),
                         "Kafka Source")
+                .uid("kafka-source-01")
                 // We can not use more parallelism for the Kafka source than we have partitions,
                 // because for some reason it messes up the watermarks. In the sense that
                 // subtasks that don't get any events seems to hold back the watermarks.
-                .setParallelism(KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic));
+                .setParallelism(Integer.min(
+                        KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic),
+                        env.getParallelism()));
         // Setup parameters for table builder.
         TableBuilder builder = (new TableBuilder())
                 .setEnv(env)

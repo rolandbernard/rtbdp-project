@@ -42,6 +42,7 @@ public class TrendingRankingTable extends AbstractRankingTable<TrendingRankingTa
                 // We only have one trending ranking, so no parallelism make sense here.
                 .setParallelism(1)
                 .returns(RepoTrendingRank.class)
+                .uid("ranking-trending-01")
                 .name("Per Repo Trending Rankings");
     }
 

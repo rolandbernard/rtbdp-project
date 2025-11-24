@@ -146,11 +146,19 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
                 } else {
                     LOGGER.error("Failed to insert elements into db", exc);
                     if (ps != null) {
-                        ps.close();
+                        try {
+                            ps.close();
+                        } catch (SQLException e) {
+                            LOGGER.error("Error closing prepared statement", exc);
+                        }
                         ps = null;
                     }
                     if (connection != null) {
-                        connection.close();
+                        try {
+                            connection.close();
+                        } catch (SQLException e) {
+                            LOGGER.error("Error closing database connection", exc);
+                        }
                         connection = null;
                     }
                     // Delay with some linear backoff.

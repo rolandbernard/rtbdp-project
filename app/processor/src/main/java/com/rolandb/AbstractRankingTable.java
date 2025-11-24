@@ -56,12 +56,16 @@ public abstract class AbstractRankingTable<E extends AbstractRankingTable.Rankin
         // there we can just always take the latest state based on sequence numbers.
         // However, for the ranking, it is important because applying the updates
         // out-of-order would result in a different overall ranking.
-        stream.keyBy(new KeySelector<E, List<Object>>() {
-            @SuppressWarnings("unchecked")
-            @Override
-            public List<Object> getKey(E event) throws Exception {
-                return (List<Object>) event.getKey();
-            }
-        }).sinkTo(buildKafkaSink()).name("Kafka Sink");
+        stream
+                .keyBy(new KeySelector<E, List<Object>>() {
+                    @SuppressWarnings("unchecked")
+                    @Override
+                    public List<Object> getKey(E event) throws Exception {
+                        return (List<Object>) event.getKey();
+                    }
+                })
+                .sinkTo(buildKafkaSink())
+                .uid("kafka-sink-01-" + tableName)
+                .name("Kafka Sink");
     }
 }

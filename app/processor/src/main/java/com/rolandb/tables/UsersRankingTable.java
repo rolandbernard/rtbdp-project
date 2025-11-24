@@ -44,7 +44,7 @@ public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.Us
                                     return event;
                                 },
                                 Long.class, Long.class))
-                .setParallelism(4)
+                .setParallelism(Integer.min(4, env.getParallelism()))
                 .returns(UserCountsRank.class)
                 .name("Per User Count Rankings");
     }

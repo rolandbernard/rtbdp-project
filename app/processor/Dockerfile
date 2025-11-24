@@ -10,6 +10,7 @@ RUN mvn clean package -DskipTests
 FROM flink:2.1.0-java17
 WORKDIR /app
 COPY --from=build /app/target/processor.jar ./processor.jar
+COPY submit.sh .
 
 # Submit to Flink Cluster
-ENTRYPOINT [ "flink", "run" ]
+ENTRYPOINT [ "bash", "submit.sh" ]
