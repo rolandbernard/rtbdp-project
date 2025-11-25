@@ -77,7 +77,7 @@ public class StaticFileHandler implements HttpHandler {
             // Normalize the path to avoid directory traversal vulnerabilities.
             // The root will swallow all excess `..', and only then do we add the
             // resource folder name.
-            assert uriPath.charAt(1) == '/';
+            assert uriPath.charAt(0) == '/';
             String normalizedPath = Path.of(uriPath).normalize().toString();
             Path resourcePath = Path.of(rootDir, normalizedPath);
             URL url = resourcePath.toUri().toURL();

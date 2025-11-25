@@ -15,8 +15,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class Subscription {
     public final long id;
     public final String tableName;
-    private final List<TableRowFilter> filters;
-    private final Long limit;
+    public final List<TableRowFilter> filters;
+    public final Long limit;
 
     @JsonCreator
     public Subscription(
@@ -36,9 +36,11 @@ public class Subscription {
      * @return {@code true} if only keys are used.
      */
     public boolean usesOnlyKey(Table table) {
-        for (TableRowFilter filter : filters) {
-            if (!filter.usesOnlyKey(table)) {
-                return false;
+        if (filters != null) {
+            for (TableRowFilter filter : filters) {
+                if (!filter.usesOnlyKey(table)) {
+                    return false;
+                }
             }
         }
         return true;

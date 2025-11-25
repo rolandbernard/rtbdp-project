@@ -30,14 +30,14 @@ public class AuthHandler implements HttpHandler {
     private final HttpHandler wrapped;
 
     public AuthHandler(String password, HttpHandler wrapped) {
-        this.password = password.trim();
+        this.password = password != null ? password.trim() : null;
         this.wrapped = wrapped;
-        if (password != null && !password.isEmpty()) {
+        if (this.password != null && !this.password.isEmpty()) {
             try {
                 byte[] salt = new byte[64];
                 SecureRandom.getInstanceStrong().nextBytes(salt);
                 MessageDigest md = MessageDigest.getInstance("SHA-512");
-                md.update(password.getBytes(StandardCharsets.UTF_8));
+                md.update(this.password.getBytes(StandardCharsets.UTF_8));
                 md.update(salt);
                 byte[] digest = md.digest();
                 this.secret = Base64.getUrlEncoder().encodeToString(digest);

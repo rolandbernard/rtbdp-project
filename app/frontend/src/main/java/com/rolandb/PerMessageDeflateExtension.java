@@ -60,14 +60,14 @@ public class PerMessageDeflateExtension extends CompressionExtension {
     private boolean isDecompressing;
 
     public PerMessageDeflateExtension() {
-        this(DEFAULT_COMPRESSION);
+        this(DEFAULT_COMPRESSION, 64);
     }
 
-    public PerMessageDeflateExtension(int compressionLevel) {
+    public PerMessageDeflateExtension(int compressionLevel, int compressionThreshold) {
         this.compressionLevel = compressionLevel;
+        this.compressionThreshold = compressionThreshold;
         compressor = new Deflater(compressionLevel, true);
         decompressor = new Inflater(true);
-        compressionThreshold = 64;
         clientNoContextTakeover = false;
         serverNoContextTakeover = false;
         clientMaxWindowBits = MAXIMUM_MAX_WINDOW_BITS;
@@ -304,12 +304,11 @@ public class PerMessageDeflateExtension extends CompressionExtension {
 
     @Override
     public PerMessageDeflateExtension copyInstance() {
-        PerMessageDeflateExtension clone = new PerMessageDeflateExtension(compressionLevel);
+        PerMessageDeflateExtension clone = new PerMessageDeflateExtension(compressionLevel, compressionThreshold);
         clone.clientNoContextTakeover = clientNoContextTakeover;
         clone.serverNoContextTakeover = serverNoContextTakeover;
         clone.clientMaxWindowBits = clientMaxWindowBits;
         clone.serverMaxWindowBits = serverMaxWindowBits;
-        clone.compressionThreshold = compressionThreshold;
         return clone;
     }
 

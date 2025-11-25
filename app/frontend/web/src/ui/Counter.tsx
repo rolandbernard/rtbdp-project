@@ -50,7 +50,7 @@ function Digit(props: DigitProps) {
                                 ? "transform"
                                 : undefined,
                         transform: `rotateX(${
-                            -36 * i + 36 * (props.value ?? 0)
+                            -36 * i + 36 * ((props.value ?? 0) % 10000)
                         }deg) translateZ(2em)`,
                     }}
                     className={
@@ -107,7 +107,7 @@ export default function Counter(props: Props) {
                             key={i}
                             value={
                                 props.value != null
-                                    ? (Math.trunc(props.value / 10 ** i) % 10000)
+                                    ? Math.trunc(props.value / 10 ** i)
                                     : undefined
                             }
                             leading={i != 0 && (props.value ?? 0) < 10 ** i}
