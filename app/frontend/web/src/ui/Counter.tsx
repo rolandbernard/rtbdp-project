@@ -107,7 +107,7 @@ export default function Counter(props: Props) {
                             key={i}
                             value={
                                 props.value != null
-                                    ? Math.trunc(props.value / 10 ** i)
+                                    ? (Math.trunc(props.value / 10 ** i) % 10000)
                                     : undefined
                             }
                             leading={i != 0 && (props.value ?? 0) < 10 ** i}

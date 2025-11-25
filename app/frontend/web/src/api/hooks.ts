@@ -58,19 +58,16 @@ export function useTable<R, V>(table: Table<R, V>, suppress = false): Row<R>[] {
 let latestCoarseHistoryTime: Date | undefined = undefined;
 const coarseListeners = new Set<() => void>();
 const coarseView = new Map();
-countsHistory
-    .where("kind", ["all"])
-    .limit(1)
-    .connect(coarseView)
-    .subscribe(() => {
-        const row = countsHistory.extractFromView(coarseView)[0];
-        if (row) {
-            latestCoarseHistoryTime = new Date(row.ts_start);
-            for (const l of coarseListeners) {
-                l();
-            }
+const coarseTable = countsHistory.where("kind", ["all"]).limit(1);
+coarseTable.connect(coarseView).subscribe(() => {
+    const row = coarseTable.extractFromView(coarseView)[0];
+    if (row) {
+        latestCoarseHistoryTime = new Date(row.ts_start);
+        for (const l of coarseListeners) {
+            l();
         }
-    });
+    }
+});
 
 function subscribeCoarse(onChange: () => void) {
     // Create a new function to ensure that everything works properly even if
@@ -87,19 +84,16 @@ function getCoarse() {
 let latestFineHistoryTime: Date | undefined = undefined;
 const fineListeners = new Set<() => void>();
 const fineView = new Map();
-countsHistoryFine
-    .where("kind", ["all"])
-    .limit(1)
-    .connect(fineView)
-    .subscribe(() => {
-        const row = countsHistoryFine.extractFromView(fineView)[0];
-        if (row) {
-            latestFineHistoryTime = new Date(row.ts_start);
-            for (const l of fineListeners) {
-                l();
-            }
+const fineTable = countsHistoryFine.where("kind", ["all"]).limit(1);
+fineTable.connect(fineView).subscribe(() => {
+    const row = fineTable.extractFromView(fineView)[0];
+    if (row) {
+        latestFineHistoryTime = new Date(row.ts_start);
+        for (const l of fineListeners) {
+            l();
         }
-    });
+    }
+});
 
 function subscribeFine(onChange: () => void) {
     // Create a new function to ensure that everything works properly even if

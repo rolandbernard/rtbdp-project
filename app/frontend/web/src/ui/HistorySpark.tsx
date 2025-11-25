@@ -57,9 +57,11 @@ export default function HistorySpark<
                 complete.push(row);
                 last = row;
             }
-            while (complete.length < limit) {
-                last = { x: new Date(last.x.getTime() + diff), y: 0 };
-                complete.push(last);
+            if (lastTime) {
+                while (last.x < lastTime) {
+                    last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                    complete.push(last);
+                }
             }
             complete.splice(0, Math.max(0, complete.length - limit));
             if (props.windowSize === "1h" || props.windowSize === "24h") {

@@ -1,4 +1,4 @@
-# Build Stage
+# Build Stage (Java Server)
 FROM maven:3.9.11-eclipse-temurin-17 AS build-java
 WORKDIR /app
 COPY pom.xml .
@@ -6,6 +6,7 @@ RUN mvn de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
 COPY src ./src
 RUN mvn clean package -DskipTests
 
+# Build Stage (Web Application)
 FROM node:25-trixie-slim AS build-web
 WORKDIR /app
 COPY web ./web
