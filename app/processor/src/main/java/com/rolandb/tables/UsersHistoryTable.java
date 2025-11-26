@@ -35,7 +35,7 @@ public class UsersHistoryTable extends AbstractTable<UsersHistoryTable.UserEvent
 
     private Duration window = Duration.ofMinutes(5);
 
-    public AbstractTable setWindowSize(Duration window) {
+    public UsersHistoryTable setWindowSize(Duration window) {
         this.window = window;
         return this;
     }

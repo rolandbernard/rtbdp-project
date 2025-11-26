@@ -41,7 +41,21 @@ public class SequencedRow {
 
     @Override
     public String toString() {
-        return getClass().getName() + " @ " + seqNum;
+        StringBuilder builder = new StringBuilder();
+        builder.append(getClass().getName());
+        builder.append("(");
+        boolean first = true;
+        for (Field field : this.getClass().getFields()) {
+            if (!first) {
+                builder.append(" ");
+            }
+            first = false;
+            builder.append(field.getName());
+            builder.append("=");
+            builder.append(getField(field));
+        }
+        builder.append(")");
+        return builder.toString();
     }
 
     public static boolean hasKeyIn(Class<?> clazz) {

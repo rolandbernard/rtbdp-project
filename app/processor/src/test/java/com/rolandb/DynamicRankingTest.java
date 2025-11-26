@@ -246,13 +246,12 @@ public class DynamicRankingTest {
     @Test
     void testRandomRankingUpdate0() throws Exception {
         Random rand = new Random(0);
-        int lastN = 0;
         Result[] output = new Result[16];
         for (int i = 0; i <= 1_000; i++) {
             harness.processElement(new StreamRecord<>(new Event("id" + rand.nextInt(16), rand.nextInt(200)), i));
             List<Result> events = harness.extractOutputValues();
-            events.stream().skip(lastN).forEach(event -> updateRanking(output, event));
-            lastN = events.size();
+            harness.getOutput().clear();
+            events.stream().forEach(event -> updateRanking(output, event));
             sanityCheckRanking(output);
         }
     }

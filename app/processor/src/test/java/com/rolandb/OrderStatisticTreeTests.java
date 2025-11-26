@@ -1,11 +1,16 @@
 package com.rolandb;
 
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class OrderStatisticTreeTests {
@@ -198,5 +203,30 @@ public class OrderStatisticTreeTests {
             actual.add(it.next());
         }
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testRandomOperations() {
+        OrderStatisticTree<Integer> tree = new OrderStatisticTree<>();
+        Random rand = new Random(0);
+        List<Integer> list = new ArrayList<>();
+        for (int i = 0; i < 1000; i++) {
+            int val = rand.nextInt(1000);
+            if (rand.nextBoolean()) {
+                if (!list.contains(val)) {
+                    tree.add(val);
+                    list.add(val);
+                    Collections.sort(list);
+                }
+            } else {
+                tree.remove(val);
+                list.remove(Integer.valueOf(val));
+            }
+            assertEquals(list.size(), tree.size());
+            for (int j = 0; j < list.size(); j++) {
+                assertEquals(list.get(j), tree.get(j));
+                assertEquals(j, tree.indexOf(list.get(j)));
+            }
+        }
     }
 }

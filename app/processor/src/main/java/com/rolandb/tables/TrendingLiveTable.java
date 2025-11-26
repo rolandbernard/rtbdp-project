@@ -20,6 +20,16 @@ public class TrendingLiveTable extends AbstractTable<TrendingLiveTable.RepoTrend
             this.repoId = repoId;
             this.trendingScore = trendingScore;
         }
+
+        @Override
+        public boolean equals(Object other) {
+            if (other.getClass() == RepoTrendingScore.class) {
+                RepoTrendingScore o = (RepoTrendingScore) other;
+                return repoId == o.repoId && trendingScore == o.trendingScore;
+            } else {
+                return false;
+            }
+        }
     }
 
     @Override

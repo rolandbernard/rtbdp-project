@@ -35,7 +35,7 @@ public class StarsHistoryTable extends AbstractTable<StarsHistoryTable.RepoStarC
 
     private Duration window = Duration.ofMinutes(5);
 
-    public AbstractTable setWindowSize(Duration window) {
+    public StarsHistoryTable setWindowSize(Duration window) {
         this.window = window;
         return this;
     }

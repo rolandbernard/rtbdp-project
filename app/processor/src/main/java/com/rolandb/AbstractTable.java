@@ -310,11 +310,15 @@ public abstract class AbstractTable<E extends SequencedRow> {
         return builder.toString();
     }
 
+    private static boolean isSurrogate(int cp) {
+        return cp <= 0xffff && Character.isSurrogate((char) cp);
+    }
+
     private static String removeInvalidCodePoints(String s) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < s.length();) {
             int cp = s.codePointAt(i);
-            if (cp != 0 && Character.isValidCodePoint(cp)) {
+            if (cp != 0 && Character.isValidCodePoint(cp) && !isSurrogate(cp)) {
                 sb.appendCodePoint(cp);
             }
             i += Character.charCount(cp);

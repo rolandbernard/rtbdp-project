@@ -39,7 +39,7 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof Tuple) {
-                Tuple other = (Tuple) obj;
+                Tuple<?, ?> other = (Tuple<?, ?>) obj;
                 return key.equals(other.key) && value.equals(other.value);
             } else {
                 return false;

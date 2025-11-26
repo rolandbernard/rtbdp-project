@@ -35,7 +35,7 @@ public class ReposHistoryTable extends AbstractTable<ReposHistoryTable.RepoEvent
 
     private Duration window = Duration.ofMinutes(5);
 
-    public AbstractTable setWindowSize(Duration window) {
+    public ReposHistoryTable setWindowSize(Duration window) {
         this.window = window;
         return this;
     }

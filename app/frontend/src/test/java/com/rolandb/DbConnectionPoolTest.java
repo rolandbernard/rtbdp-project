@@ -21,7 +21,7 @@ public class DbConnectionPoolTest {
     }
 
     @Test
-    public void testGetConnection_ReusedConnection() throws SQLException {
+    public void testGetConnectionReusedConnection() throws SQLException {
         dbConnectionPool.returnConnection(null);
         assertThrows(NullPointerException.class, () -> dbConnectionPool.getConnection());
     }

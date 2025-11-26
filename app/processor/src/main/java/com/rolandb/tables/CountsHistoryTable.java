@@ -36,7 +36,7 @@ public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCo
 
     private Duration window = Duration.ofMinutes(5);
 
-    public AbstractTable setWindowSize(Duration window) {
+    public CountsHistoryTable setWindowSize(Duration window) {
         this.window = window;
         return this;
     }
