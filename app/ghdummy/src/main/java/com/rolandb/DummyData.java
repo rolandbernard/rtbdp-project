@@ -276,43 +276,47 @@ public class DummyData {
         LOGGER.info("Loaded dummy data timestamps");
     }
 
+    public void loadCurrentData() throws InterruptedException {
+        Instant now = currentTimestamp();
+        Instant prev = now.minus(Duration.ofHours(1));
+        Instant next = now.plus(Duration.ofHours(1));
+        boolean loadNow, loadPrev, loadNext;
+        synchronized (cached) {
+            loadPrev = cached.isEmpty() || !cached.getLast().last.isAfter(prev);
+            loadNow = cached.isEmpty() || !cached.getLast().last.isAfter(now);
+            loadNext = cached.isEmpty() || !cached.getLast().last.isAfter(next);
+        }
+        HourlyData dataNow = null, dataPrev = null, dataNext = null;
+        if (loadPrev) {
+            dataPrev = HourlyData.loadFrom(prev, archiveUrl, dataDir);
+        }
+        if (loadNow) {
+            dataNow = HourlyData.loadFrom(now, archiveUrl, dataDir);
+        }
+        if (loadNext) {
+            dataNext = HourlyData.loadFrom(next, archiveUrl, dataDir);
+        }
+        synchronized (cached) {
+            if (loadPrev) {
+                cached.addLast(dataPrev);
+            }
+            if (loadNow) {
+                cached.addLast(dataNow);
+            }
+            if (loadNext) {
+                cached.addLast(dataNext);
+            }
+            while (cached.getFirst().last.isBefore(prev.minus(Duration.ofHours(1)))) {
+                cached.removeFirst();
+            }
+        }
+        Thread.sleep(5_000);
+    }
+
     private void runBackgroundWorker() {
         while (!Thread.interrupted()) {
             try {
-                Instant now = currentTimestamp();
-                Instant prev = now.minus(Duration.ofHours(1));
-                Instant next = now.plus(Duration.ofHours(1));
-                boolean loadNow, loadPrev, loadNext;
-                synchronized (cached) {
-                    loadPrev = cached.isEmpty() || !cached.getLast().last.isAfter(prev);
-                    loadNow = cached.isEmpty() || !cached.getLast().last.isAfter(now);
-                    loadNext = cached.isEmpty() || !cached.getLast().last.isAfter(next);
-                }
-                HourlyData dataNow = null, dataPrev = null, dataNext = null;
-                if (loadPrev) {
-                    dataPrev = HourlyData.loadFrom(prev, archiveUrl, dataDir);
-                }
-                if (loadNow) {
-                    dataNow = HourlyData.loadFrom(now, archiveUrl, dataDir);
-                }
-                if (loadNext) {
-                    dataNext = HourlyData.loadFrom(next, archiveUrl, dataDir);
-                }
-                synchronized (cached) {
-                    if (loadPrev) {
-                        cached.addLast(dataPrev);
-                    }
-                    if (loadNow) {
-                        cached.addLast(dataNow);
-                    }
-                    if (loadNext) {
-                        cached.addLast(dataNext);
-                    }
-                    while (cached.getFirst().last.isBefore(prev.minus(Duration.ofHours(1)))) {
-                        cached.removeFirst();
-                    }
-                }
-                Thread.sleep(5_000);
+                loadCurrentData();
             } catch (InterruptedException e) {
                 // We have been interrupted. We should just terminate.
                 break;
