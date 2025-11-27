@@ -4,8 +4,8 @@ import {
     Pie,
     PieChart as RePieChart,
     Cell,
-    type PieLabelRenderProps,
     Legend,
+    type PieLabelRenderProps,
 } from "recharts";
 
 import CatTooltip from "./CatTooltip";
@@ -29,7 +29,7 @@ export default function PieChart(props: Props) {
         <ResponsiveContainer
             width="100%"
             height="100%"
-            className="contain-strict"
+            className="select-none contain-strict"
         >
             <RePieChart data={data}>
                 <Tooltip content={<CatTooltip />} />

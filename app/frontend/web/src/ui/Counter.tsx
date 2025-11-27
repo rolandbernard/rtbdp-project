@@ -94,7 +94,7 @@ export default function Counter(props: Props) {
                 "relative inline-block contain-paint " + (props.className ?? "")
             }
         >
-            <div className="absolute top-0 right-0 text-transparent">
+            <div className="absolute top-0 right-0 text-transparent select-text">
                 {props.value}
             </div>
             <div

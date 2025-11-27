@@ -48,7 +48,7 @@ function OwnerCard(props: OwnerProps) {
                 to={"/user/" + user.id}
                 state={{ from: "repo", name: user?.username }}
                 className={
-                    "text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75 " +
+                    "text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75 select-text " +
                     (user?.username ? "" : "text-primary/50")
                 }
                 title={user?.username}
@@ -66,7 +66,7 @@ function OwnerCard(props: OwnerProps) {
     ) : props.name ? (
         <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
             <div className="text-xs pb-1">Owner</div>
-            <div className="font-semibold">
+            <div className="font-semibold select-text">
                 <span className="font-bold">@</span>
                 {props.name}
             </div>
@@ -95,10 +95,12 @@ function RepoDetails(props: DetailsProps) {
             {props.reponame || props.fullname ? (
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Repository Name</div>
-                    {props.reponame ??
-                        props.fullname?.substring(
-                            props.fullname.indexOf("/") + 1
-                        )}
+                    <span className="select-text">
+                        {props.reponame ??
+                            props.fullname?.substring(
+                                props.fullname.indexOf("/") + 1
+                            )}
+                    </span>
                 </div>
             ) : undefined}
             {props.owner_id || props.fullname ? (
@@ -123,7 +125,7 @@ function RepoDetails(props: DetailsProps) {
                             "https://github.com/" + props.fullname
                         }
                         target="_blank"
-                        className="text-primary underline dark:hover:text-primary/90 hover:text-primary/75"
+                        className="text-primary underline dark:hover:text-primary/90 hover:text-primary/75 select-text"
                     >
                         {props.html_url ??
                             "https://github.com/" + props.fullname}
@@ -136,7 +138,7 @@ function RepoDetails(props: DetailsProps) {
                     <a
                         href={props.homepage}
                         target="_blank"
-                        className="text-primary underline"
+                        className="text-primary underline dark:hover:text-primary/90 hover:text-primary/75 select-text"
                     >
                         {props.homepage}
                     </a>
@@ -146,44 +148,44 @@ function RepoDetails(props: DetailsProps) {
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Topics</div>
                     {props.topics.split(" ").map(e => (
-                        <span className="pe-1">{e}</span>
+                        <span className="pe-1 select-text">{e}</span>
                     ))}
                 </div>
             ) : undefined}
             {props.lang ? (
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Language</div>
-                    {props.lang}
+                    <span className="select-text">{props.lang}</span>
                 </div>
             ) : undefined}
             {props.license ? (
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">License</div>
-                    {props.license}
+                    <span className="select-text">{props.license}</span>
                 </div>
             ) : undefined}
             {props.fork_count ? (
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Forks</div>
-                    {props.fork_count}
+                    <span className="select-text">{props.fork_count}</span>
                 </div>
             ) : undefined}
             {props.issue_count ? (
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Issues</div>
-                    {props.issue_count}
+                    <span className="select-text">{props.issue_count}</span>
                 </div>
             ) : undefined}
             {props.star_count ? (
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Stars</div>
-                    {props.star_count}
+                    <span className="select-text">{props.star_count}</span>
                 </div>
             ) : undefined}
             {props.descr ? (
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Description</div>
-                    {props.descr}
+                    <span className="select-text">{props.descr}</span>
                 </div>
             ) : undefined}
         </div>
@@ -354,7 +356,7 @@ export default function RepoPage() {
                     "page" + (navigating ? "ranking" : location.state?.from),
             }}
         >
-            <div className="text-3xl font-semibold m-3 mt-0">
+            <div className="text-3xl font-semibold m-3 mt-0 select-text">
                 <span
                     style={{
                         viewTransitionName:

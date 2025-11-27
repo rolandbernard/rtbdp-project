@@ -25,7 +25,7 @@ function UserName(props: UserNameProps) {
     const user = useTable(users.where("id", [props.userId]))[0];
     return (
         <div
-            className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis contain-content
+            className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis contain-content select-text
                     text-primary font-semibold dark:hover:text-primary/90 hover:text-primary/75"
         >
             <Link

@@ -61,6 +61,7 @@ export default function HistoryLong<
     }, [loaded, rawHistory, lastTime]);
     return (
         <AreaBrush
+            name={props.chartColor ?? ""}
             data={cleanHistory}
             chartColor={props.chartColor ?? "var(--color-primary)"}
             window={5 * 60}

@@ -39,7 +39,7 @@ function UserDetails(props: DetailsProps) {
                 {props.username ? (
                     <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                         <div className="text-xs pb-1">User Name</div>
-                        {props.username}
+                        <span className="select-text">{props.username}</span>
                     </div>
                 ) : undefined}
                 {props.html_url || props.username ? (
@@ -51,7 +51,7 @@ function UserDetails(props: DetailsProps) {
                                 "https://github.com/" + props.username
                             }
                             target="_blank"
-                            className="text-primary underline dark:hover:text-primary/90 hover:text-primary/75"
+                            className="text-primary underline dark:hover:text-primary/90 hover:text-primary/75 select-text"
                         >
                             {props.html_url ??
                                 "https://github.com/" + props.username}
@@ -61,7 +61,7 @@ function UserDetails(props: DetailsProps) {
                 {props.user_type ? (
                     <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                         <div className="text-xs pb-1">User Type</div>
-                        {props.user_type}
+                        <span className="select-text">{props.user_type}</span>
                     </div>
                 ) : undefined}
             </div>
@@ -191,7 +191,7 @@ export default function UserPage() {
                     "page" + (navigating ? "ranking" : location.state?.from),
             }}
         >
-            <div className="text-3xl font-semibold m-3 mt-0">
+            <div className="text-3xl font-semibold m-3 mt-0 select-text">
                 <span
                     style={{
                         viewTransitionName:

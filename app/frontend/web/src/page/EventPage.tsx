@@ -35,7 +35,7 @@ export default function EventPage() {
             className="flex flex-col grow p-3"
             style={{ viewTransitionName: fromRoot ? "page" : "none" }}
         >
-            <div className="text-3xl font-semibold m-3 mt-0">
+            <div className="text-3xl font-semibold m-3 mt-0 select-text">
                 <span style={{ viewTransitionName: "name" }}>
                     {EVENT_KINDS[kind]}
                 </span>

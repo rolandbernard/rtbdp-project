@@ -145,7 +145,7 @@ function Event(props: EventProps) {
                     {new Date(props.created_at).toLocaleString()}
                 </div>
             </div>
-            <div className="pt-2 pb-1 px-2 wrap-break-word">
+            <div className="pt-2 pb-1 px-2 wrap-break-word select-text">
                 <Description desc={props.desc} id={props.id} />
             </div>
         </div>

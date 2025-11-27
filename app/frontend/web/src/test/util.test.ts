@@ -126,12 +126,7 @@ describe("formatDate", () => {
     });
 
     it("handles different durations", () => {
-        const result = formatDate(
-            date,
-            0,
-            24 * 60 * 60 * 1000,
-            365 * 24 * 60 * 60 * 1000
-        );
+        const result = formatDate(date, 0, 7 * 24 * 60 * 60 * 1000);
         expect(result).toMatch(/Jan 15 \d{2}:\d{2}/);
     });
 });
@@ -140,12 +135,16 @@ describe("findTicks", () => {
     it("finds ticks for different time ranges", () => {
         const start = new Date("2024-01-01");
         const end = new Date("2024-12-31");
-        const ticks = findTicks(start, end);
+        const ticks = findTicks(
+            [{ x: new Date("2024-03-01") }, { x: new Date("2024-04-01") }],
+            start,
+            end
+        );
         expect(ticks.length).toBeGreaterThan(0);
     });
 
     it("handles default parameters", () => {
-        const ticks = findTicks();
+        const ticks = findTicks([]);
         expect(Array.isArray(ticks)).toBe(true);
     });
 });

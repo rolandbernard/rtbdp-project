@@ -70,33 +70,26 @@ const MONTHS = [
 export function formatDate(
     date: Date | undefined,
     window: number = 0,
-    min_dur = 24 * 60 * 60 * 1000,
-    max_dur = 24 * 60 * 60 * 1000
+    dur = 24 * 60 * 60 * 1000
 ) {
     if (!date) {
         return "No date";
     }
     let result = "";
-    if (max_dur > 365 * 24 * 60 * 60 * 1000) {
+    if (dur > 365 * 24 * 60 * 60 * 1000) {
         result += date.getFullYear();
     }
-    if (
-        max_dur > 24 * 60 * 60 * 1000 &&
-        min_dur < 5 * 365 * 24 * 60 * 60 * 1000
-    ) {
+    if (dur > 24 * 60 * 60 * 1000) {
         result += " " + MONTHS[date.getMonth()] + " " + date.getDate();
     }
-    if (
-        window !== 0 ||
-        (max_dur > 60 * 1000 && min_dur < 7 * 24 * 60 * 60 * 1000)
-    ) {
+    if (window !== 0 || dur > 60 * 1000) {
         result +=
             " " +
             twoDigitString(date.getHours()) +
             ":" +
             twoDigitString(date.getMinutes());
     }
-    if ((window !== 0 && window < 60) || min_dur < 5 * 60 * 1000) {
+    if ((window !== 0 && window < 60) || dur < 5 * 60 * 1000) {
         result += ":" + twoDigitString(date.getSeconds());
     }
     if (window !== 0) {
@@ -106,7 +99,7 @@ export function formatDate(
                 new Date(date.getTime() + 1000 * window).getMinutes()
             );
         }
-        if (window < 60 || min_dur < 5 * 60 * 1000) {
+        if (window < 60 || dur < 5 * 60 * 1000) {
             if (result[result.length - 1] !== "-") {
                 result += ":";
             }
@@ -118,60 +111,57 @@ export function formatDate(
     return result.trim();
 }
 
-function findTicksWithDiff(start: Date, stop: Date, r: (d: Date) => number) {
+function findTicksWithDiff(data: { x: Date }[], r: (d: Date) => number) {
     const ticks = [];
-    const diff = 300_000;
-    let curr = start;
-    while (curr < stop) {
-        const next = new Date(curr.getTime() + diff);
-        if (r(curr) !== r(next)) {
-            ticks.push(next);
+    let last = data[0]?.x;
+    for (const d of data) {
+        if (r(last!) !== r(d.x)) {
+            ticks.push(d.x);
         }
-        curr = next;
+        last = d.x;
     }
     return ticks;
 }
 
-export function findTicks(start: Date = new Date(), stop: Date = new Date()) {
+export function findTicks(
+    data: { x: Date }[],
+    start: Date = new Date(),
+    stop: Date = new Date()
+) {
     const duration = stop.getTime() - start.getTime();
     if (duration > 5 * 365 * 24 * 60 * 60 * 1000) {
-        return findTicksWithDiff(start, stop, d => d.getFullYear());
+        return findTicksWithDiff(data, d => d.getFullYear());
     } else if (duration > 7 * 31 * 24 * 60 * 60 * 1000) {
-        return findTicksWithDiff(start, stop, d => d.getMonth());
+        return findTicksWithDiff(data, d => d.getMonth());
     } else if (duration > 4 * 31 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
-            start,
-            stop,
-            d => Math.round(d.getDate() / 16) * 12 + d.getMonth()
+            data,
+            d => Math.trunc(d.getDate() / 16) * 12 + d.getMonth()
         );
     } else if (duration > 31 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
-            start,
-            stop,
-            d => Math.round(d.getDate() / 4) * 12 + d.getMonth()
+            data,
+            d => Math.trunc(d.getDate() / 4) * 12 + d.getMonth()
         );
     } else if (duration > 14 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
-            start,
-            stop,
-            d => Math.round(d.getDate() / 2) * 12 + d.getMonth()
+            data,
+            d => Math.trunc(d.getDate() / 2) * 12 + d.getMonth()
         );
     } else if (duration > 7 * 24 * 60 * 60 * 1000) {
-        return findTicksWithDiff(start, stop, d => d.getDate());
+        return findTicksWithDiff(data, d => d.getDate());
     } else if (duration > 4 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
-            start,
-            stop,
-            d => Math.round(d.getHours() / 6) * 31 + d.getDate()
+            data,
+            d => Math.trunc(d.getHours() / 6) * 31 + d.getDate()
         );
     } else if (duration > 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
-            start,
-            stop,
-            d => Math.round(d.getHours() / 3) * 31 + d.getDate()
+            data,
+            d => Math.trunc(d.getHours() / 3) * 31 + d.getDate()
         );
     } else {
-        return findTicksWithDiff(start, stop, d => d.getHours());
+        return findTicksWithDiff(data, d => d.getHours());
     }
 }
 

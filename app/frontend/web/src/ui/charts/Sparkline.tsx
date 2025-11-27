@@ -37,9 +37,7 @@ export default function Sparkline(props: Props) {
                     </linearGradient>
                 </defs>
                 <XAxis dataKey="x" hide />
-                <Tooltip
-                    content={<TimeTooltip window={props.window} small={true} />}
-                />
+                <Tooltip content={<TimeTooltip window={props.window} />} />
                 <Area
                     type="monotone"
                     dataKey="y"

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { AxisTick } from "recharts/types/util/types";
 import {
     AreaChart,
     ResponsiveContainer,
@@ -8,12 +9,11 @@ import {
     Area,
     CartesianGrid,
 } from "recharts";
-import type { AxisTick } from "recharts/types/util/types";
 
 import { colorFor, findTicks, formatDate } from "../../util";
 
 import TimeTooltip from "./TimeTooltip";
-import { computeFactor, VarBrush } from "./VarBrush";
+import { computeFactor, filterData, VarBrush } from "./VarBrush";
 
 type DataRow = { x: Date; y: number; [k: string]: number | Date };
 
@@ -28,105 +28,127 @@ interface Props {
 }
 
 export default function StackedAreaBrush(props: Props) {
-    const [startIdx, setStart] = useState<number | undefined>(undefined);
-    const [endIdx, setEnd] = useState<number | undefined>(undefined);
-    const start =
-        props.data[startIdx ?? Math.max(0, props.data.length - 288)]?.x;
-    const stop = props.data[endIdx ?? props.data.length - 1]?.x;
-    const max_dur =
-        props.data.length > 0
-            ? props.data[props.data.length - 1]!.x.getTime() -
-              props.data[0]!.x.getTime()
-            : undefined;
-    const min_dur =
-        start && stop ? stop.getTime() - start.getTime() : undefined;
-    const newFactor = computeFactor(props.data.length, startIdx, endIdx);
-    const [f, setFactor] = useState(newFactor);
-    let factor = f;
-    if (newFactor !== factor && endIdx == null) {
-        factor = newFactor;
-        setFactor(newFactor);
-    }
-    const cleanData = useMemo(() => {
+    const [rawStart, setStart] = useState<Date | undefined>(undefined);
+    const [rawStop, setStop] = useState<Date | undefined>(undefined);
+    const stop = useMemo(
+        () => rawStop ?? props.data[props.data.length - 1]?.x ?? new Date(),
+        [rawStop, props.data]
+    );
+    const start = useMemo(() => {
+        if (rawStart) {
+            return rawStart;
+        } else {
+            const startA = new Date(stop.getTime() - 24 * 60 * 60 * 1000);
+            const startB = props.data[0]?.x ?? new Date();
+            return startA > startB ? startA : startB;
+        }
+    }, [rawStart, stop, props.data]);
+    const [factor, cleanData] = useMemo(() => {
+        const factor = computeFactor(props.data, start, stop, 100);
+        const align = factor * props.window * 1000;
+        const extStart = new Date(align * Math.floor(start.getTime() / align));
+        const extStop = new Date(
+            align * Math.ceil(stop.getTime() / align) - props.window * 1000
+        );
+        const filtered = filterData(
+            props.data,
+            extStart,
+            extStop >= extStart ? extStop : extStart
+        );
         if (factor > 1) {
             const reduced = [];
-            for (let i = props.data.length - 1; i >= 0; i -= factor) {
+            for (let i = filtered.length - 1; i >= 0; i -= factor) {
                 const row = {
-                    x: props.data[Math.max(0, i + 1 - factor)]!.x,
+                    x: filtered[Math.max(0, i + 1 - factor)]!.x,
                 } as DataRow;
                 for (const key of [...props.keys, "y"]) {
                     let sum = 0;
                     for (let j = 0; j < factor && i - j >= 0; j++) {
-                        sum += props.data[i - j]![key]! as number;
+                        sum += filtered[i - j]![key]! as number;
                     }
                     row[key] = sum;
                 }
                 reduced.push(row);
             }
-            return reduced.reverse();
+            return [factor, reduced.reverse()];
         } else {
-            return props.data;
+            return [factor, filtered];
         }
-    }, [props.keys, props.data, factor]);
-    const formatTick = (d: Date) => formatDate(d, 0, min_dur, min_dur);
-    const formatTick2 = (d: Date) => formatDate(d, 0, min_dur, max_dur);
+    }, [props.keys, props.data, props.window, start, stop]);
+    const ticks = useMemo(
+        () => findTicks(cleanData, start, stop),
+        [cleanData, start, stop]
+    );
+    const formatTick = (d: Date) =>
+        formatDate(d, 0, stop.getTime() - start.getTime());
     return (
-        <ResponsiveContainer
-            width="100%"
-            height="100%"
-            className="contain-strict"
-        >
-            <AreaChart data={cleanData}>
-                <CartesianGrid
-                    strokeDasharray="3 3"
-                    className="stroke-border"
-                />
-                <XAxis
-                    dataKey="x"
-                    tickFormatter={formatTick}
-                    ticks={findTicks(start, stop) as unknown as AxisTick[]}
-                />
-                <YAxis />
-                <Tooltip
-                    content={
-                        <TimeTooltip
-                            window={props.window * factor}
-                            start={start}
-                            stop={stop}
-                            small={false}
+        <div className="w-full h-full flex flex-col">
+            <div className="grow min-h-0 contain-strict select-none">
+                <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                    className="contain-strict"
+                >
+                    <AreaChart data={cleanData} syncId="syncIdStacked">
+                        <CartesianGrid
+                            strokeDasharray="3 3"
+                            className="stroke-border"
                         />
-                    }
-                />
-                <VarBrush
-                    len={props.data.length}
-                    startIdx={startIdx}
-                    endIdx={endIdx}
-                    factor={factor}
-                    chartColor={props.chartColor}
-                    formatTicks={formatTick2}
-                    setStart={setStart}
-                    setEnd={setEnd}
-                    setFactor={setFactor}
-                />
-                {props.keys.sort().map(key => {
-                    const opacity =
-                        props.highligh && props.highligh !== key ? 0.4 : 1.0;
-                    return (
-                        <Area
-                            key={key}
-                            type="monotone"
-                            dataKey={key}
-                            fill={colorFor(key, opacity)}
-                            stroke={colorFor(key, opacity)}
-                            strokeWidth={opacity == 0.4 ? 1 : 2}
-                            stackId="1"
-                            onClick={() => props.onClick?.(key)}
-                            className="cursor-pointer"
-                            isAnimationActive={false}
+                        <XAxis
+                            dataKey="x"
+                            tickFormatter={formatTick}
+                            ticks={ticks as unknown as AxisTick[]}
+                            minTickGap={20}
                         />
+                        <YAxis />
+                        <Tooltip
+                            content={
+                                <TimeTooltip
+                                    window={props.window * factor}
+                                    start={props.data[0]?.x}
+                                    stop={props.data[props.data.length - 1]?.x}
+                                />
+                            }
+                        />
+                        {props.keys.sort().map(key => {
+                            const opacity =
+                                props.highligh && props.highligh !== key
+                                    ? 0.4
+                                    : 1.0;
+                            return (
+                                <Area
+                                    key={key}
+                                    type="monotone"
+                                    dataKey={key}
+                                    fill={colorFor(key, opacity)}
+                                    stroke={colorFor(key, opacity)}
+                                    strokeWidth={opacity == 0.4 ? 1 : 2}
+                                    stackId="1"
+                                    onClick={() => props.onClick?.(key)}
+                                    className="cursor-pointer"
+                                    isAnimationActive={false}
+                                />
+                            );
+                        })}
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
+            <VarBrush
+                name="Stacked"
+                data={props.data}
+                window={props.window}
+                start={start}
+                stop={stop}
+                chartColor={props.chartColor}
+                setStartStop={(start, stop) => {
+                    setStart(start);
+                    setStop(
+                        stop === props.data[props.data.length - 1]?.x
+                            ? undefined
+                            : stop
                     );
-                })}
-            </AreaChart>
-        </ResponsiveContainer>
+                }}
+            />
+        </div>
     );
 }
