@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -15,11 +14,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EventPollServiceTest {
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private MockRestApiClient mockRestApiClient;
     private EventPollService eventPollService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // A manual mock for RestApiClient
     static class MockRestApiClient extends RestApiClient {
         private final List<List<GithubEvent>> responses = new ArrayList<>();
         private int callCount = 0;
@@ -35,11 +33,11 @@ class EventPollServiceTest {
             if (callCount < responses.size()) {
                 return responses.get(callCount++);
             }
-            return Collections.emptyList();
+            return new ArrayList<>();
         }
 
         public void addResponse(List<GithubEvent> response) {
-            responses.add(response);
+            responses.add(new ArrayList<>(response));
         }
 
         public int getCallCount() {
@@ -62,8 +60,8 @@ class EventPollServiceTest {
     void testPollingAndEventEmission() throws InterruptedException {
         GithubEvent event1 = createGithubEvent("1", "PushEvent");
         GithubEvent event2 = createGithubEvent("2", "PullRequestEvent");
-        mockRestApiClient.addResponse(new ArrayList<>(List.of(event2, event1)));
-        mockRestApiClient.addResponse(new ArrayList<>(List.of(event2, event1)));
+        mockRestApiClient.addResponse(List.of(event2, event1));
+        mockRestApiClient.addResponse(List.of(event2, event1));
         List<GithubEvent> receivedEvents = new ArrayList<>();
         eventPollService.getEventsStream().subscribe(receivedEvents::add);
         eventPollService.startPolling();
@@ -80,9 +78,9 @@ class EventPollServiceTest {
         GithubEvent event1 = createGithubEvent("1", "PushEvent");
         GithubEvent event2 = createGithubEvent("2", "PullRequestEvent");
         GithubEvent event3 = createGithubEvent("3", "ForkEvent");
-        mockRestApiClient.addResponse(new ArrayList<>(List.of(event2, event1)));
-        mockRestApiClient.addResponse(new ArrayList<>(List.of(event2, event1)));
-        mockRestApiClient.addResponse(new ArrayList<>(List.of(event3, event2, event1)));
+        mockRestApiClient.addResponse(List.of(event2, event1));
+        mockRestApiClient.addResponse(List.of(event2, event1));
+        mockRestApiClient.addResponse(List.of(event3, event2, event1));
         List<GithubEvent> receivedEvents = new ArrayList<>();
         eventPollService.getEventsStream().subscribe(receivedEvents::add);
         eventPollService.startPolling();
@@ -97,15 +95,15 @@ class EventPollServiceTest {
     @Test
     void testUnmarkEvent() throws InterruptedException {
         GithubEvent event1 = createGithubEvent("1", "PushEvent");
-        mockRestApiClient.addResponse(new ArrayList<>(List.of(event1)));
-        mockRestApiClient.addResponse(new ArrayList<>(List.of(event1)));
+        mockRestApiClient.addResponse(List.of(event1));
+        mockRestApiClient.addResponse(List.of(event1));
         List<GithubEvent> receivedEvents = new ArrayList<>();
         eventPollService.getEventsStream().subscribe(receivedEvents::add);
         eventPollService.startPolling();
         Thread.sleep(100);
         assertEquals(1, receivedEvents.size());
         eventPollService.unmarkEvent(receivedEvents.get(0));
-        mockRestApiClient.addResponse(new ArrayList<>(List.of(event1)));
+        mockRestApiClient.addResponse(List.of(event1));
         Thread.sleep(100);
         assertEquals(2, receivedEvents.size());
         assertEquals("1", receivedEvents.get(0).getId());
