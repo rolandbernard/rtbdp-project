@@ -3,6 +3,7 @@ package com.rolandb.tables;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.rolandb.AbstractUpdateTable;
+import com.rolandb.UpdateDeduplicate;
 import com.rolandb.AbstractUpdateTable.UpdateSeqRow;
 
 import java.util.ArrayList;
@@ -144,7 +145,11 @@ public class UsersTable extends AbstractUpdateTable<UsersTable.UserUpdateEvent> 
                 })
                 .returns(UserUpdateEvent.class)
                 .uid("user-updates-01")
-                .name("User Update Stream");
+                .name("User Update Stream")
+                .keyBy(e -> e.id)
+                .filter(new UpdateDeduplicate<>())
+                .uid("user-dedup-updates-01")
+                .name("User Updates Deduplicated");
     }
 
     @Override

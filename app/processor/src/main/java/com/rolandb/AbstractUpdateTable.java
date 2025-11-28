@@ -34,6 +34,26 @@ public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSe
             return allValues;
         }
 
+        @JsonIgnore
+        public Object[] getUpdateValues() {
+            List<Field> fields = new ArrayList<>();
+            for (Field field : this.getClass().getFields()) {
+                if (field.getAnnotation(TableEventKey.class) == null) {
+                    fields.add(field);
+                }
+            }
+            Object[] result = new Object[fields.size() * 2];
+            try {
+                for (int i = 0; i < fields.size(); i++) {
+                    result[2 * i] = seqNum;
+                    result[2 * i + 1] = fields.get(i).get(this);
+                }
+            } catch (IllegalArgumentException | IllegalAccessException e) {
+                throw new IllegalStateException("Failed to read field values.", e);
+            }
+            return result;
+        }
+
         @JsonAnyGetter
         public Map<String, Long> perFieldSeqNumbers() {
             Map<String, Long> fields = new HashMap<>();

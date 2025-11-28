@@ -54,7 +54,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
         protected StreamExecutionEnvironment env;
         protected Map<String, Object> streams = new HashMap<>();
         private JdbcConnectionOptions jdbcOptions;
-        private String bootstrapServers = "localhost:29092";
+        private String bootstrapServers;
         private boolean dryRun = false;
         private int numPartitions = 1;
         private int replicationFactor = 1;
@@ -133,7 +133,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
     protected Map<String, Object> streams = new HashMap<>();
     protected String tableName;
     protected JdbcConnectionOptions jdbcOptions;
-    protected String bootstrapServers = "localhost:29092";
+    protected String bootstrapServers;
     protected boolean dryRun = false;
     protected int numPartitions = 1;
     protected int replicationFactor = 1;
@@ -351,7 +351,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                         AbstractTable::jdbcSinkSetStatementValues)
                 // JDBC execution options.
                 .withExecutionOptions(JdbcExecutionOptions.builder()
-                        .withBatchSize(10_000) // Allow some batching.
+                        .withBatchSize(1024) // Allow some batching.
                         .withBatchIntervalMs(100)
                         .withMaxRetries(5) // Retry up to 5 times on transient failures.
                         .build())
@@ -364,7 +364,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 // Use connection setting from setter.
                 jdbcOptions,
                 // JDBC execution options.
-                5, 10_000, Duration.ofMillis(100),
+                5, 1024, Duration.ofMillis(100),
                 // The UPSERT SQL statement for PostgreSQL.
                 buildJdbcSinkStatement(getOutputType()),
                 // A lambda function to map the Row objects to the prepared statement.
@@ -382,7 +382,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                 .setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip")
                 .setProperty(ProducerConfig.ACKS_CONFIG, "1") // Wait for only one in-sync replica to acknowledge.
-                .setProperty(ProducerConfig.BATCH_SIZE_CONFIG, "10000") // Allow some batching.
+                .setProperty(ProducerConfig.BATCH_SIZE_CONFIG, "1024") // Allow some batching.
                 .setProperty(ProducerConfig.LINGER_MS_CONFIG, "100")
                 .setProperty(ProducerConfig.RETRIES_CONFIG, "5") // Retry up to 5 times on transient failures.
                 .build();
@@ -414,9 +414,16 @@ public abstract class AbstractTable<E extends SequencedRow> {
         if (dryRun) {
             rawStream.print().setParallelism(1);
         } else {
-            DataStream<E> committedStream = sinkToPostgres(rawStream);
+            DataStream<E> committedStream;
+            if (jdbcOptions != null) {
+                committedStream = sinkToPostgres(rawStream);
+            } else {
+                committedStream = rawStream;
+            }
             streams.put("[table]" + tableName, committedStream);
-            sinkToKafka(committedStream);
+            if (bootstrapServers != null) {
+                sinkToKafka(committedStream);
+            }
         }
     }
 }

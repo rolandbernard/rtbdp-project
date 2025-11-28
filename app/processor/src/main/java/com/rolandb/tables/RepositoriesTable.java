@@ -3,6 +3,7 @@ package com.rolandb.tables;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.rolandb.AbstractUpdateTable;
+import com.rolandb.UpdateDeduplicate;
 import com.rolandb.AbstractUpdateTable.UpdateSeqRow;
 
 import java.util.ArrayList;
@@ -209,7 +210,11 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
                 })
                 .returns(RepoUpdateEvent.class)
                 .uid("repo-updates-01")
-                .name("Repository Update Stream");
+                .name("Repository Update Stream")
+                .keyBy(e -> e.id)
+                .filter(new UpdateDeduplicate<>())
+                .uid("repo-dedup-updates-01")
+                .name("Repository Updates Deduplicated");
     }
 
     @Override

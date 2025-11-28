@@ -100,8 +100,7 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
                 }
                 if (ps == null) {
                     assert connection == null;
-                    connection = DriverManager.getConnection(
-                            jdbcOptions.getDbURL(), jdbcOptions.getUsername().get(), jdbcOptions.getPassword().get());
+                    connection = DriverManager.getConnection(jdbcOptions.getDbURL(), jdbcOptions.getProperties());
                     connection.setAutoCommit(false);
                     ps = connection.prepareStatement(sqlInsert);
                 }
