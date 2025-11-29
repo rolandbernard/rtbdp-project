@@ -4,7 +4,7 @@ import { countsHistory, countsHistoryFine } from "./tables";
 import type { Table } from "./table";
 import type { Row } from "./client";
 
-export function useLoadingTable<R, V>(
+export function useTable<R, V>(
     table: Table<R, V>,
     suppress = false
 ): [boolean, Row<R>[]] {
@@ -48,11 +48,6 @@ export function useLoadingTable<R, V>(
     }
     const [subscribe, snapshot] = store.current!;
     return useSyncExternalStore(subscribe, snapshot);
-}
-
-export function useTable<R, V>(table: Table<R, V>, suppress = false): Row<R>[] {
-    const [_replayed, results] = useLoadingTable(table, suppress);
-    return results;
 }
 
 let latestCoarseHistoryTime: Date | undefined = undefined;

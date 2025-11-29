@@ -20,6 +20,7 @@ interface Props {
     data: { x: Date; y: number }[];
     chartColor: string;
     window: number;
+    className?: string;
 }
 
 export default function AreaBrush(props: Props) {
@@ -74,7 +75,9 @@ export default function AreaBrush(props: Props) {
     const formatTick = (d: Date) =>
         formatDate(d, 0, stop.getTime() - start.getTime());
     return (
-        <div className="w-full h-full flex flex-col">
+        <div
+            className={"w-full h-full flex flex-col " + (props.className ?? "")}
+        >
             <div className="grow min-h-0 contain-strict select-none">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={cleanData} syncId={"syncId" + props.name}>

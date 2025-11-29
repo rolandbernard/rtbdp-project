@@ -9,7 +9,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import type { RankingRow, RankingTable } from "../api/ranking";
 import type { Row } from "../api/client";
-import { useLoadingTable } from "../api/hooks";
+import { useTable } from "../api/hooks";
 import { useParam } from "../hooks";
 
 import Counter, { Letters } from "./Counter";
@@ -59,7 +59,7 @@ interface ViewProps<R> {
 
 export function RankingView<R>(props: ViewProps<R>) {
     const len = props.to - props.from;
-    const [loaded, rawResults] = useLoadingTable(
+    const [loaded, rawResults] = useTable(
         props.table.desiredRows(props.from, props.to + 1)
     );
     const [atEnd, results] = useMemo(() => {
@@ -81,7 +81,21 @@ export function RankingView<R>(props: ViewProps<R>) {
         }
     }, [loaded, atEnd, onAtEnd]);
     return (
-        <>
+        <div
+            className={
+                "flex-1 min-h-0 overflow-hidden grid auto-rows-fr " +
+                (props.from + 10 < 100
+                    ? "grid-cols-[3em_1fr]"
+                    : props.from + 10 < 1000
+                    ? "grid-cols-[3.5em_1fr]"
+                    : props.from + 10 < 10000
+                    ? "grid-cols-[4em_1fr]"
+                    : props.from + 10 < 100000
+                    ? "grid-cols-[4.5em_1fr]"
+                    : "grid-cols-[5em_1fr]") +
+                (loaded ? "" : " loading")
+            }
+        >
             {results.map((r, i) =>
                 r ? (
                     props.rows(r)
@@ -105,7 +119,7 @@ export function RankingView<R>(props: ViewProps<R>) {
                     </div>
                 )
             )}
-        </>
+        </div>
     );
 }
 
@@ -121,28 +135,13 @@ export default function RankingList<R>(props: Props<R>) {
     const [atEnd, setAtEnd] = useState(false);
     return (
         <div className="flex-1 min-h-0 flex flex-col">
-            <div
-                className={
-                    "flex-1 min-h-0 overflow-hidden grid auto-rows-fr " +
-                    (start + 10 < 100
-                        ? "grid-cols-[3em_1fr]"
-                        : start + 10 < 1000
-                        ? "grid-cols-[3.5em_1fr]"
-                        : start + 10 < 10000
-                        ? "grid-cols-[4em_1fr]"
-                        : start + 10 < 100000
-                        ? "grid-cols-[4.5em_1fr]"
-                        : "grid-cols-[5em_1fr]")
-                }
-            >
-                <RankingView
-                    table={props.table}
-                    from={start}
-                    to={start + 10}
-                    rows={props.rows}
-                    onAtEnd={e => setAtEnd(e)}
-                />
-            </div>
+            <RankingView
+                table={props.table}
+                from={start}
+                to={start + 10}
+                rows={props.rows}
+                onAtEnd={e => setAtEnd(e)}
+            />
             <div className="grow-0 flex flex-row items-center justify-center text-sm">
                 <button
                     className="flex items-center justify-center w-8 h-8 mx-1 not-disabled:cursor-pointer

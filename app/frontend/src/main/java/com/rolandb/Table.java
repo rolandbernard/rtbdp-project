@@ -93,7 +93,7 @@ public class Table {
                 try {
                     KafkaUtil.waitForTopics(kafkaProperties.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG), name);
                 } catch (InterruptedException | ExecutionException e) {
-                    throw new IllegalStateException("unable to connect to Kafka topics", e);
+                    throw new IllegalStateException("Unable to connect to Kafka topics", e);
                 }
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);

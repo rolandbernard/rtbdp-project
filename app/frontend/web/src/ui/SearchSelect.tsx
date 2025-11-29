@@ -28,7 +28,8 @@ interface Props<K, R, V> {
 export default function SearchSelect<K extends Key, R, V>(
     props: Props<K, R, V>
 ) {
-    const selected = useTable(props.find(props.selected)) ?? [];
+    const [loaded, selected] =
+        useTable(props.find(props.selected)) ?? [];
     return (
         <SearchBar
             name={props.ident}
@@ -93,7 +94,7 @@ export default function SearchSelect<K extends Key, R, V>(
                           : ".")
             }
             placeholderItalic={props.selected.length === 0}
-            className={props.className}
+            className={(props.className ?? "") + (loaded ? "" : " loading")}
             suppress={props.suppress}
             limit={props.limit ?? 10}
             debounce={props.debounce}

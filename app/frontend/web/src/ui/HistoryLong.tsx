@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { useHistoryTime, useLoadingTable } from "../api/hooks";
+import { useHistoryTime, useTable } from "../api/hooks";
 import type { NormalTable } from "../api/table";
 import { sort } from "../util";
 
@@ -15,7 +15,7 @@ export default function HistoryLong<
     R extends { ts_start: string; num_events?: number; num_stars?: number }
 >(props: Props<R>) {
     const historyTable = props.table;
-    const [loaded, rawHistory] = useLoadingTable(historyTable);
+    const [loaded, rawHistory] = useTable(historyTable);
     const lastTime = useHistoryTime(false);
     const cleanHistory = useMemo(() => {
         if (!loaded && rawHistory.length < 10) {
@@ -44,7 +44,10 @@ export default function HistoryLong<
             };
             for (const row of sorted) {
                 while (last.x.getTime() + diff < row.x.getTime()) {
-                    last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                    last = {
+                        x: new Date(last.x.getTime() + diff),
+                        y: loaded ? 0 : NaN,
+                    };
                     complete.push(last);
                 }
                 complete.push(row);
@@ -52,7 +55,10 @@ export default function HistoryLong<
             }
             if (lastTime) {
                 while (last.x < lastTime) {
-                    last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                    last = {
+                        x: new Date(last.x.getTime() + diff),
+                        y: loaded ? 0 : NaN,
+                    };
                     complete.push(last);
                 }
             }
@@ -65,6 +71,7 @@ export default function HistoryLong<
             data={cleanHistory}
             chartColor={props.chartColor ?? "var(--color-primary)"}
             window={5 * 60}
+            className={loaded ? "" : "loading"}
         />
     );
 }

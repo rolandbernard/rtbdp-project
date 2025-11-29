@@ -21,6 +21,7 @@ interface Props {
     keys: string[];
     data: DataRow[];
     chartColor: string;
+    className?: string;
     window: number;
     highligh?: string;
     onClick?: (v: string) => void;
@@ -82,7 +83,9 @@ export default function StackedAreaBrush(props: Props) {
     const formatTick = (d: Date) =>
         formatDate(d, 0, stop.getTime() - start.getTime());
     return (
-        <div className="w-full h-full flex flex-col">
+        <div
+            className={"w-full h-full flex flex-col " + (props.className ?? "")}
+        >
             <div className="grow min-h-0 contain-strict select-none">
                 <ResponsiveContainer
                     width="100%"

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 
-import { useLoadingTable } from "../api/hooks";
+import { useTable } from "../api/hooks";
 import { EVENT_KINDS, type EventKind } from "../api/tables";
 import type { NormalTable } from "../api/table";
 
@@ -17,7 +17,7 @@ export default function Proportions<
 >(props: Props<R>) {
     const navigate = useNavigate();
     const table = props.table;
-    const [loaded, rawData] = useLoadingTable(table);
+    const [loaded, rawData] = useTable(table);
     const cleanData = useMemo(() => {
         if (!loaded && rawData.length < 10) {
             // Avoid initial partial renders.
@@ -46,6 +46,7 @@ export default function Proportions<
                     { replace: true, viewTransition: true }
                 )
             }
+            className={loaded ? "" : "loading"}
         />
     );
 }

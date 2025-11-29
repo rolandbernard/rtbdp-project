@@ -5,6 +5,7 @@ import TimeTooltip from "./TimeTooltip";
 interface Props {
     data: { x: Date; y: number }[];
     chartColor: string;
+    className?: string;
     window?: number;
 }
 
@@ -13,7 +14,7 @@ export default function Sparkline(props: Props) {
         <ResponsiveContainer
             width="100%"
             height="100%"
-            className="contain-strict"
+            className={"contain-strict " + (props.className ?? "")}
         >
             <AreaChart data={props.data}>
                 <defs>

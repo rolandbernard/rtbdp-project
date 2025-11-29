@@ -8,7 +8,7 @@ import {
 import { Bot, Building2, FolderGit2, Search, User } from "lucide-react";
 
 import { users, repos } from "../api/tables";
-import { useLoadingTable } from "../api/hooks";
+import { useTable } from "../api/hooks";
 import { useClickOutside, useDebounce } from "../hooks";
 import { sortedKey } from "../util";
 import { boldQuery } from "../utils";
@@ -133,7 +133,7 @@ export default function GlobalSearch(props: Props) {
     const [query, setQuery] = useState("");
     useEffect(() => setQuery(""), [location]);
     const debounced = useDebounce(query.toLowerCase(), 250);
-    const [userComplete, userResults] = useLoadingTable(
+    const [userComplete, userResults] = useTable(
         users
             .where("username", [debounced])
             .or()
@@ -141,7 +141,7 @@ export default function GlobalSearch(props: Props) {
             .limit(10),
         debounced.length === 0
     );
-    const [repoComplete, repoResults] = useLoadingTable(
+    const [repoComplete, repoResults] = useTable(
         repos
             .where("reponame", [debounced])
             .or()
@@ -194,10 +194,17 @@ export default function GlobalSearch(props: Props) {
             </div>
             {query.length !== 0 ? (
                 <div
-                    className="absolute inset-y-full end-0 w-full hidden focus-within:block
-                        peer-focus-within:block hover:block active:block z-50"
+                    className={
+                        "absolute inset-y-full end-0 w-full hidden focus-within:block " +
+                        "peer-focus-within:block hover:block active:block z-50"
+                    }
                 >
-                    <div className="flex flex-col w-full bg-base-300 rounded-box p-1 py-3 shadow-xl dark:shadow-2xl">
+                    <div
+                        className={
+                            "flex flex-col w-full bg-base-300 rounded-box p-1 py-3 shadow-xl dark:shadow-2xl " +
+                            (userComplete && repoComplete ? "" : "loading")
+                        }
+                    >
                         {trueResults.length ? (
                             trueResults.map(row => {
                                 return "kind" in row ? (

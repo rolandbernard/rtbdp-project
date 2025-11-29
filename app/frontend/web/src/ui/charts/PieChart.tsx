@@ -20,6 +20,7 @@ function labels({ percent }: PieLabelRenderProps) {
 interface Props {
     data: { x: string; y: number }[];
     highligh?: string;
+    className?: string;
     onClick?: (v: string) => void;
 }
 
@@ -29,7 +30,7 @@ export default function PieChart(props: Props) {
         <ResponsiveContainer
             width="100%"
             height="100%"
-            className="select-none contain-strict"
+            className={"select-none contain-strict " + (props.className ?? "")}
         >
             <RePieChart data={data}>
                 <Tooltip content={<CatTooltip />} />

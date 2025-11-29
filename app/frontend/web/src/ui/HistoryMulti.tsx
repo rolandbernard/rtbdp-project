@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
 
-import { useHistoryTime, useLoadingTable } from "../api/hooks";
+import { useHistoryTime, useTable } from "../api/hooks";
 import type { NormalTable } from "../api/table";
 import { groupBy, sort } from "../util";
 
@@ -19,7 +19,7 @@ export default function HistoryMulti<
 >(props: Props<R>) {
     const navigate = useNavigate();
     const historyTable = props.table;
-    const [loaded, rawHistory] = useLoadingTable(historyTable);
+    const [loaded, rawHistory] = useTable(historyTable);
     const lastTime = useHistoryTime(false);
     const [keys, cleanHistory] = useMemo(() => {
         if ((!loaded && rawHistory.length < 10) || rawHistory.length === 0) {
@@ -49,7 +49,10 @@ export default function HistoryMulti<
                 };
                 for (const row of sorted) {
                     while (last.x.getTime() + diff < row.x.getTime()) {
-                        last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                        last = {
+                            x: new Date(last.x.getTime() + diff),
+                            y: loaded ? 0 : NaN,
+                        };
                         complete.push(last);
                     }
                     complete.push(row);
@@ -57,7 +60,10 @@ export default function HistoryMulti<
                 }
                 if (lastTime) {
                     while (last.x < lastTime) {
-                        last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                        last = {
+                            x: new Date(last.x.getTime() + diff),
+                            y: loaded ? 0 : NaN,
+                        };
                         complete.push(last);
                     }
                 }
@@ -82,7 +88,7 @@ export default function HistoryMulti<
                             each.data[
                                 (cur.getTime() - each.data[0]!.x.getTime()) /
                                     diff
-                            ]?.y ?? 0,
+                            ]?.y ?? (loaded ? 0 : NaN),
                         ])
                     ),
                 };
@@ -115,6 +121,7 @@ export default function HistoryMulti<
                 )
             }
             window={5 * 60}
+            className={loaded ? "" : "loading"}
         />
     );
 }

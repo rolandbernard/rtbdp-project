@@ -1,6 +1,6 @@
 import { useLocation, useNavigate, useParams } from "react-router";
 
-import { useLoadingTable, useTable } from "../api/hooks";
+import { useTable } from "../api/hooks";
 import {
     users,
     usersHistory,
@@ -73,6 +73,7 @@ const ORDINAL = ["st", "nd", "rd", "th"];
 
 interface CounterProps {
     rows: RankingRow<{ window_size: WindowSize; num_events: number }>[];
+    loaded: boolean;
     windowSize: WindowSize;
     onNavigate: (to: string) => void;
 }
@@ -116,8 +117,11 @@ function UserRankingCounter(props: CounterProps) {
     );
     return row ? (
         <div
-            className="m-2 p-2 border border-border/50 rounded-box min-w-0 cursor-pointer
-                bg-base-200/80 hover:bg-content/7 hover:dark:bg-content/10"
+            className={
+                "m-2 p-2 border border-border/50 rounded-box min-w-0 cursor-pointer " +
+                "bg-base-200/80 hover:bg-content/7 hover:dark:bg-content/10 " +
+                (props.loaded ? "" : "loading")
+            }
             onClick={() =>
                 props.onNavigate(
                     `/?ur${props.windowSize}=${Math.max(
@@ -142,26 +146,32 @@ interface RankingsProps {
 }
 
 function UserRankings(props: RankingsProps) {
-    const activityRank = useTable(usersRanking.where("user_id", [props.id]));
+    const [loaded, activityRank] = useTable(
+        usersRanking.where("user_id", [props.id])
+    );
     return (
         <>
             <UserRankingCounter
                 rows={activityRank}
+                loaded={loaded}
                 windowSize="5m"
                 onNavigate={props.onNavigate}
             />
             <UserRankingCounter
                 rows={activityRank}
+                loaded={loaded}
                 windowSize="1h"
                 onNavigate={props.onNavigate}
             />
             <UserRankingCounter
                 rows={activityRank}
+                loaded={loaded}
                 windowSize="6h"
                 onNavigate={props.onNavigate}
             />
             <UserRankingCounter
                 rows={activityRank}
+                loaded={loaded}
                 windowSize="24h"
                 onNavigate={props.onNavigate}
             />
@@ -175,7 +185,7 @@ export default function UserPage() {
     const location = useLocation();
     const params = useParams();
     const userId = parseInt(params["userId"]!);
-    const [loaded, userData] = useLoadingTable(users.where("id", [userId]));
+    const [loaded, userData] = useTable(users.where("id", [userId]));
     const user = userData[0];
     if (loaded && !user) {
         throw new Response("Invalid User", {
@@ -210,7 +220,12 @@ export default function UserPage() {
                 </span>
             </div>
             <div className="flex flex-col grow">
-                <div className="m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0 min-h-40">
+                <div
+                    className={
+                        "m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0 min-h-40 " +
+                        (loaded ? "" : "loading")
+                    }
+                >
                     {user ? (
                         <UserDetails
                             {...user}

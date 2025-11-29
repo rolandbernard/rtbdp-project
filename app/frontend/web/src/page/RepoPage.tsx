@@ -6,7 +6,7 @@ import {
     useViewTransitionState,
 } from "react-router";
 
-import { useLoadingTable, useTable } from "../api/hooks";
+import { useTable } from "../api/hooks";
 import {
     repos,
     reposHistory,
@@ -31,13 +31,17 @@ function OwnerCard(props: OwnerProps) {
     const table = props.id
         ? users.where("id", [props.id])
         : users.where("username", [props.name]);
-    const user = useTable(table)[0];
+    const [loaded, rows] = useTable(table);
+    const user = rows[0];
     const inTransition = useViewTransitionState(
         "/user/" + (user?.id ?? props.id)
     );
     return user ? (
         <div
-            className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200"
+            className={
+                "p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200 " +
+                (loaded ? "" : "loading")
+            }
             style={{
                 viewTransitionName: inTransition ? "pagerepo" : "none",
             }}
@@ -64,7 +68,12 @@ function OwnerCard(props: OwnerProps) {
             </Link>
         </div>
     ) : props.name ? (
-        <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
+        <div
+            className={
+                "p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200 " +
+                (loaded ? "" : "loading")
+            }
+        >
             <div className="text-xs pb-1">Owner</div>
             <div className="font-semibold select-text">
                 <span className="font-bold">@</span>
@@ -200,6 +209,7 @@ interface CounterProps {
         num_stars?: number;
         num_events?: number;
     }>[];
+    loaded: boolean;
     windowSize: WindowSize;
     kind: string;
     onNavigate: (to: string) => void;
@@ -251,8 +261,11 @@ function RepoRankingCounter(props: CounterProps) {
     );
     return row ? (
         <div
-            className="m-2 p-2 border border-border/50 rounded-box min-w-0 cursor-pointer
-                bg-base-200/80 hover:bg-content/7 hover:dark:bg-content/10"
+            className={
+                "m-2 p-2 border border-border/50 rounded-box min-w-0 cursor-pointer " +
+                "bg-base-200/80 hover:bg-content/7 hover:dark:bg-content/10 " +
+                (props.loaded ? "" : "loading")
+            }
             onClick={() =>
                 props.onNavigate(
                     `/?rrkind=${props.kind}&rr${props.kind}${
@@ -266,7 +279,12 @@ function RepoRankingCounter(props: CounterProps) {
             {inner}
         </div>
     ) : (
-        <div className="m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80">
+        <div
+            className={
+                "m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80 " +
+                (props.loaded ? "" : "loading")
+            }
+        >
             {inner}
         </div>
     );
@@ -278,54 +296,66 @@ interface RankingsProps {
 }
 
 function RepoRankings(props: RankingsProps) {
-    const activityRank = useTable(reposRanking.where("repo_id", [props.id]));
-    const starsRank = useTable(starsRanking.where("repo_id", [props.id]));
+    const [activityLoaded, activityRank] = useTable(
+        reposRanking.where("repo_id", [props.id])
+    );
+    const [startsLoaded, starsRank] = useTable(
+        starsRanking.where("repo_id", [props.id])
+    );
     return (
         <>
             <RepoRankingCounter
                 rows={activityRank}
+                loaded={activityLoaded}
                 windowSize="5m"
                 kind="activity"
                 onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={activityRank}
+                loaded={activityLoaded}
                 windowSize="1h"
                 kind="activity"
                 onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={activityRank}
+                loaded={activityLoaded}
                 windowSize="6h"
                 kind="activity"
                 onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={activityRank}
+                loaded={activityLoaded}
                 windowSize="24h"
                 kind="activity"
                 onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={starsRank}
+                loaded={startsLoaded}
                 windowSize="5m"
                 kind="stars"
                 onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={starsRank}
+                loaded={startsLoaded}
                 windowSize="1h"
                 kind="stars"
                 onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={starsRank}
+                loaded={startsLoaded}
                 windowSize="6h"
                 kind="stars"
                 onNavigate={props.onNavigate}
             />
             <RepoRankingCounter
                 rows={starsRank}
+                loaded={startsLoaded}
                 windowSize="24h"
                 kind="stars"
                 onNavigate={props.onNavigate}
@@ -340,7 +370,7 @@ export default function RepoPage() {
     const location = useLocation();
     const params = useParams();
     const repoId = parseInt(params["repoId"]!);
-    const [loaded, repoData] = useLoadingTable(repos.where("id", [repoId]));
+    const [loaded, repoData] = useTable(repos.where("id", [repoId]));
     const repo = repoData[0];
     if (loaded && !repo) {
         throw new Response("Invalid Repository", {
@@ -372,7 +402,12 @@ export default function RepoPage() {
                 </span>
             </div>
             <div className="flex flex-col grow">
-                <div className="m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0 min-h-20">
+                <div
+                    className={
+                        "m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0 min-h-20 " +
+                        (loaded ? "" : "loading")
+                    }
+                >
                     {repo ? (
                         <RepoDetails {...repo} />
                     ) : (

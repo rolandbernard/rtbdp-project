@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 
-import { useLoadingTable } from "../api/hooks";
+import { useTable } from "../api/hooks";
 import { useClickOutside, useDebounce } from "../hooks";
 import { sort } from "../util";
 import type { Table } from "../api/table";
@@ -26,7 +26,7 @@ export default function SearchBar<R, V>(props: Props<R, V>) {
     const [query, setQuery] = useState("");
     const lowerQuery = query.toLowerCase();
     const debounced = useDebounce(lowerQuery, props.debounce ?? 250);
-    const [complete, results] = useLoadingTable(
+    const [complete, results] = useTable(
         props.table(debounced),
         props.suppress !== false && debounced.length === 0
     );
@@ -71,7 +71,12 @@ export default function SearchBar<R, V>(props: Props<R, V>) {
                     className="absolute inset-y-full end-0 w-full hidden focus-within:block
                         peer-focus-within:block hover:block active:block z-50"
                 >
-                    <div className="flex flex-col w-full bg-base-300 rounded-box py-2.5 shadow-xl dark:shadow-2xl">
+                    <div
+                        className={
+                            "flex flex-col w-full bg-base-300 rounded-box py-2.5 shadow-xl dark:shadow-2xl " +
+                            (complete ? "" : "loading")
+                        }
+                    >
                         {trueResults.length ? (
                             trueResults.map(row =>
                                 props.output(row, lowerQuery)

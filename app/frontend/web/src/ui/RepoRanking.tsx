@@ -28,11 +28,15 @@ interface RepoNameProps {
 }
 
 function RepoName(props: RepoNameProps) {
-    const repo = useTable(repos.where("id", [props.repoId]))[0];
+    const [loaded, rows] = useTable(repos.where("id", [props.repoId]));
+    const repo = rows[0];
     return (
         <div
-            className="flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis contain-content select-text
-                    text-primary font-semibold text-left dark:hover:text-primary/90 hover:text-primary/75"
+            className={
+                "flex-2 min-w-0 whitespace-nowrap overflow-hidden overflow-ellipsis contain-content select-text " +
+                "text-primary font-semibold text-left dark:hover:text-primary/90 hover:text-primary/75 " +
+                (loaded ? "" : "loading")
+            }
             style={{ direction: "rtl" }}
         >
             <Link

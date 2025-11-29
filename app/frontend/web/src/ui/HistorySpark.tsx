@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { useHistoryTime, useLoadingTable } from "../api/hooks";
+import { useHistoryTime, useTable } from "../api/hooks";
 import type { NormalTable } from "../api/table";
 import type { WindowSize } from "../api/tables";
 import { sort } from "../util";
@@ -22,7 +22,7 @@ export default function HistorySpark<
     const limit = { "5m": 5 * 6, "1h": 60 * 6, "6h": 6 * 12, "24h": 24 * 12 }[
         props.windowSize
     ];
-    const [loaded, rawHistory] = useLoadingTable(historyTable.limit(limit));
+    const [loaded, rawHistory] = useTable(historyTable.limit(limit));
     const lastTime = useHistoryTime(useFine);
     const cleanHistory = useMemo(() => {
         if (!loaded && rawHistory.length < 10) {
@@ -51,7 +51,10 @@ export default function HistorySpark<
             };
             for (const row of sorted) {
                 while (last.x.getTime() + diff < row.x.getTime()) {
-                    last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                    last = {
+                        x: new Date(last.x.getTime() + diff),
+                        y: 0,
+                    };
                     complete.push(last);
                 }
                 complete.push(row);
@@ -59,7 +62,10 @@ export default function HistorySpark<
             }
             if (lastTime) {
                 while (last.x < lastTime) {
-                    last = { x: new Date(last.x.getTime() + diff), y: 0 };
+                    last = {
+                        x: new Date(last.x.getTime() + diff),
+                        y: 0,
+                    };
                     complete.push(last);
                 }
             }
@@ -95,6 +101,7 @@ export default function HistorySpark<
                     "24h": 20 * 60,
                 }[props.windowSize]
             }
+            className={loaded ? "" : "loading"}
         />
     );
 }

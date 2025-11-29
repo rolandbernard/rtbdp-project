@@ -2,7 +2,7 @@ import { createElement, useMemo, useRef, type RefObject } from "react";
 import { Link, useViewTransitionState } from "react-router";
 import { ArrowUpToLine } from "lucide-react";
 
-import { useLoadingTable } from "../api/hooks";
+import { useTable } from "../api/hooks";
 import {
     EVENT_KINDS,
     events,
@@ -170,25 +170,29 @@ function BasicEventList(props: Props) {
     if (props.repoIds.length !== 0) {
         filtered = filtered.where("repo_id", props.repoIds);
     }
-    const [loaded, rawResults] = useLoadingTable(filtered);
+    const [loaded, rawResults] = useTable(filtered);
     const results = useMemo(() => {
         return sort(rawResults, [e => e.created_at, e => e.id], true);
     }, [rawResults]);
     return (
         <div
-            className="grow overflow-y-scroll overflow-x-hidden not-md:h-[50dvh] min-w-0"
+            className={
+                "grow not-md:h-[50dvh] min-h-0 min-w-0 " + (loaded ? "" : "loading")
+            }
             ref={props.listRef}
         >
             {results.length !== 0 ? (
-                results.map(row => (
-                    <Event
-                        key={row.id}
-                        created_at={row.created_at}
-                        kind={row.kind}
-                        desc={row.details}
-                        id={row.id}
-                    />
-                ))
+                <div className="h-full w-full min-h-0 overflow-y-scroll overflow-x-hidden">
+                    {results.map(row => (
+                        <Event
+                            key={row.id}
+                            created_at={row.created_at}
+                            kind={row.kind}
+                            desc={row.details}
+                            id={row.id}
+                        />
+                    ))}
+                </div>
             ) : (
                 <div className="w-full h-full flex justify-center items-center text-content/80">
                     {loaded ? "No such events." : "Loading..."}
