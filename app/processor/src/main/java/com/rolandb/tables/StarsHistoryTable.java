@@ -15,15 +15,15 @@ public class StarsHistoryTable extends AbstractTable<StarsHistoryTable.RepoStarC
     public static class RepoStarCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("repo_id")
-        public final long repoId;
+        public long repoId;
         @TableEventKey
         @JsonProperty("ts_start")
-        public final Instant winStart;
+        public Instant winStart;
         @TableEventKey
         @JsonProperty("ts_end")
-        public final Instant winEnd;
+        public Instant winEnd;
         @JsonProperty("num_stars")
-        public final long numStars;
+        public long numStars;
 
         public RepoStarCounts(Instant winStart, Instant winEnd, long repoId, long numStars) {
             this.winStart = winStart;

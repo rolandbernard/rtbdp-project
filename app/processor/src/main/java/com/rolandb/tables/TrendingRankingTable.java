@@ -11,9 +11,9 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 public class TrendingRankingTable extends AbstractRankingTable<TrendingRankingTable.RepoTrendingRank> {
     public static class RepoTrendingRank extends RankingSeqRow {
         @JsonProperty("repo_id")
-        public final long repoId;
+        public long repoId;
         @JsonProperty("trending_score")
-        public final Long trendingScore;
+        public Long trendingScore;
 
         public RepoTrendingRank(
                 long repoId, Long trendingScore, Integer rowNumber, Integer rank,

@@ -15,12 +15,12 @@ public class ReposLiveTable extends AbstractTable<ReposLiveTable.RepoEventCounts
     public static class RepoEventCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("repo_id")
-        public final long repoId;
+        public long repoId;
         @TableEventKey
         @JsonProperty("window_size")
-        public final WindowSize windowSize;
+        public WindowSize windowSize;
         @JsonProperty("num_events")
-        public final long numEvents;
+        public long numEvents;
 
         public RepoEventCounts(long repoId, WindowSize windowSize, long numEvents) {
             this.repoId = repoId;

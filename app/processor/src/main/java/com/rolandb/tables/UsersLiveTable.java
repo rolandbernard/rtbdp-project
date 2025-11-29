@@ -15,12 +15,12 @@ public class UsersLiveTable extends AbstractTable<UsersLiveTable.UserEventCounts
     public static class UserEventCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("user_id")
-        public final long userId;
+        public long userId;
         @TableEventKey
         @JsonProperty("window_size")
-        public final WindowSize windowSize;
+        public WindowSize windowSize;
         @JsonProperty("num_events")
-        public final long numEvents;
+        public long numEvents;
 
         public UserEventCounts(long userId, WindowSize windowSize, long numEvents) {
             this.userId = userId;

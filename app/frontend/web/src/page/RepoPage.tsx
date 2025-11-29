@@ -156,9 +156,11 @@ function RepoDetails(props: DetailsProps) {
             {props.topics ? (
                 <div className="p-2 flex flex-col border border-border/50 rounded-box min-w-0 bg-base-200">
                     <div className="text-xs pb-1">Topics</div>
-                    {props.topics.split(" ").map(e => (
-                        <span className="pe-1 select-text">{e}</span>
-                    ))}
+                    <div>
+                        {props.topics.split(" ").map(e => (
+                            <span className="select-text"> {e}</span>
+                        ))}
+                    </div>
                 </div>
             ) : undefined}
             {props.lang ? (

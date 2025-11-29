@@ -45,13 +45,37 @@ public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSe
             Object[] result = new Object[fields.size() * 2];
             try {
                 for (int i = 0; i < fields.size(); i++) {
-                    result[2 * i] = seqNum;
-                    result[2 * i + 1] = fields.get(i).get(this);
+                    Object value = fields.get(i).get(this);
+                    result[2 * i] = value == null ? 0 : seqNum;
+                    result[2 * i + 1] = value;
                 }
             } catch (IllegalArgumentException | IllegalAccessException e) {
                 throw new IllegalStateException("Failed to read field values.", e);
             }
             return result;
+        }
+
+        @Override
+        public void mergeWith(SequencedRow next) {
+            assert getClass() == next.getClass();
+            try {
+                if (seqNum == null || (next.seqNum != null && next.seqNum > seqNum)) {
+                    for (Field field : getClass().getFields()) {
+                        Object value = field.get(next);
+                        if (value != null) {
+                            field.set(this, value);
+                        }
+                    }
+                } else {
+                    for (Field field : getClass().getFields()) {
+                        if (field.get(this) == null) {
+                            field.set(this, field.get(next));
+                        }
+                    }
+                }
+            } catch (IllegalArgumentException | IllegalAccessException e) {
+                throw new IllegalStateException("Failed to merge events.", e);
+            }
         }
 
         @JsonAnyGetter

@@ -15,15 +15,15 @@ public class UsersHistoryTable extends AbstractTable<UsersHistoryTable.UserEvent
     public static class UserEventCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("user_id")
-        public final long userId;
+        public long userId;
         @TableEventKey
         @JsonProperty("ts_start")
-        public final Instant winStart;
+        public Instant winStart;
         @TableEventKey
         @JsonProperty("ts_end")
-        public final Instant winEnd;
+        public Instant winEnd;
         @JsonProperty("num_events")
-        public final long numEvents;
+        public long numEvents;
 
         public UserEventCounts(Instant winStart, Instant winEnd, long userId, long numEvents) {
             this.winStart = winStart;

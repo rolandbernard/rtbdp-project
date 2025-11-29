@@ -12,9 +12,9 @@ public class TrendingLiveTable extends AbstractTable<TrendingLiveTable.RepoTrend
     public static class RepoTrendingScore extends SequencedRow {
         @TableEventKey
         @JsonProperty("repo_id")
-        public final long repoId;
+        public long repoId;
         @JsonProperty("trending_score")
-        public final long trendingScore;
+        public long trendingScore;
 
         public RepoTrendingScore(long repoId, long trendingScore) {
             this.repoId = repoId;

@@ -17,11 +17,11 @@ public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.
         // frontend client.
         @TableEventKey
         @JsonProperty("window_size")
-        public final WindowSize windowSize;
+        public WindowSize windowSize;
         @JsonProperty("kind")
-        public final GithubEventType eventType;
+        public GithubEventType eventType;
         @JsonProperty("num_events")
-        public final Long numEvents;
+        public Long numEvents;
 
         public CountsRank(
                 WindowSize windowSize, GithubEventType eventType, Long numEvents, Integer rowNumber, Integer rank,

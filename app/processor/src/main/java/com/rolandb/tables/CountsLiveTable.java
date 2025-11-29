@@ -52,12 +52,12 @@ public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> 
     public static class EventCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("kind")
-        public final GithubEventType eventType;
+        public GithubEventType eventType;
         @TableEventKey
         @JsonProperty("window_size")
-        public final WindowSize windowSize;
+        public WindowSize windowSize;
         @JsonProperty("num_events")
-        public final long numEvents;
+        public long numEvents;
 
         public EventCounts(GithubEventType eventType, WindowSize windowSize, long numEvents) {
             this.eventType = eventType;

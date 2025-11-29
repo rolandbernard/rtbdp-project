@@ -11,6 +11,7 @@ import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ExternalizedCheckpointRetention;
 import org.apache.flink.configuration.MemorySize;
+import org.apache.flink.configuration.PipelineOptions;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -119,6 +120,7 @@ public class Processor {
         conf.set(CheckpointingOptions.INCREMENTAL_CHECKPOINTS, true);
         conf.set(CheckpointingOptions.EXTERNALIZED_CHECKPOINT_RETENTION,
                 ExternalizedCheckpointRetention.RETAIN_ON_CANCELLATION);
+        conf.set(PipelineOptions.AUTO_GENERATE_UIDS, false);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         // Enable checkpointing. At-least-once semantics are fine because we basically
         // always use upserts with a primary key.

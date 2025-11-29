@@ -16,35 +16,35 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
     public static class RepoUpdateEvent extends UpdateSeqRow {
         @TableEventKey
         @JsonProperty("id")
-        public final long id;
+        public long id;
         @JsonProperty("reponame")
-        public final String reponame;
+        public String reponame;
         @JsonProperty("fullname")
-        public final String fullname;
+        public String fullname;
         @JsonProperty("owner_id")
-        public final Long ownerId;
+        public Long ownerId;
         @JsonProperty("html_url")
-        public final String htmlUrl;
+        public String htmlUrl;
         @JsonProperty("homepage")
-        public final String homepage;
+        public String homepage;
         @JsonProperty("descr")
-        public final String description;
+        public String description;
         @JsonProperty("topics")
-        public final String topics;
+        public String topics;
         @JsonProperty("lang")
-        public final String lang;
+        public String lang;
         @JsonProperty("license")
-        public final String license;
+        public String license;
         @JsonProperty("is_fork")
-        public final Boolean isFork;
+        public Boolean isFork;
         @JsonProperty("is_archived")
-        public final Boolean isArchive;
+        public Boolean isArchive;
         @JsonProperty("fork_count")
-        public final Long forkCount;
+        public Long forkCount;
         @JsonProperty("issue_count")
-        public final Long issueCount;
+        public Long issueCount;
         @JsonProperty("star_count")
-        public final Long starCount;
+        public Long starCount;
 
         public RepoUpdateEvent(
                 long id, String reponame, String fullname, Long ownerId, String htmlUrl, String homepage,

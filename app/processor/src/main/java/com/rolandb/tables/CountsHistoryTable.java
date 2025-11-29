@@ -16,15 +16,15 @@ public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCo
     public static class EventCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("ts_start")
-        public final Instant winStart;
+        public Instant winStart;
         @TableEventKey
         @JsonProperty("ts_end")
-        public final Instant winEnd;
+        public Instant winEnd;
         @TableEventKey
         @JsonProperty("kind")
-        public final GithubEventType eventType;
+        public GithubEventType eventType;
         @JsonProperty("num_events")
-        public final long numEvents;
+        public long numEvents;
 
         public EventCounts(Instant winStart, Instant winEnd, GithubEventType eventType, long numEvents) {
             this.winStart = winStart;

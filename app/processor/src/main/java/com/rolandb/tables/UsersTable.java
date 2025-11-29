@@ -15,15 +15,15 @@ public class UsersTable extends AbstractUpdateTable<UsersTable.UserUpdateEvent> 
     public static class UserUpdateEvent extends UpdateSeqRow {
         @TableEventKey
         @JsonProperty("id")
-        public final long id;
+        public long id;
         @JsonProperty("username")
-        public final String username;
+        public String username;
         @JsonProperty("avatar_url")
-        public final String avatarUrl;
+        public String avatarUrl;
         @JsonProperty("html_url")
-        public final String htmlUrl;
+        public String htmlUrl;
         @JsonProperty("user_type")
-        public final String userType;
+        public String userType;
 
         public UserUpdateEvent(long id, String username, String avatarUrl, String htmlUrl, String userType) {
             this.id = id;

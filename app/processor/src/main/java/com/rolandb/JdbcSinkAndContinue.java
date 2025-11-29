@@ -7,8 +7,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.ListState;
@@ -104,18 +105,25 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
                     connection.setAutoCommit(false);
                     ps = connection.prepareStatement(sqlInsert);
                 }
+                Map<List<?>, E> events = new HashMap<>();
+                for (E event : buffer.get()) {
+                    if (event.seqNum == null) {
+                        // We fallback to a timestamp based sequence number.
+                        lastSeq++;
+                        event.seqNum = lastSeq;
+                    }
+                    List<?> key = event.getKey();
+                    if (events.containsKey(key)) {
+                        events.get(key).mergeWith(event);
+                    } else {
+                        events.put(key, event);
+                    }
+                }
                 connection.beginRequest();
-                List<E> events = new ArrayList<>();
                 try {
-                    for (E event : buffer.get()) {
-                        if (event.seqNum == null) {
-                            // We fallback to a timestamp based sequence number.
-                            lastSeq++;
-                            event.seqNum = lastSeq;
-                        }
+                    for (E event : events.values()) {
                         stmtFunction.apply(ps, event);
                         ps.addBatch();
-                        events.add(event);
                     }
                     ps.executeBatch();
                     connection.commit();
@@ -127,7 +135,7 @@ public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcess
                 }
                 // Now that the data is committed in the database, emit the sequenced
                 // events for further processing.
-                for (E event : events) {
+                for (E event : events.values()) {
                     out.collect(event);
                 }
                 buffer.clear();

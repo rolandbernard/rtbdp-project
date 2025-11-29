@@ -174,6 +174,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
         return getStream("events", () -> {
             return getRawEventStream()
                     .map(jsonNode -> new GithubEvent(jsonNode))
+                    .uid("event-stream-map-01")
                     // We assume events can be up to 10 seconds late, but otherwise in-order.
                     .assignTimestampsAndWatermarks(
                             WatermarkStrategy

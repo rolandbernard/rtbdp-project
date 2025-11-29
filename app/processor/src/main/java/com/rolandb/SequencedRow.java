@@ -45,7 +45,7 @@ public class SequencedRow {
         builder.append(getClass().getName());
         builder.append("(");
         boolean first = true;
-        for (Field field : this.getClass().getFields()) {
+        for (Field field : getClass().getFields()) {
             if (!first) {
                 builder.append(" ");
             }
@@ -56,6 +56,19 @@ public class SequencedRow {
         }
         builder.append(")");
         return builder.toString();
+    }
+
+    public void mergeWith(SequencedRow next) {
+        assert getClass() == next.getClass();
+        if (seqNum == null || (next.seqNum != null && next.seqNum > seqNum)) {
+            try {
+                for (Field field : getClass().getFields()) {
+                    field.set(this, field.get(next));
+                }
+            } catch (IllegalArgumentException | IllegalAccessException e) {
+                throw new IllegalStateException("Failed to merge events.", e);
+            }
+        }
     }
 
     public static boolean hasKeyIn(Class<?> clazz) {

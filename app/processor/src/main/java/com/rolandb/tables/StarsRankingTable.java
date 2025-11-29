@@ -13,11 +13,11 @@ public class StarsRankingTable extends AbstractRankingTable<StarsRankingTable.Re
     public static class RepoStarsRank extends RankingSeqRow {
         @TableEventKey
         @JsonProperty("window_size")
-        public final WindowSize windowSize;
+        public WindowSize windowSize;
         @JsonProperty("repo_id")
-        public final long repoId;
+        public long repoId;
         @JsonProperty("num_stars")
-        public final Long numStars;
+        public Long numStars;
 
         public RepoStarsRank(
                 WindowSize windowSize, long repoId, Long numEvents, Integer rowNumber, Integer rank,
@@ -46,6 +46,7 @@ public class StarsRankingTable extends AbstractRankingTable<StarsRankingTable.Re
                                 Long.class, Long.class))
                 .setParallelism(Integer.min(4, env.getParallelism()))
                 .returns(RepoStarsRank.class)
+                .uid("ranking-stars-01")
                 .name("Per Repo Stars Rankings");
     }
 

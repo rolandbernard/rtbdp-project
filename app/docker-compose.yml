@@ -254,6 +254,34 @@ services:
       "--db-password", "${USERPWD:-user}"
     ]
 
+  ghareplay:
+    build: processor
+    image: "${COMPOSE_PROJECT_NAME:-rtgh}-processor:latest"
+    container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-ghareplay"
+    restart: on-failure
+    volumes:
+      - flink-checkpoints:/opt/flink/checkpoints:z
+      - flink-savepoints:/opt/flink/savepoints:z
+      - flink-ha-metadata:/opt/flink/ha-metadata:z
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    profiles:
+      - ghareplay
+    environment:
+      JOB_NAME: "GitHub Historical Event Analysis"
+    command: [
+      "-c", "com.rolandb.ProcessorHistory",
+      "/app/processor.jar",
+      "--start-date", "${GHAREPLAY_START}",
+      "--end-date", "${GHAREPLAY_END}",
+      "--db-url", "jdbc:postgresql://postgres:5432/db",
+      "--db-username", "${USERID:-user}",
+      "--db-password", "${USERPWD:-user}"
+    ]
+
   frontend:
     build: frontend
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-frontend:latest"

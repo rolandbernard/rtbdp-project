@@ -15,12 +15,12 @@ public class StarsLiveTable extends AbstractTable<StarsLiveTable.RepoStarCounts>
     public static class RepoStarCounts extends SequencedRow {
         @TableEventKey
         @JsonProperty("repo_id")
-        public final long repoId;
+        public long repoId;
         @TableEventKey
         @JsonProperty("window_size")
-        public final WindowSize windowSize;
+        public WindowSize windowSize;
         @JsonProperty("num_stars")
-        public final long numStars;
+        public long numStars;
 
         public RepoStarCounts(long repoId, WindowSize windowSize, long numStars) {
             this.repoId = repoId;

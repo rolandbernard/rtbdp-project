@@ -10,7 +10,7 @@ CHECKPOINT_DIR="${CHECKPOINT_DIR:-/opt/flink/checkpoints}"
 SAVEPOINT_DIR="${SAVEPOINT_DIR:-/opt/flink/savepoints}"
 
 # Check if this job may already be running. If it is, get the job id.
-JOB_ID=$(flink list -m $JM_ADDRESS 2>/dev/null | grep "GitHub Event Analysis" | cut -d" " -f4)
+JOB_ID=$(flink list -m $JM_ADDRESS 2>/dev/null | grep "$JOB_NAME" | cut -d" " -f4)
 
 if [ -n "$JOB_ID" ]; then
     echo "Found running job $JOB_ID. Triggering savepoint..."

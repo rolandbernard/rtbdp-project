@@ -16,18 +16,18 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
     public static class DetailedGithubEvent extends SequencedRow {
         @TableEventKey
         @JsonProperty("id")
-        public final long id;
+        public long id;
         @TableEventKey
         @JsonProperty("created_at")
-        public final Instant createdAt;
+        public Instant createdAt;
         @JsonProperty("kind")
-        public final GithubEventType eventType;
+        public GithubEventType eventType;
         @JsonProperty("repo_id")
-        public final long repoId;
+        public long repoId;
         @JsonProperty("user_id")
-        public final long userId;
+        public long userId;
         @JsonProperty("details")
-        public final String details;
+        public String details;
 
         public DetailedGithubEvent(
                 long id, Instant createdAt, GithubEventType eventType, long repoId, long userId, String details) {

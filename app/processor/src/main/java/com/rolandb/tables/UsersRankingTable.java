@@ -13,11 +13,11 @@ public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.Us
     public static class UserCountsRank extends RankingSeqRow {
         @TableEventKey
         @JsonProperty("window_size")
-        public final WindowSize windowSize;
+        public WindowSize windowSize;
         @JsonProperty("user_id")
-        public final long userId;
+        public long userId;
         @JsonProperty("num_events")
-        public final Long numEvents;
+        public Long numEvents;
 
         public UserCountsRank(
                 WindowSize windowSize, long userId, Long numEvents, Integer rowNumber, Integer rank,
@@ -46,6 +46,7 @@ public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.Us
                                 Long.class, Long.class))
                 .setParallelism(Integer.min(4, env.getParallelism()))
                 .returns(UserCountsRank.class)
+                .uid("ranking-user-counts-01")
                 .name("Per User Count Rankings");
     }
 

@@ -13,11 +13,11 @@ public class ReposRankingTable extends AbstractRankingTable<ReposRankingTable.Re
     public static class RepoCountsRank extends RankingSeqRow {
         @TableEventKey
         @JsonProperty("window_size")
-        public final WindowSize windowSize;
+        public WindowSize windowSize;
         @JsonProperty("repo_id")
-        public final long repoId;
+        public long repoId;
         @JsonProperty("num_events")
-        public final Long numEvents;
+        public Long numEvents;
 
         public RepoCountsRank(
                 WindowSize windowSize, long repoId, Long numEvents, Integer rowNumber, Integer rank,
