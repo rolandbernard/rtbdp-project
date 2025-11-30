@@ -11,22 +11,48 @@ import java.util.List;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * This is a table that computes the number of events in the preceding windows
+ * on a per-user granularity.
+ */
 public class UsersLiveTable extends AbstractTable<UsersLiveTable.UserEventCounts> {
+    /** Type of event for this table. */
     public static class UserEventCounts extends SequencedRow {
+        /** The user id. */
         @TableEventKey
         @JsonProperty("user_id")
         public long userId;
+        /** Thw window size. */
         @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
+        /** The number of events. */
         @JsonProperty("num_events")
         public long numEvents;
 
+        /**
+         * Create a new instance.
+         * 
+         * @param userId
+         *            The user id.
+         * @param windowSize
+         *            The considered window size.
+         * @param numEvents
+         *            The number of events for that used in the latest window of the
+         *            given size.
+         */
         public UserEventCounts(long userId, WindowSize windowSize, long numEvents) {
             this.userId = userId;
             this.windowSize = windowSize;
             this.numEvents = numEvents;
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public UsersLiveTable() {
+        super();
     }
 
     @Override

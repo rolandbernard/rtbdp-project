@@ -18,6 +18,17 @@ import org.apache.flink.util.Collector;
  * events key has moved in the ranking. Note that for scalability reasons not
  * the complete ranking will be output every time, and a consumer of the
  * outgoing stream will have to reconstruct the full ranking themselves.
+ * 
+ * @param <K>
+ *            The type of key used with the operator.
+ * @param <E>
+ *            The type of events consumed by the operator.
+ * @param <R>
+ *            The type of events returned by the operator..
+ * @param <I>
+ *            The type of used to identify a ranked object.
+ * @param <V>
+ *            The type of the value used to rank object.
  */
 public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparable<V>>
         extends KeyedProcessFunction<K, E, R> {
@@ -90,30 +101,91 @@ public class DynamicRanking<K, E, R, I extends Comparable<I>, V extends Comparab
         }
     }
 
+    /**
+     * Interface of the function to use for extracting the key from an object.
+     * 
+     * @param <I>
+     *            The type of identifier.
+     * @param <E>
+     *            The type event to identify.
+     */
     public static interface KeyFunction<I, E> extends Serializable {
+        /**
+         * Extract the key from the given event.
+         * 
+         * @param event
+         *            The event to extract the key from.
+         * @return The extracted key.
+         */
         public abstract I apply(E event);
     }
 
+    /**
+     * Interface for the function used to generate output events.
+     * 
+     * @param <E>
+     *            The type of events we got as input.
+     * @param <K>
+     *            The key used on the stream level.
+     * @param <R>
+     *            The type of event to get as result.
+     * @param <I>
+     *            The type identifying an object in the ranking
+     * @param <V>
+     *            The type for values by which objects are ranked.
+     */
     public static interface ResultFunction<E, K, R, I, V> extends Serializable {
+        /**
+         * Create a new result event to output.
+         * 
+         * @param event
+         *            The event that caused the rank change.
+         * @param key
+         *            The key of the element.
+         * @param i
+         *            The identifier of the element in the ranking.
+         * @param v
+         *            The value of the element in the ranking.
+         * @param rowNumber
+         *            The row number of the events object in the ranking.
+         * @param minRank
+         *            The number of objects in the ranking with lower value.
+         * @param maxRank
+         *            The number of objects in the ranking with lower or equal value.
+         * @param oldRowNumber
+         *            The row number before this event was considered.
+         * @param oldMinRank
+         *            The min rank before this event was considered.
+         * @param oldMaxRank
+         *            The max rank before this event was considered.
+         * @return The result event to output.
+         */
         public abstract R apply(
                 E event, K key, I i, V v, Integer rowNumber, Integer minRank, Integer maxRank,
                 Integer oldRowNumber, Integer oldMinRank, Integer oldMaxRank);
     }
 
+    /** The value at which objects are removed from the ranking. */
     private final V cutoff;
+    /** The function to extract the ranking key from an object. */
     private final KeyFunction<I, E> keyFunction;
+    /** The function to extract the ranking value from an object. */
     private final KeyFunction<V, E> valueFunction;
+    /** The function to generate the rank update event. */
     private final ResultFunction<E, K, R, I, V> resultFunction;
-    // These are needed for the persistent state.
+    /** The class of they key. These are needed for the persistent state. */
     private final Class<I> keyClass;
+    /** The class of the value. */
     private final Class<V> valueClass;
 
-    // The last value for each key.
+    /** The last value for each key. */
     private transient MapState<I, V> persistentValues;
 
-    // The current dynamic ranking of all the keys. Can be restored from
-    // `persistentValues` in case of recovery from snapshot. This is basically
-    // only a more efficiently organized cache of `persistentValues`.
+    /**
+     * The current dynamic ranking of all the keys. Can be restored from
+     * `persistentValues` in case of recovery from snapshot. This is basically
+     * only a more efficiently organized cache of `persistentValues`.
+     */
     private transient Map<K, OrderStatisticTree<Tuple<I, V>>> rankings;
 
     /**

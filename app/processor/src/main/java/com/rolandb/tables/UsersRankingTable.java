@@ -9,16 +9,46 @@ import com.rolandb.tables.UsersLiveTable.UserEventCounts;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * This table compute ranking updates based on the live event counts computed by
+ * the {@link UsersLiveTable} table.
+ */
 public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.UserCountsRank> {
+    /** Type of event for this table. */
     public static class UserCountsRank extends RankingSeqRow {
+        /** The window size. */
         @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
+        /** The user id. */
         @JsonProperty("user_id")
         public long userId;
+        /** The number of events. */
         @JsonProperty("num_events")
         public Long numEvents;
 
+        /**
+         * Create a new instance of the event.
+         * 
+         * @param windowSize
+         *            The size of the window.
+         * @param userId
+         *            The user id.
+         * @param numEvents
+         *            The number of events.
+         * @param rowNumber
+         *            The row number in the ranking.
+         * @param rank
+         *            The rank in the ranking.
+         * @param maxRank
+         *            The max rank in the ranking.
+         * @param oldRow
+         *            The previous row number.
+         * @param oldRank
+         *            The previous rank.
+         * @param oldMaxRank
+         *            The previous max rank.
+         */
         public UserCountsRank(
                 WindowSize windowSize, long userId, Long numEvents, Integer rowNumber, Integer rank,
                 Integer maxRank, Integer oldRow, Integer oldRank, Integer oldMaxRank) {
@@ -27,6 +57,13 @@ public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.Us
             this.userId = userId;
             this.numEvents = numEvents;
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public UsersRankingTable() {
+        super();
     }
 
     @Override

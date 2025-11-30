@@ -5,8 +5,17 @@ import org.apache.flink.api.common.functions.AggregateFunction;
 /**
  * A simple aggregation function that simply counts the number of received
  * elements and returned that as a Long.
+ * 
+ * @param <T>
+ *            The type of event we want to count.
  */
 public class CountAggregation<T> implements AggregateFunction<T, Long, Long> {
+    /**
+     * Instantiate a new count aggregator.
+     */
+    public CountAggregation() {
+    }
+
     @Override
     public Long createAccumulator() {
         return 0L;

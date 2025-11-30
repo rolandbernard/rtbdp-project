@@ -22,38 +22,96 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This is a custom JDBC sink that in after committing the events into the
+ * database emits them again so that they can be processed further. It also
+ * assigns them sequence numbers in monotonically increasing order to enure that
+ * the client can correctly handle them.
+ * 
+ * @param <K>
+ *            The type of key used in the stream.
+ * @param <E>
+ *            The type of event used in the stream.
+ */
 public class JdbcSinkAndContinue<K, E extends SequencedRow> extends KeyedProcessFunction<K, E, E> {
     private static final Logger LOGGER = LoggerFactory.getLogger(JdbcSinkAndContinue.class);
 
+    /**
+     * A interface for the function that should be provided for populating the
+     * prepared statement.
+     * 
+     * @param <E>
+     *            The type of event.
+     */
     public static interface StatementFunction<E> extends Serializable {
+        /**
+         * Populate the provided statement with the values from the given event.
+         * 
+         * @param statement
+         *            The statement to fill.
+         * @param event
+         *            The event to use.
+         * @throws SQLException
+         *             In case of errors.
+         */
         public abstract void apply(PreparedStatement statement, E event) throws SQLException;
     }
 
+    /** The number of retires to attempt on intermittent issues. */
     private final int retires;
+    /** The maximum delay before an event is flushed. */
     private final long batchMs;
+    /** The maximum number of events before we flush them. */
     private final long batchSize;
+    /** The JDBC connection options to use for connecting to the db. */
     private final JdbcConnectionOptions jdbcOptions;
+    /** The SQL statement to use for insertion. */
     private final String sqlInsert;
+    /** A function with which to populate the prepared statement. */
     private final StatementFunction<E> stmtFunction;
-    // Event class needed to create the state descriptor for saving the temporarily
-    // buffered events.
+    /**
+     * Event class needed to create the state descriptor for saving the temporarily
+     * buffered events.
+     */
     private final Class<E> eventClass;
 
-    // Currently buffered events.
+    /** Currently buffered events. */
     private transient ListState<E> buffer;
-    // Last sequence number, used in case the event stream does not contain any.
-    // It is to be considered undefined behavior if some events in an event stream
-    // have sequence numbers, while others don't.
+    /**
+     * Last sequence number, used in case the event stream does not contain any.
+     * It is to be considered undefined behavior if some events in an event stream
+     * have sequence numbers, while others don't.
+     */
     private transient ValueState<Long> sequenceNumber;
-    // Buffer size of the current buffer, to detect when to flush.
+    /** Buffer size of the current buffer, to detect when to flush. */
     private transient ValueState<Long> bufferSize;
-    // Currently set timer timestamp. For deleting it in case of early flush.
+    /** Currently set timer timestamp. For deleting it in case of early flush. */
     private transient ValueState<Long> currentTimer;
 
-    // A single connection.
+    /** A single connection. */
     private transient Connection connection;
     private transient PreparedStatement ps;
 
+    /**
+     * Create a new instance of the sink.
+     * 
+     * @param jdbcOptions
+     *            JDBC connection options.
+     * @param retries
+     *            The number of reties in case of transient database connection
+     *            issues.
+     * @param batchSize
+     *            The batch size to use when batching the events.
+     * @param batchDuration
+     *            The maximum delay in processing time before flushing an event.
+     * @param sqlInsert
+     *            The SQL statement to use for inserting into the database.
+     * @param stmtFunction
+     *            A function that populates a prepared statement created based on
+     *            the query in {@code sqlInsert}:
+     * @param eventClass
+     *            The class of events we want to store.
+     */
     public JdbcSinkAndContinue(
             JdbcConnectionOptions jdbcOptions, int retries, long batchSize, Duration batchDuration,
             String sqlInsert, StatementFunction<E> stmtFunction, Class<E> eventClass) {

@@ -14,10 +14,21 @@ import com.rolandb.tables.CountsLiveTable.WindowSize;
 import com.rolandb.tables.StarsLiveTable.RepoStarCounts;
 import com.rolandb.tables.TrendingLiveTable.RepoTrendingScore;
 
+/**
+ * A mapping function that computes a simple trending score for each repository.
+ * The score computation is based on a linear combination of the number of new
+ * starts in the preceding 5 minutes, hour, 6 hours, and day.
+ */
 public class TrendingScoreFunction extends RichMapFunction<RepoStarCounts, RepoTrendingScore> {
     // Stores the last counts for the different window sizes. If a specific window
     // size is not included it is assumed to be zero.
     private transient MapState<WindowSize, Long> lastCounts;
+
+    /**
+     * Default instance of the mapping function:
+     */
+    public TrendingScoreFunction() {
+    }
 
     @Override
     public void open(OpenContext parameters) throws Exception {

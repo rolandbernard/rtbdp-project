@@ -14,22 +14,51 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * and therefore we only transmit the data to Kafka. Further, they are specially
  * handled in the frontend to correctly apply all of the updates inferred by
  * the events.
+ * 
+ * @param <E>
+ *            The type of event this table outputs.
  */
 public abstract class AbstractRankingTable<E extends AbstractRankingTable.RankingSeqRow> extends AbstractTable<E> {
+    /**
+     * The superclass of all rows for ranking tables. These always include some
+     * specific fields.
+     */
     public static abstract class RankingSeqRow extends SequencedRow {
+        /** The row number of the ranked object. */
         @JsonProperty("row_number")
         public final Integer rowNumber;
+        /** The rank of the ranked object. */
         @JsonProperty("rank")
         public final Integer rank;
+        /** The row number of first object of higher rank. */
         @JsonProperty("max_rank")
         public final Integer maxRank;
+        /** The row number of the object before this event. */
         @JsonProperty("old_row_number")
         public final Integer oldRow;
+        /** The rank of the object before this event. */
         @JsonProperty("old_rank")
         public final Integer oldRank;
+        /** The max rank of the object before this event. */
         @JsonProperty("old_max_rank")
         public final Integer oldMaxRank;
 
+        /**
+         * Create a new ranking row.
+         * 
+         * @param rowNumber
+         *            The row number.
+         * @param rank
+         *            The rank.
+         * @param maxRank
+         *            The max rank.
+         * @param oldRow
+         *            The old row number.
+         * @param oldRank
+         *            The old rank.
+         * @param oldMaxRank
+         *            The old max rank.
+         */
         public RankingSeqRow(
                 Integer rowNumber, Integer rank, Integer maxRank, Integer oldRow, Integer oldRank, Integer oldMaxRank) {
             this.rowNumber = rowNumber;
@@ -39,6 +68,13 @@ public abstract class AbstractRankingTable<E extends AbstractRankingTable.Rankin
             this.oldRank = oldRank;
             this.oldMaxRank = oldMaxRank;
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public AbstractRankingTable() {
+        super();
     }
 
     @Override

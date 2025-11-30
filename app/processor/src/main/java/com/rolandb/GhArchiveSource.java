@@ -47,14 +47,23 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * A bounded Flink data stream source that reads GitHub events from the
+ * GhArchive service.
+ */
 public class GhArchiveSource
         implements Source<JsonNode, GhArchiveSource.GhArchiveFile, Collection<GhArchiveSource.GhArchiveFile>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(GhArchiveSource.class);
 
+    /**
+     * Class representing a single file from GhArchive with the URL where it can be
+     * downloaded from.
+     */
     public static class GhArchiveFile implements SourceSplit, Serializable {
-        public final String url;
+        /** The URL at which the file can be downloaded. */
+        private final String url;
 
-        public GhArchiveFile(String url) {
+        private GhArchiveFile(String url) {
             this.url = url;
         }
 
@@ -64,11 +73,15 @@ public class GhArchiveSource
         }
     }
 
+    /**
+     * The enumerator generates all of the individual file URLs from the base URL,
+     * the start date, and the end date.
+     */
     public static class GhArchiveEnumerator implements SplitEnumerator<GhArchiveFile, Collection<GhArchiveFile>> {
         private final SplitEnumeratorContext<GhArchiveFile> context;
         private final Queue<GhArchiveFile> remainingSplits;
 
-        public GhArchiveEnumerator(
+        private GhArchiveEnumerator(
                 SplitEnumeratorContext<GhArchiveFile> context, String url, String startDate, String endDate) {
             this.context = context;
             this.remainingSplits = new ArrayDeque<>();
@@ -81,7 +94,7 @@ public class GhArchiveSource
             }
         }
 
-        public GhArchiveEnumerator(
+        private GhArchiveEnumerator(
                 SplitEnumeratorContext<GhArchiveFile> context, Collection<GhArchiveFile> splits) {
             this.context = context;
             this.remainingSplits = new ArrayDeque<>(splits);
@@ -119,6 +132,10 @@ public class GhArchiveSource
         }
     }
 
+    /**
+     * The reader is given the files, and actually downloads and parses them into
+     * {@link JsonNode} objects.
+     */
     public static class GhArchiveReader implements SourceReader<JsonNode, GhArchiveFile> {
         private final ObjectMapper mapper = new ObjectMapper();
         private final Queue<GhArchiveFile> assignedSplits = new ArrayDeque<>();
@@ -126,7 +143,7 @@ public class GhArchiveSource
         private final SourceReaderContext context;
         private boolean noMoreSplits = false;
 
-        public GhArchiveReader(SourceReaderContext context) {
+        private GhArchiveReader(SourceReaderContext context) {
             this.context = context;
         }
 
@@ -281,10 +298,23 @@ public class GhArchiveSource
         }
     }
 
+    /** The base URL for GhArchive. */
     private final String url;
+    /** The first date that we want to load. */
     private final String startDate;
+    /** The last date that we want to load. */
     private final String endDate;
 
+    /**
+     * Create a new instance of this source class.
+     * 
+     * @param url
+     *            The base GhArchive URL to use.
+     * @param startDate
+     *            The start date to get.
+     * @param endDate
+     *            The end data to get.
+     */
     public GhArchiveSource(String url, String startDate, String endDate) {
         this.url = url;
         this.startDate = startDate;

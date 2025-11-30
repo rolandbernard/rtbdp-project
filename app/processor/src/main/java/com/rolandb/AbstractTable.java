@@ -19,9 +19,6 @@ import java.util.function.Supplier;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
-import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
-import org.apache.flink.connector.jdbc.core.datastream.Jdbc;
-import org.apache.flink.connector.jdbc.core.datastream.sink.JdbcSink;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
@@ -39,6 +36,9 @@ import com.fasterxml.jackson.databind.JsonNode;
  * the messages from the Kafka topic.
  * This is intended to be an subclassed, but if used as it it will simply write
  * out the events table as-is.
+ * 
+ * @param <E>
+ *            The type of event this table outputs.
  */
 public abstract class AbstractTable<E extends SequencedRow> {
     /**
@@ -50,56 +50,143 @@ public abstract class AbstractTable<E extends SequencedRow> {
     public @interface TableEventKey {
     }
 
+    /**
+     * A builder for configuring and instantiating a table instance.
+     */
     public static class TableBuilder {
+        /** The execution environment to run on. */
         protected StreamExecutionEnvironment env;
-        protected Map<String, Object> streams = new HashMap<>();
+        /** A map for sharing computation results between tables. */
+        protected Map<String, Object> streams;
         private JdbcConnectionOptions jdbcOptions;
         private String bootstrapServers;
-        private boolean dryRun = false;
-        private int numPartitions = 1;
-        private int replicationFactor = 1;
-        private long retentionMs = 604800000;
+        private boolean dryRun;
+        private int numPartitions;
+        private int replicationFactor;
+        private long retentionMs;
 
+        /**
+         * Instantiate a new builder with default parameters.
+         */
+        public TableBuilder() {
+            streams = new HashMap<>();
+            dryRun = false;
+            numPartitions = 1;
+            replicationFactor = 1;
+            retentionMs = 604800000;
+        }
+
+        /**
+         * Set the execution environment.
+         * 
+         * @param env
+         *            The execution environment.
+         * @return {@code this}
+         */
         public TableBuilder setEnv(StreamExecutionEnvironment env) {
             this.env = env;
             return this;
         }
 
+        /**
+         * Add a stream to the shared stream map.
+         * 
+         * @param name
+         *            The name of the stream.
+         * @param stream
+         *            The stream to add.
+         * @return {@code this}
+         */
         public TableBuilder addStream(String name, Object stream) {
             this.streams.put(name, stream);
             return this;
         }
 
+        /**
+         * Set the JDB connection options.
+         * 
+         * @param jdbcOptions
+         *            The JDBC connection options.
+         * @return {@code this}
+         */
         public TableBuilder setJdbcOptions(JdbcConnectionOptions jdbcOptions) {
             this.jdbcOptions = jdbcOptions;
             return this;
         }
 
+        /**
+         * Set the bootstrap sever address.
+         * 
+         * @param bootstrapServers
+         *            The bootstrap server.
+         * @return {@code this}
+         */
         public TableBuilder setBootstrapServers(String bootstrapServers) {
             this.bootstrapServers = bootstrapServers;
             return this;
         }
 
+        /**
+         * Set whether this should be for a dry run.
+         * 
+         * @param dryRun
+         *            {@code true} if a dry run.
+         * @return {@code this}
+         */
         public TableBuilder setDryRun(boolean dryRun) {
             this.dryRun = dryRun;
             return this;
         }
 
+        /**
+         * Set the number of partitions for the Kafka topic.
+         * 
+         * @param numPartitions
+         *            The number of partitions.
+         * @return {@code this}
+         */
         public TableBuilder setNumPartitions(int numPartitions) {
             this.numPartitions = numPartitions;
             return this;
         }
 
+        /**
+         * Set the replication factor for the Kafka topic.
+         * 
+         * @param replicationFactor
+         *            The replication factor.
+         * @return {@code this}
+         */
         public TableBuilder setReplicationFactor(int replicationFactor) {
             this.replicationFactor = replicationFactor;
             return this;
         }
 
+        /**
+         * Set the retention time for the Kafka topic.
+         * 
+         * @param retentionMs
+         *            The retention time.
+         * @return {@code this}
+         */
         public TableBuilder setRetentionMs(long retentionMs) {
             this.retentionMs = retentionMs;
             return this;
         }
 
+        /**
+         * Instantiate the table and return it.
+         * 
+         * @param <E>
+         *            The type of event the table works with.
+         * @param <T>
+         *            The type of the table.
+         * @param tableName
+         *            The name for the table.
+         * @param clazz
+         *            The class to instantiate.
+         * @return The instantiated and configured table.
+         */
         public <E extends SequencedRow, T extends AbstractTable<E>> T get(String tableName, Class<T> clazz) {
             T instance;
             try {
@@ -121,6 +208,23 @@ public abstract class AbstractTable<E extends SequencedRow> {
             return instance;
         }
 
+        /**
+         * Instantiate the table and build the computation graph.
+         * 
+         * @param <E>
+         *            The type of event the table works with.
+         * @param <T>
+         *            The type of the table.
+         * @param tableName
+         *            The name for the table.
+         * @param clazz
+         *            The class to instantiate.
+         * @return {@code this}
+         * @throws ExecutionException
+         *             If there is a Kafka issue.
+         * @throws InterruptedException
+         *             If interrupted.
+         */
         public <E extends SequencedRow, T extends AbstractTable<E>> TableBuilder build(String tableName, Class<T> clazz)
                 throws ExecutionException, InterruptedException {
             T instance = get(tableName, clazz);
@@ -129,16 +233,45 @@ public abstract class AbstractTable<E extends SequencedRow> {
         }
     }
 
+    /** The Flink environment to operate in. */
     protected StreamExecutionEnvironment env;
-    protected Map<String, Object> streams = new HashMap<>();
+    /** A map of streams for easier reuse of the same computation between tables. */
+    protected Map<String, Object> streams;
+    /** The name of this table. */
     protected String tableName;
+    /** The JDBC options to use for connecting to PostgreSQL. */
     protected JdbcConnectionOptions jdbcOptions;
+    /** The Kafka broker to connect to. */
     protected String bootstrapServers;
-    protected boolean dryRun = false;
-    protected int numPartitions = 1;
-    protected int replicationFactor = 1;
-    protected long retentionMs = 604800000;
+    /** If this is a dry run, we only pint to standard output. */
+    protected boolean dryRun;
+    /** The number of partitions to create in the Kafka topic. */
+    protected int numPartitions;
+    /** The replication factor to create the Kafka topic with- */
+    protected int replicationFactor;
+    /** The retention time to create the Kafka topic with. */
+    protected long retentionMs;
 
+    /**
+     * Instantiate the table with default parameters.
+     */
+    protected AbstractTable() {
+        streams = new HashMap<>();
+        dryRun = false;
+        numPartitions = 1;
+        replicationFactor = 1;
+        retentionMs = 604800000;
+    }
+
+    /**
+     * Get a named stream from the shared dictionary.
+     * 
+     * @param <T>
+     *            The type of the stream.
+     * @param name
+     *            The name in the shared map.
+     * @return The stream of {@code null} if not found.
+     */
     @SuppressWarnings("unchecked")
     protected <T> T getStream(String name) {
         return (T) streams.get(name);
@@ -166,10 +299,20 @@ public abstract class AbstractTable<E extends SequencedRow> {
         return stream;
     }
 
+    /**
+     * Get the stream of raw events.
+     * 
+     * @return The raw event stream.
+     */
     protected DataStream<JsonNode> getRawEventStream() {
         return getStream("rawEvents");
     }
 
+    /**
+     * Get the stream of parsed events.
+     * 
+     * @return The event stream.
+     */
     protected DataStream<GithubEvent> getEventStream() {
         return getStream("events", () -> {
             return getRawEventStream()
@@ -185,6 +328,12 @@ public abstract class AbstractTable<E extends SequencedRow> {
         });
     }
 
+    /**
+     * Get the stream of events that additionally contains a an additional
+     * {@code all} event for every regular event.
+     * 
+     * @return The events stream.
+     */
     protected DataStream<GithubEvent> getEventsWithAllStream() {
         return getStream("eventsWithAll", () -> {
             return getEventStream()
@@ -202,18 +351,33 @@ public abstract class AbstractTable<E extends SequencedRow> {
         });
     }
 
+    /**
+     * Get the event stream keyed by type of event.
+     * 
+     * @return The keyed stream.
+     */
     protected KeyedStream<GithubEvent, String> getEventsByTypeStream() {
         return getStream("eventsByType", () -> {
             return getEventsWithAllStream().keyBy(event -> event.eventType.toString());
         });
     }
 
+    /**
+     * Get the event stream keyed by repository of event.
+     * 
+     * @return The keyed stream.
+     */
     protected KeyedStream<GithubEvent, Long> getEventsByRepoStream() {
         return getStream("eventsByRepo", () -> {
             return getEventStream().keyBy(event -> event.repoId);
         });
     }
 
+    /**
+     * Get the stream of starring events keyed by type of event.
+     * 
+     * @return The keyed stream.
+     */
     protected KeyedStream<GithubEvent, Long> getStarEventsByRepoStream() {
         return getStream("starsByRepo", () -> {
             return getEventStream()
@@ -224,16 +388,41 @@ public abstract class AbstractTable<E extends SequencedRow> {
         });
     }
 
+    /**
+     * Get the stream events keyed by user of event.
+     * 
+     * @return The keyed stream.
+     */
     protected KeyedStream<GithubEvent, Long> getEventsByUserStream() {
         return getStream("eventsByUser", () -> {
             return getEventStream().keyBy(event -> event.userId);
         });
     }
 
+    /**
+     * Compute the output events that should be streamed into the table.
+     * 
+     * @return The stream out output events.
+     */
     protected abstract DataStream<E> computeTable();
 
+    /**
+     * Get the class of output events.
+     * 
+     * @return The class of output events.
+     */
     protected abstract Class<E> getOutputType();
 
+    /**
+     * Create the SQL expression to use for resolving key conflicts.
+     * 
+     * @param keyNames
+     *            The names of the key fields.
+     * @param fields
+     *            All fields in the output type.
+     * @param builder
+     *            The string builder to write into.
+     */
     protected void buildSqlConflictResolution(String keyNames, Field[] fields, StringBuilder builder) {
         builder.append(" ON CONFLICT (");
         builder.append(keyNames);
@@ -257,15 +446,39 @@ public abstract class AbstractTable<E extends SequencedRow> {
         builder.append(".seq_num < EXCLUDED.seq_num");
     }
 
+    /**
+     * Build SQL statement for any extra fields to output.
+     * 
+     * @param output
+     *            The type to create the statement for.
+     * @param builder
+     *            The builder to write into.
+     */
     protected void buildSqlExtraFields(Class<E> output, StringBuilder builder) {
         // To be implemented in a subclass.
     }
 
+    /**
+     * Build SQL statement for any extra values to output.
+     * 
+     * @param output
+     *            The type to create the statement for.
+     * @param builder
+     *            The builder to write into.
+     */
     protected void buildSqlExtraValues(Class<E> output, StringBuilder builder) {
         // To be implemented in a subclass.
     }
 
-    protected String buildJdbcSinkStatement(Class<E> output) {
+    /**
+     * Build the SQL statement used for inserting result object of this table into
+     * PostgreSQL.
+     * 
+     * @param output
+     *            Tht output type.
+     * @return The SQL statement string.
+     */
+    public String buildJdbcSinkStatement(Class<E> output) {
         StringBuilder builder = new StringBuilder();
         builder.append("INSERT INTO ");
         builder.append(tableName);
@@ -327,7 +540,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
         return sb.toString();
     }
 
-    protected static void jdbcSinkSetStatementValues(PreparedStatement statement, SequencedRow row)
+    private static void jdbcSinkSetStatementValues(PreparedStatement statement, SequencedRow row)
             throws SQLException {
         int idx = 1;
         for (Object value : row.getValues()) {
@@ -343,24 +556,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
         }
     }
 
-    protected JdbcSink<SequencedRow> buildJdbcSink() {
-        return Jdbc.<SequencedRow>sinkBuilder()
-                .withQueryStatement(
-                        // The UPSERT SQL statement for PostgreSQL.
-                        buildJdbcSinkStatement(getOutputType()),
-                        // A lambda function to map the Row objects to the prepared statement.
-                        AbstractTable::jdbcSinkSetStatementValues)
-                // JDBC execution options.
-                .withExecutionOptions(JdbcExecutionOptions.builder()
-                        .withBatchSize(1024) // Allow some batching.
-                        .withBatchIntervalMs(100)
-                        .withMaxRetries(5) // Retry up to 5 times on transient failures.
-                        .build())
-                // Use connection setting from setter.
-                .buildAtLeastOnce(jdbcOptions);
-    }
-
-    protected JdbcSinkAndContinue<String, E> buildJdbcSinkAndContinue() {
+    private JdbcSinkAndContinue<String, E> buildJdbcSinkAndContinue() {
         return new JdbcSinkAndContinue<>(
                 // Use connection setting from setter.
                 jdbcOptions,
@@ -373,6 +569,13 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 getOutputType());
     }
 
+    /**
+     * Build the Kafka sink for this table.
+     * 
+     * @param <T>
+     *            The type of events to write into Kafka.
+     * @return The Kafka sink.
+     */
     protected <T extends SequencedRow> KafkaSink<T> buildKafkaSink() {
         return KafkaSink.<T>builder()
                 .setBootstrapServers(bootstrapServers)
@@ -389,6 +592,14 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .build();
     }
 
+    /**
+     * Sink the given data stream to this tables PostgreSQL table.
+     * 
+     * @param stream
+     *            The stream to sink.
+     * @return A datastream that contains events with added sequence number and only
+     *         outputs them after they have been committed in PostgreSQL.
+     */
     protected DataStream<E> sinkToPostgres(DataStream<E> stream) {
         return stream
                 .keyBy(row -> "dummyKey")
@@ -401,6 +612,16 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .setParallelism(1);
     }
 
+    /**
+     * Sink the given datastream to the Kafka topic for this table.
+     * 
+     * @param stream
+     *            The stream to sink.
+     * @throws ExecutionException
+     *             If the Kafka client throes errors.
+     * @throws InterruptedException
+     *             If interrupted.
+     */
     protected void sinkToKafka(DataStream<E> stream) throws ExecutionException, InterruptedException {
         KafkaUtil.setupTopic(tableName, bootstrapServers, numPartitions, replicationFactor, retentionMs);
         stream.sinkTo(buildKafkaSink())
@@ -408,6 +629,14 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .name("Kafka Sink");
     }
 
+    /**
+     * Build the computation for this table.
+     * 
+     * @throws ExecutionException
+     *             If there is a issue writing to Kafka.
+     * @throws InterruptedException
+     *             If interrupted.
+     */
     public void build() throws ExecutionException, InterruptedException {
         // We partition here by key so that all rows for the same key are
         // handled by the same subtask, ensuring timestamps are monotonic.

@@ -10,19 +10,48 @@ import com.rolandb.tables.CountsLiveTable.WindowSize;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * A table for ranking the event types by number of events in last window.
+ */
 public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.CountsRank> {
+    /** Type of event for this table. */
     public static class CountsRank extends RankingSeqRow {
         // We put only the window size as the key, so that we put all for the same
         // ranking into the same Kafka partition, ensuring in-order delivery to the
         // frontend client.
+        /** The size of window considered. */
         @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
+        /** The type of event considered. */
         @JsonProperty("kind")
         public GithubEventType eventType;
+        /** The number of events in that window. */
         @JsonProperty("num_events")
         public Long numEvents;
 
+        /**
+         * Create a new instance of the event.
+         * 
+         * @param windowSize
+         *            The size of the window.
+         * @param eventType
+         *            The type of event.
+         * @param numEvents
+         *            The number of events.
+         * @param rowNumber
+         *            The row number in the ranking.
+         * @param rank
+         *            The rank in the ranking.
+         * @param maxRank
+         *            The max rank in the ranking.
+         * @param oldRow
+         *            The previous row number.
+         * @param oldRank
+         *            The previous rank.
+         * @param oldMaxRank
+         *            The previous max rank.
+         */
         public CountsRank(
                 WindowSize windowSize, GithubEventType eventType, Long numEvents, Integer rowNumber, Integer rank,
                 Integer maxRank, Integer oldRow, Integer oldRank, Integer oldMaxRank) {
@@ -31,6 +60,13 @@ public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.
             this.eventType = eventType;
             this.numEvents = numEvents;
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public CountsRankingTable() {
+        super();
     }
 
     @Override

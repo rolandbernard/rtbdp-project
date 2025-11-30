@@ -12,41 +12,63 @@ import java.util.stream.Collectors;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * A table for collecting information about repositories. Not all events contain
+ * all of the information for a given repository. This means it is necessary to
+ * aggregate over all events to find as much information as possible about a
+ * given repository.
+ */
 public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.RepoUpdateEvent> {
+    /** Type of event for this table. */
     public static class RepoUpdateEvent extends UpdateSeqRow {
+        /** The id of the repository. */
         @TableEventKey
         @JsonProperty("id")
         public long id;
+        /** The simple name of the repository. */
         @JsonProperty("reponame")
         public String reponame;
+        /** The full name of the repository. */
         @JsonProperty("fullname")
         public String fullname;
+        /** The user id of the owner. */
         @JsonProperty("owner_id")
         public Long ownerId;
+        /** The GitHub HTML URL for the repository. */
         @JsonProperty("html_url")
         public String htmlUrl;
+        /** The homepage for the repository. */
         @JsonProperty("homepage")
         public String homepage;
+        /** The description of the repository. */
         @JsonProperty("descr")
         public String description;
+        /** The space-separated list of topics. */
         @JsonProperty("topics")
         public String topics;
+        /** The language in which the repository has been written. */
         @JsonProperty("lang")
         public String lang;
+        /** The license that the repository has. */
         @JsonProperty("license")
         public String license;
+        /** Whether or not this repository is a fork. */
         @JsonProperty("is_fork")
         public Boolean isFork;
+        /** Whether or not this repository is archived. */
         @JsonProperty("is_archived")
         public Boolean isArchive;
+        /** The number of forks this repository has. */
         @JsonProperty("fork_count")
         public Long forkCount;
+        /** The number of issues this repository has. */
         @JsonProperty("issue_count")
         public Long issueCount;
+        /** The number of starts this repository has. */
         @JsonProperty("star_count")
         public Long starCount;
 
-        public RepoUpdateEvent(
+        private RepoUpdateEvent(
                 long id, String reponame, String fullname, Long ownerId, String htmlUrl, String homepage,
                 String description, String topics, String lang, String license, Boolean isFork, Boolean isArchive,
                 Long forkCount, Long issueCount, Long starCount) {
@@ -196,6 +218,13 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
             }
             return events;
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public RepositoriesTable() {
+        super();
     }
 
     @Override

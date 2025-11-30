@@ -9,16 +9,46 @@ import com.rolandb.tables.ReposLiveTable.RepoEventCounts;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * This table compute ranking updates based on the live event counts computed by
+ * the {@link ReposLiveTable} table.
+ */
 public class ReposRankingTable extends AbstractRankingTable<ReposRankingTable.RepoCountsRank> {
+    /** Type of event for this table. */
     public static class RepoCountsRank extends RankingSeqRow {
+        /** The window size. */
         @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
+        /** The repository id. */
         @JsonProperty("repo_id")
         public long repoId;
+        /** Ths number of events. */
         @JsonProperty("num_events")
         public Long numEvents;
 
+        /**
+         * Create a new instance of the event.
+         * 
+         * @param windowSize
+         *            The size of the window.
+         * @param repoId
+         *            The repository id.
+         * @param numEvents
+         *            The number of events.
+         * @param rowNumber
+         *            The row number in the ranking.
+         * @param rank
+         *            The rank in the ranking.
+         * @param maxRank
+         *            The max rank in the ranking.
+         * @param oldRow
+         *            The previous row number.
+         * @param oldRank
+         *            The previous rank.
+         * @param oldMaxRank
+         *            The previous max rank.
+         */
         public RepoCountsRank(
                 WindowSize windowSize, long repoId, Long numEvents, Integer rowNumber, Integer rank,
                 Integer maxRank, Integer oldRow, Integer oldRank, Integer oldMaxRank) {
@@ -48,6 +78,13 @@ public class ReposRankingTable extends AbstractRankingTable<ReposRankingTable.Re
                 .returns(RepoCountsRank.class)
                 .uid("ranking-repo-counts-01")
                 .name("Per Repo Count Rankings");
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public ReposRankingTable() {
+        super();
     }
 
     @Override

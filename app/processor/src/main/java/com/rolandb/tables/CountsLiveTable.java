@@ -13,12 +13,22 @@ import java.util.List;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * A table that contains the live counts for the preceding window.
+ */
 public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> {
+    /** The type of window size used. */
     public static enum WindowSize implements WindowSpec {
         // The below should be in sync with the ones in the frontend and in
         // postgres database.
-        MINUTES_5("5m", Duration.ofMinutes(5)), HOURS_1("1h", Duration.ofHours(1)),
-        HOURS_6("6h", Duration.ofHours(6)), HOURS_24("24h", Duration.ofHours(24));
+        /** Five minutes. */
+        MINUTES_5("5m", Duration.ofMinutes(5)),
+        /** One hour. */
+        HOURS_1("1h", Duration.ofHours(1)),
+        /** Six hours. */
+        HOURS_6("6h", Duration.ofHours(6)),
+        /** One day. */
+        HOURS_24("24h", Duration.ofHours(24));
 
         private final String name;
         private final long sizeMs;
@@ -39,6 +49,13 @@ public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> 
             return sizeMs;
         }
 
+        /**
+         * Find the window size that matches the given string.
+         * 
+         * @param name
+         *            The string to search for.
+         * @return The window size with given name.
+         */
         public static WindowSize fromString(String name) {
             for (WindowSize type : WindowSize.values()) {
                 if (type.toString().equals(name)) {
@@ -49,21 +66,42 @@ public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> 
         }
     }
 
+    /** Type of event for this table. */
     public static class EventCounts extends SequencedRow {
+        /** The type of event considered. */
         @TableEventKey
         @JsonProperty("kind")
         public GithubEventType eventType;
+        /** The window size considered */
         @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
+        /** The number of events in the window. */
         @JsonProperty("num_events")
         public long numEvents;
 
+        /**
+         * Create a new event instance.
+         * 
+         * @param eventType
+         *            The type of event.
+         * @param windowSize
+         *            The size of the window.
+         * @param numEvents
+         *            The number of events of that type in the window.
+         */
         public EventCounts(GithubEventType eventType, WindowSize windowSize, long numEvents) {
             this.eventType = eventType;
             this.windowSize = windowSize;
             this.numEvents = numEvents;
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public CountsLiveTable() {
+        super();
     }
 
     @Override

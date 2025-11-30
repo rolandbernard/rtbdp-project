@@ -12,20 +12,40 @@ import com.rolandb.CountAggregation;
 import com.rolandb.GithubEventType;
 import com.rolandb.SequencedRow;
 
+/**
+ * A table that counts the events by type in tumbling windows.
+ */
 public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCounts> {
+    /** Type of event for this table. */
     public static class EventCounts extends SequencedRow {
+        /** Start of the window. */
         @TableEventKey
         @JsonProperty("ts_start")
         public Instant winStart;
+        /** End of the window. */
         @TableEventKey
         @JsonProperty("ts_end")
         public Instant winEnd;
+        /** Event type considered. */
         @TableEventKey
         @JsonProperty("kind")
         public GithubEventType eventType;
+        /** Number of events in the window. */
         @JsonProperty("num_events")
         public long numEvents;
 
+        /**
+         * Construct a new instance of the event counts.
+         * 
+         * @param winStart
+         *            Window start.
+         * @param winEnd
+         *            Window end.
+         * @param eventType
+         *            Type of event.
+         * @param numEvents
+         *            Number of events in that window of the given type.
+         */
         public EventCounts(Instant winStart, Instant winEnd, GithubEventType eventType, long numEvents) {
             this.winStart = winStart;
             this.winEnd = winEnd;
@@ -34,8 +54,23 @@ public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCo
         }
     }
 
-    private Duration window = Duration.ofMinutes(5);
+    private Duration window;
 
+    /**
+     * Create a new table with default values.
+     */
+    public CountsHistoryTable() {
+        super();
+        window = Duration.ofMinutes(5);
+    }
+
+    /**
+     * Modify the window size to use for this table.
+     * 
+     * @param window
+     *            The new window size.
+     * @return {@code this}
+     */
     public CountsHistoryTable setWindowSize(Duration window) {
         this.window = window;
         return this;

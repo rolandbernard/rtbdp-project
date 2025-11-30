@@ -31,9 +31,27 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 
+/**
+ * This is the main class for submitting the Flink job processing in batch mode
+ * historical events retrieved from GhArchive. This job does not populate Kafka,
+ * instead only writing to tables in PostgreSQL. Further, the job only computes
+ * a subset of tables, that is those that are retained for a longer time.
+ */
 public class ProcessorHistory {
     private static final Logger LOGGER = LoggerFactory.getLogger(Processor.class);
 
+    /** This class is only for static methods. You should not instantiate it. */
+    private ProcessorHistory() {
+    }
+
+    /**
+     * Submit the Flink job configured based on the given arguments.
+     * 
+     * @param args
+     *            The arguments with which to configure the job.
+     * @throws Exception
+     *             In case of errors.
+     */
     public static void main(String[] args) throws Exception {
         // Parse command line.
         ArgumentParser parser = ArgumentParsers.newFor("Processor").build()
@@ -85,9 +103,11 @@ public class ProcessorHistory {
         // Parse into a stream of events.
         DataStream<JsonNode> rawEventsStream = env
                 .fromSource(ghArchiveSource,
-                        // We assume events can be up to 10 seconds late, but otherwise in-order.
+                        // We assume events can be up to 10 seconds late, but otherwise
+                        // in-order.
                         WatermarkStrategy
-                                .<JsonNode>forBoundedOutOfOrderness(Duration.ofSeconds(10))
+                                .<JsonNode>forBoundedOutOfOrderness(
+                                        Duration.ofSeconds(10))
                                 .withTimestampAssigner((event, timestamp) -> Instant
                                         .parse(event.at("/created_at").asText())
                                         .toEpochMilli()),

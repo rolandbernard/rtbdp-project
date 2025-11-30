@@ -12,23 +12,50 @@ import java.time.Instant;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * A table that contains processed GitHub events, with a description that can be
+ * easily shown in the frontend.
+ */
 public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedGithubEvent> {
+    /** Type of event for this table. */
     public static class DetailedGithubEvent extends SequencedRow {
+        /** The unique id of the event. */
         @TableEventKey
         @JsonProperty("id")
         public long id;
+        /** Creation timestamp of the event. */
         @TableEventKey
         @JsonProperty("created_at")
         public Instant createdAt;
+        /** The type of event. */
         @JsonProperty("kind")
         public GithubEventType eventType;
+        /** The repository related to the event. */
         @JsonProperty("repo_id")
         public long repoId;
+        /** The user related to the event. */
         @JsonProperty("user_id")
         public long userId;
+        /** A textual description of the event. */
         @JsonProperty("details")
         public String details;
 
+        /**
+         * Create a new event instance.
+         * 
+         * @param id
+         *            The id of the event.
+         * @param createdAt
+         *            The creation timestamp.
+         * @param eventType
+         *            The event type.
+         * @param repoId
+         *            The repository id.
+         * @param userId
+         *            The user id.
+         * @param details
+         *            A textual description.
+         */
         public DetailedGithubEvent(
                 long id, Instant createdAt, GithubEventType eventType, long repoId, long userId, String details) {
             this.id = id;
@@ -365,6 +392,13 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
             }
             details = builder.toString();
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public GithubEventsTable() {
+        super();
     }
 
     @Override

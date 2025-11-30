@@ -30,30 +30,85 @@ import java.util.List;
  * values are loaded from a checkpoint, the results might be wrong if the window
  * sizes or slide duration are not the same. Names or collection function may
  * be changed however.
+ * 
+ * @param <K>
+ *            The key used in this keyed stream.
+ * @param <E>
+ *            The type of event we are counting.
+ * @param <R>
+ *            The type of result we want to get as result.
+ * @param <W>
+ *            The type of we use to define the windows.
  */
 public class MultiSlidingBuckets<K, E, R, W extends MultiSlidingBuckets.WindowSpec>
         extends KeyedProcessFunction<K, E, R> {
     private static final Logger LOGGER = LoggerFactory.getLogger(MultiSlidingBuckets.class);
 
+    /**
+     * Interface representing the windows the operator should count over.
+     */
     public static interface WindowSpec extends Serializable {
+        /**
+         * Get the length of the window in milliseconds.
+         * 
+         * @return The window length.
+         */
         public long sizeInMs();
     }
 
+    /**
+     * Interface representing the function that create the output events.
+     * 
+     * @param <K>
+     *            The type of key.
+     * @param <R>
+     *            The type of output event.
+     * @param <W>
+     *            The type of window.
+     */
     public static interface ResultFunction<K, R, W> extends Serializable {
+        /**
+         * Generate the result to output.
+         * 
+         * @param ws
+         *            The start of the window.
+         * @param we
+         *            The end of the window.
+         * @param k
+         *            The key of this event.
+         * @param win
+         *            The window specification of the window.
+         * @param count
+         *            The number of elements in the window.
+         * @return The result that will then be emitted.
+         */
         public abstract R apply(Instant ws, Instant we, K k, W win, long count);
     }
 
+    /** The skip length of the sliding window in milliseconds. */
     private final long slideMs;
+    /** The list of windows for which to compute the counts. */
     private final List<W> windows;
+    /** The function to use for creating results to emit. */
     private final ResultFunction<K, R, W> function;
 
-    // Buckets by Timestamp
+    /** Buckets by Timestamp */
     private transient MapState<Long, Long> bucketCounts;
-    // Rolling Sum per Window
+    /** Rolling Sum per Window */
     private transient ValueState<long[]> windowTotals;
-    // When the last window was closed.
+    /** When the last window was closed. */
     private transient ValueState<Long> lastTimer;
 
+    /**
+     * Create a new instance of the operator.
+     * 
+     * @param slide
+     *            The step size to slide by.
+     * @param windows
+     *            The windows to compute. Must be multiples of the step size.
+     * @param function
+     *            The function to use for generating output events.
+     */
     public MultiSlidingBuckets(Duration slide, List<W> windows, ResultFunction<K, R, W> function) {
         this.slideMs = slide.toMillis();
         // We sort the windows, so the first is the shortest and the last is the

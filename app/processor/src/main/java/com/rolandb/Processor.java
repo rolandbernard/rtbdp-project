@@ -52,9 +52,25 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 
+/**
+ * This is the main class for submitting the Flink job processing all of the
+ * events and outputting both to Kafka topics and PostgreSQL tables.
+ */
 public class Processor {
     private static final Logger LOGGER = LoggerFactory.getLogger(Processor.class);
 
+    /** This class is only for static methods. You should not instantiate it. */
+    private Processor() {
+    }
+
+    /**
+     * Submit the Flink job configured based on the given arguments.
+     * 
+     * @param args
+     *            The arguments with which to configure the job.
+     * @throws Exception
+     *             In case of errors.
+     */
     public static void main(String[] args) throws Exception {
         // Parse command line.
         ArgumentParser parser = ArgumentParsers.newFor("Processor").build()

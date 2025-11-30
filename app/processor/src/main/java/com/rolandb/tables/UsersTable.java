@@ -11,21 +11,33 @@ import java.util.List;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * A table for collecting information about users. Exactly like for
+ * repositories, not all events contain all of the information for a given user.
+ * This table is used to aggregate all the known information for a single user.
+ * given repository.
+ */
 public class UsersTable extends AbstractUpdateTable<UsersTable.UserUpdateEvent> {
+    /** Type of event for this table. */
     public static class UserUpdateEvent extends UpdateSeqRow {
+        /** The user id. */
         @TableEventKey
         @JsonProperty("id")
         public long id;
+        /** The username. */
         @JsonProperty("username")
         public String username;
+        /** A URL to the avatar image of the user. */
         @JsonProperty("avatar_url")
         public String avatarUrl;
+        /** A URL to the HTML GitHub page on the user. */
         @JsonProperty("html_url")
         public String htmlUrl;
+        /** The type of user this is. */
         @JsonProperty("user_type")
         public String userType;
 
-        public UserUpdateEvent(long id, String username, String avatarUrl, String htmlUrl, String userType) {
+        private UserUpdateEvent(long id, String username, String avatarUrl, String htmlUrl, String userType) {
             this.id = id;
             this.username = username;
             this.avatarUrl = avatarUrl;
@@ -131,6 +143,13 @@ public class UsersTable extends AbstractUpdateTable<UsersTable.UserUpdateEvent> 
             }
             return events;
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public UsersTable() {
+        super();
     }
 
     @Override

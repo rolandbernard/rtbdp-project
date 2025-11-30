@@ -11,10 +11,26 @@ import org.apache.flink.api.common.state.ValueStateDescriptor;
 
 import com.rolandb.AbstractUpdateTable.UpdateSeqRow;
 
+/**
+ * This is a filter function that filters out update events that are redundant
+ * because they contain the same or less information than the combination of the
+ * preceding update events. Many users appear often and for these we always see
+ * the same information, meaning this can cut down significantly on the number
+ * of events emitted to the sink.
+ * 
+ * @param <T>
+ *            The type of event we try to deduplicate.
+ */
 public class UpdateDeduplicate<T extends UpdateSeqRow> extends RichFilterFunction<T> {
     // Stores the last values that have already been stored. This is used to prevent
     // duplicate events that don't add any new information.
     private transient ValueState<Object[]> lastState;
+
+    /**
+     * Instantiate a default instance of the filter function.
+     */
+    public UpdateDeduplicate() {
+    }
 
     @Override
     public void open(OpenContext parameters) throws Exception {

@@ -9,23 +9,53 @@ import com.rolandb.tables.StarsLiveTable.RepoStarCounts;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * This table compute ranking updates based on the live event counts computed by
+ * the {@link StarsLiveTable} table.
+ */
 public class StarsRankingTable extends AbstractRankingTable<StarsRankingTable.RepoStarsRank> {
+    /** Type of event for this table. */
     public static class RepoStarsRank extends RankingSeqRow {
+        /** The window size considered. */
         @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
+        /** The repository id. */
         @JsonProperty("repo_id")
         public long repoId;
+        /** The number of new stars. */
         @JsonProperty("num_stars")
         public Long numStars;
 
+        /**
+         * Create a new instance of the event.
+         * 
+         * @param windowSize
+         *            The size of the window.
+         * @param repoId
+         *            The repository id.
+         * @param numStars
+         *            The number of events.
+         * @param rowNumber
+         *            The row number in the ranking.
+         * @param rank
+         *            The rank in the ranking.
+         * @param maxRank
+         *            The max rank in the ranking.
+         * @param oldRow
+         *            The previous row number.
+         * @param oldRank
+         *            The previous rank.
+         * @param oldMaxRank
+         *            The previous max rank.
+         */
         public RepoStarsRank(
-                WindowSize windowSize, long repoId, Long numEvents, Integer rowNumber, Integer rank,
+                WindowSize windowSize, long repoId, Long numStars, Integer rowNumber, Integer rank,
                 Integer maxRank, Integer oldRow, Integer oldRank, Integer oldMaxRank) {
             super(rowNumber, rank, maxRank, oldRow, oldRank, oldMaxRank);
             this.windowSize = windowSize;
             this.repoId = repoId;
-            this.numStars = numEvents;
+            this.numStars = numStars;
         }
     }
 
@@ -48,6 +78,13 @@ public class StarsRankingTable extends AbstractRankingTable<StarsRankingTable.Re
                 .returns(RepoStarsRank.class)
                 .uid("ranking-stars-01")
                 .name("Per Repo Stars Rankings");
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public StarsRankingTable() {
+        super();
     }
 
     @Override

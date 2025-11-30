@@ -11,10 +11,38 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum GithubEventType {
     // The below should be in sync with the ones in the frontend and in
     // postgres database.
-    ALL("all"), PUSH("push"), WATCH("watch"), CREATE_REPO("create_repo"), CREATE_BRANCH("create_branch"),
-    DELETE_BRANCH("delete_branch"), FORK("fork"), WIKI("wiki"), ISSUE_OPEN("issue_open"), ISSUE_CLOSE("issue_close"),
-    PULL_OPEN("pull_open"), PULL_CLOSE("pull_close"), COMMIT_COMMENT("commit_comment"), 
-    ISSUE_COMMENT("issue_comment"), PULL_COMMENT("pull_comment"), OTHER("other");
+    /** Special type that matches all events. */
+    ALL("all"),
+    /** A push of one or more commits to a repository. */
+    PUSH("push"),
+    /** A user starred a repository. */
+    WATCH("watch"),
+    /** A repository has been created. */
+    CREATE_REPO("create_repo"),
+    /** A branch has been created. */
+    CREATE_BRANCH("create_branch"),
+    /** A branch has been deleted. */
+    DELETE_BRANCH("delete_branch"),
+    /** A repository has been forked. */
+    FORK("fork"),
+    /** The wiki of a repository has been modified. */
+    WIKI("wiki"),
+    /** An issue has been opened. */
+    ISSUE_OPEN("issue_open"),
+    /** An issue has been closed. */
+    ISSUE_CLOSE("issue_close"),
+    /** An pull request has been opened. */
+    PULL_OPEN("pull_open"),
+    /** An pull request has been closed. */
+    PULL_CLOSE("pull_close"),
+    /** An Commit has been commented on. */
+    COMMIT_COMMENT("commit_comment"),
+    /** An issue has been commented on. */
+    ISSUE_COMMENT("issue_comment"),
+    /** An pull request has been commented in. */
+    PULL_COMMENT("pull_comment"),
+    /** All other events get this type. */
+    OTHER("other");
 
     private final String name;
 
@@ -28,6 +56,13 @@ public enum GithubEventType {
         return this.name;
     }
 
+    /**
+     * Find the event type matching the given string.
+     * 
+     * @param name
+     *            The name of the event.
+     * @return The enum value with that name.
+     */
     public static GithubEventType fromString(String name) {
         for (GithubEventType type : GithubEventType.values()) {
             if (type.toString().equals(name)) {

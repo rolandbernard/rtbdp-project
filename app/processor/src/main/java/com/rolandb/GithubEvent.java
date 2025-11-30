@@ -12,16 +12,28 @@ import com.fasterxml.jackson.databind.JsonNode;
  * additional information that we don't need.
  */
 public class GithubEvent extends SequencedRow {
-    // These are all public so that this is a POJO.
+    /** The type of event this is. */
     @JsonProperty("kind")
     public final GithubEventType eventType;
+    /** The time at which the event was created. */
     @JsonProperty("created_at")
     public final Instant createdAt;
+    /** The user that caused the event. */
     @JsonProperty("user_id")
     public final long userId;
+    /** The repository on which the user caused the event. */
     @JsonProperty("repo_id")
     public final long repoId;
 
+    /**
+     * Create a new event instance from the fields directly.
+     * 
+     * @param eventType The event type.
+     * @param createdAt The creation timestamp.
+     * @param userId The user id.
+     * @param repoId The repository id.
+     * @param seqNum The sequence number for the event.
+     */
     public GithubEvent(GithubEventType eventType, Instant createdAt, long userId, long repoId, long seqNum) {
         this.seqNum = seqNum;
         this.eventType = eventType;

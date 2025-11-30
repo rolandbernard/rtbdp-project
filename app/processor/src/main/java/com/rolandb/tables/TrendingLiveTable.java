@@ -8,14 +8,30 @@ import com.rolandb.tables.StarsLiveTable.RepoStarCounts;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 
+/**
+ * A live computation of a simple trending score. The trending score is based on
+ * the linear compilation of the number of new stars in the last 5 minutes,
+ * hour, 6 hours, and day.
+ */
 public class TrendingLiveTable extends AbstractTable<TrendingLiveTable.RepoTrendingScore> {
+    /** Type of event for this table. */
     public static class RepoTrendingScore extends SequencedRow {
+        /** The repository id. */
         @TableEventKey
         @JsonProperty("repo_id")
         public long repoId;
+        /** The trending score. */
         @JsonProperty("trending_score")
         public long trendingScore;
 
+        /**
+         * Create a new event instance.
+         * 
+         * @param repoId
+         *            The considered repository id.
+         * @param trendingScore
+         *            The latest trending score.
+         */
         public RepoTrendingScore(long repoId, long trendingScore) {
             this.repoId = repoId;
             this.trendingScore = trendingScore;
@@ -30,6 +46,13 @@ public class TrendingLiveTable extends AbstractTable<TrendingLiveTable.RepoTrend
                 return false;
             }
         }
+    }
+
+    /**
+     * Create a new table with default values.
+     */
+    public TrendingLiveTable() {
+        super();
     }
 
     @Override

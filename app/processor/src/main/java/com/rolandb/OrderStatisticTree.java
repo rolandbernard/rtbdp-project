@@ -8,11 +8,17 @@ import java.util.NoSuchElementException;
 /**
  * This implements an order statistic tree with support for querying elements at
  * a given index in the sorted list, and to quickly find their index.
+ * 
+ * @param <T>
+ *            The type of object we want to store in the tree.
  */
 public class OrderStatisticTree<T extends Comparable<T>> {
     /**
      * An iterator for the ordered statistics tree. The start and end are determined
      * when creating the iterator. The end is moved until it hits the end.
+     * 
+     * @param <T>
+     *            The type of object the tree we are iterating over contains.
      */
     public static class TreeIterator<T extends Comparable<T>> implements Iterator<T> {
         private List<Node<T>> path;
@@ -82,6 +88,13 @@ public class OrderStatisticTree<T extends Comparable<T>> {
     private Node<T> root;
 
     /**
+     * Create an empty tree.
+     */
+    public OrderStatisticTree() {
+        root = null;
+    }
+
+    /**
      * Add an element to the collection. Note that duplicates will be ignored.
      *
      * @param key
@@ -106,6 +119,9 @@ public class OrderStatisticTree<T extends Comparable<T>> {
      * return a negative value of {@code -insertionIndex - 1} if the key does not
      * currently exist in the collection.
      *
+     * @param <N>
+     *            The type of key to search with. Must be comparable to the element
+     *            type of the collection.
      * @param key
      *            The element to search for.
      * @return The index of the element or {@code -index - 1} if not found.

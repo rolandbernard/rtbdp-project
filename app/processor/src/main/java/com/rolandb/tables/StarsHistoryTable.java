@@ -11,20 +11,42 @@ import com.rolandb.AbstractTable;
 import com.rolandb.CountAggregation;
 import com.rolandb.SequencedRow;
 
+/**
+ * This table computes windowed star event counts per repository using tumbling
+ * windows of fixed size.
+ */
 public class StarsHistoryTable extends AbstractTable<StarsHistoryTable.RepoStarCounts> {
+    /** Type of event for this table. */
     public static class RepoStarCounts extends SequencedRow {
+        /** The repository id. */
         @TableEventKey
         @JsonProperty("repo_id")
         public long repoId;
+        /** The window start. */
         @TableEventKey
         @JsonProperty("ts_start")
         public Instant winStart;
+        /** The window end. */
         @TableEventKey
         @JsonProperty("ts_end")
         public Instant winEnd;
+        /** The number of star events. */
         @JsonProperty("num_stars")
         public long numStars;
 
+        /**
+         * Create a new event instance.
+         * 
+         * @param winStart
+         *            The start of the window.
+         * @param winEnd
+         *            The end of the window.
+         * @param repoId
+         *            The id of the considered repository.
+         * @param numStars
+         *            The number of starring events for that repository in the given
+         *            window.
+         */
         public RepoStarCounts(Instant winStart, Instant winEnd, long repoId, long numStars) {
             this.winStart = winStart;
             this.winEnd = winEnd;
@@ -33,8 +55,23 @@ public class StarsHistoryTable extends AbstractTable<StarsHistoryTable.RepoStarC
         }
     }
 
-    private Duration window = Duration.ofMinutes(5);
+    private Duration window;
 
+    /**
+     * Create a new table with default values.
+     */
+    public StarsHistoryTable() {
+        super();
+        window = Duration.ofMinutes(5);
+    }
+
+    /**
+     * Set the window size with which to aggregate the events.
+     * 
+     * @param window
+     *            The window size.
+     * @return {@code this}
+     */
     public StarsHistoryTable setWindowSize(Duration window) {
         this.window = window;
         return this;

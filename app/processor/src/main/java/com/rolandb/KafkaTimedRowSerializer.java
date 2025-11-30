@@ -19,11 +19,23 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  * to use the event time as the creation time in the Kafka topic. Doing so would
  * cause the dummy data to be deleted (or ready for deletion) immediately, as
  * that data has timestamps from the past.
+ * 
+ * @param <T>
+ *            The type of row to serialize.
  */
 public class KafkaTimedRowSerializer<T extends SequencedRow> implements KafkaRecordSerializationSchema<T> {
+    /** Name of the table for which we serialize. */
     private final String tableName;
+    /** Object mapper used for serialization. */
     private final ObjectMapper objectMapper;
 
+    /**
+     * Create a new serializer for the given table name. The table will be used as
+     * topic name in the Kafka producer record.
+     * 
+     * @param tableName
+     *            The name of the table this serializer is for.
+     */
     public KafkaTimedRowSerializer(String tableName) {
         this.tableName = tableName;
         objectMapper = new ObjectMapper();

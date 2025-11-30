@@ -15,9 +15,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * row by overwriting values in the database on a per-field level. This means
  * that we have a sequence number for every single field, allowing for updates
  * to arrive out-of-order at the client, and still be combined correctly.
+ * 
+ * @param <E>
+ *            The type of event this table outputs.
  */
 public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSeqRow> extends AbstractTable<E> {
+    /**
+     * A type of row that has extra sequence numbers for each field.
+     */
     public static abstract class UpdateSeqRow extends SequencedRow {
+        /**
+         * Default constructor for the new row.
+         */
+        protected UpdateSeqRow() {
+            super();
+        }
+
         @Override
         @JsonIgnore
         public Object[] getValues() {
@@ -34,6 +47,11 @@ public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSe
             return allValues;
         }
 
+        /**
+         * Get the value and sequence numbers for those values.
+         * 
+         * @return Array of sequence numbers and values.
+         */
         @JsonIgnore
         public Object[] getUpdateValues() {
             List<Field> fields = new ArrayList<>();
@@ -78,6 +96,11 @@ public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSe
             }
         }
 
+        /**
+         * Extra getter got the sequence number fields.
+         * 
+         * @return The sequence number fields and values.
+         */
         @JsonAnyGetter
         public Map<String, Long> perFieldSeqNumbers() {
             Map<String, Long> fields = new HashMap<>();
@@ -97,6 +120,13 @@ public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSe
             return fields;
         }
 
+        /**
+         * Compute the extra sequence number field names for the given class.
+         * 
+         * @param clazz
+         *            The class to generate for.
+         * @return The extra sequence number field names.
+         */
         public static List<String> perFieldSeqNumNames(Class<?> clazz) {
             List<String> fields = new ArrayList<>();
             for (Field field : clazz.getFields()) {
@@ -112,6 +142,14 @@ public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSe
         }
     }
 
+    /**
+     * Create a new table with default values.
+     */
+    public AbstractUpdateTable() {
+        super();
+    }
+
+    @Override
     protected void buildSqlConflictResolution(String keyNames, Field[] fields, StringBuilder builder) {
         builder.append(" ON CONFLICT (");
         builder.append(keyNames);
@@ -163,6 +201,7 @@ public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSe
         }
     }
 
+    @Override
     protected void buildSqlExtraFields(Class<E> output, StringBuilder builder) {
         for (String seqNum : UpdateSeqRow.perFieldSeqNumNames(output)) {
             builder.append(", ");
@@ -170,6 +209,7 @@ public abstract class AbstractUpdateTable<E extends AbstractUpdateTable.UpdateSe
         }
     }
 
+    @Override
     protected void buildSqlExtraValues(Class<E> output, StringBuilder builder) {
         for (int i = 0; i < UpdateSeqRow.perFieldSeqNumNames(output).size(); i++) {
             builder.append(", ?");

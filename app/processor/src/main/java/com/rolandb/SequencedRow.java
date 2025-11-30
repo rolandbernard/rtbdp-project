@@ -14,12 +14,27 @@ import com.rolandb.AbstractTable.TableEventKey;
  * the same key. This is required for the client to know whether incoming events
  * are newer than the snapshot.
  */
-public class SequencedRow {
-    // A single number that is used by the client (and the database) to ignore
-    // updates that arrive to late and are older that what is already in the db.
+public abstract class SequencedRow {
+    /**
+     * A single number that is used by the client (and the database) to ignore
+     * updates that arrive to late and are older that what is already in the db.
+     */
     @JsonProperty("seq_num")
     public Long seqNum;
 
+    /**
+     * Default constructor for the new row.
+     */
+    protected SequencedRow() {
+    }
+
+    /**
+     * Get the given field from the object or return {@code null} if unable to.
+     * 
+     * @param field
+     *            The field to read.
+     * @return The value of the field.
+     */
     public Object getField(Field field) {
         try {
             return field.get(this);
@@ -29,11 +44,21 @@ public class SequencedRow {
         }
     }
 
+    /**
+     * Get the values of the key field of this object.
+     * 
+     * @return The key values.
+     */
     @JsonIgnore
     public List<?> getKey() {
         return readKeyFrom(this);
     }
 
+    /**
+     * Get the values of all fields of this object.
+     * 
+     * @return The values.
+     */
     @JsonIgnore
     public Object[] getValues() {
         return readValuesFrom(this);
@@ -58,6 +83,12 @@ public class SequencedRow {
         return builder.toString();
     }
 
+    /**
+     * Merge the given row into this one, but only if its sequence number is newer.
+     * 
+     * @param next
+     *            The row to merge into this one.
+     */
     public void mergeWith(SequencedRow next) {
         assert getClass() == next.getClass();
         if (seqNum == null || (next.seqNum != null && next.seqNum > seqNum)) {
@@ -71,6 +102,14 @@ public class SequencedRow {
         }
     }
 
+    /**
+     * Check of the given class has any key fields.
+     * 
+     * @param clazz
+     *            The class to check.
+     * @return {@code true} if the class has any fields marked as keys,
+     *         {@code false} otherwise.
+     */
     public static boolean hasKeyIn(Class<?> clazz) {
         for (Field field : clazz.getFields()) {
             if (field.getAnnotation(TableEventKey.class) != null) {
@@ -80,6 +119,13 @@ public class SequencedRow {
         return false;
     }
 
+    /**
+     * Read the keys from the given object.
+     * 
+     * @param obj
+     *            The object to read keys from.
+     * @return The objects keys.
+     */
     public static List<?> readKeyFrom(Object obj) {
         List<Object> keys = new ArrayList<>();
         for (Field field : obj.getClass().getFields()) {
@@ -95,6 +141,13 @@ public class SequencedRow {
         return keys;
     }
 
+    /**
+     * Read the values from the given object.
+     * 
+     * @param obj
+     *            The object to read from.
+     * @return The objects fields values.
+     */
     public static Object[] readValuesFrom(Object obj) {
         Field[] fields = obj.getClass().getFields();
         Object[] values = new Object[fields.length];
