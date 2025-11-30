@@ -14,8 +14,15 @@ import java.util.concurrent.ExecutionException;
  * Utility methods related to the Kafka Java client. These have been taken from
  * the lab exercises, with some minor modifications.
  */
-public class KafkaUtil {
+public final class KafkaUtil {
+    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaUtil.class);
+
+    /**
+     * This class is only for static methods. You should not instantiate it.
+     */
+    private KafkaUtil() {
+    }
 
     /**
      * Block until the specified topics are available in Kafka before returning
@@ -28,7 +35,9 @@ public class KafkaUtil {
      * @param topics
      *            The list of topics that we want to wait for before continuing.
      * @throws ExecutionException
+     *             If thrown by the Kafka client.
      * @throws InterruptedException
+     *             If interrupted.
      */
     public static void waitForTopics(String bootstrapServers, String... topics)
             throws InterruptedException, ExecutionException {

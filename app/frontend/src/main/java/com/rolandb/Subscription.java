@@ -13,11 +13,27 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * easily be added and removed.
  */
 public class Subscription {
+    /** The unique id of the subscription. */
     public final long id;
+    /** The name of the table being subscribed to. */
     public final String tableName;
+    /** The set of disjunctive filters to apply to the table. */
     public final List<TableRowFilter> filters;
+    /** The limit to apply to the replay query. */
     public final Long limit;
 
+    /**
+     * Create a new subscription object.
+     * 
+     * @param id
+     *            The unique id of the subscription.
+     * @param tableName
+     *            The table the subscription applies to.
+     * @param filters
+     *            The filters to apply for the subscription.
+     * @param limit
+     *            The limit to used for replay requests.
+     */
     @JsonCreator
     public Subscription(
             @JsonProperty("id") long id, @JsonProperty("table") String tableName,
@@ -74,6 +90,8 @@ public class Subscription {
      *
      * @param table
      *            The table to check against.
+     * @param inReplay
+     *            Whether this is for a replay of for a subscription.
      * @return {@code true} if the subscription can be used with the table,
      *         {@code false} otherwise.
      */

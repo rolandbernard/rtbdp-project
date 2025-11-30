@@ -12,18 +12,43 @@ import com.rolandb.Table.Field;
 
 /**
  * Interface used for filters that filter based on a single columns value.
+ * 
+ * @param <T>
+ *            The type of value that can be filtered with this filter.
  */
 public interface TableValueFilter<T> {
     /**
      * A column filter that retains only a range of values. The values of start
      * or end may be omitted (set to null) to get an open interval.
+     * 
+     * @param <T>
+     *            The type of value that can be filtered with this filter.
      */
     public static class RangeFilter<T> implements TableValueFilter<T> {
+        /** The minimum value passing the filter. */
         private final T start;
+        /** The upper bound on passing values. */
         private final T end;
+        /** A string that must be a subset of all passing values. */
         private final T substr;
+        /** Whether the upper bound is inclusive or not. */
         private final boolean inclusive;
 
+        /**
+         * Create a new range based filer.
+         * 
+         * @param start
+         *            The minimum value passing the filter. Or null of there is no lower
+         *            bound.
+         * @param end
+         *            The upper bound on values passing the filter. Or null if there is
+         *            no upper bound.
+         * @param substr
+         *            The substring that must be included in the lowercase version of
+         *            the filed value. Or null to ignore it.
+         * @param inclusive
+         *            Whether the upper bound is inclusive or not.
+         */
         @JsonCreator
         public RangeFilter(
                 @JsonProperty("start") T start, @JsonProperty("end") T end, @JsonProperty("substr") T substr,
@@ -126,10 +151,20 @@ public interface TableValueFilter<T> {
     /**
      * A column filter that accepts only the elements that are equal to the ones
      * it has been constructed with.
+     * 
+     * @param <T>
+     *            The type of value that can be filtered with this filter.
      */
     public static class InFilter<T> implements TableValueFilter<T> {
+        /** The list of values that should pass the filter. */
         private final List<T> options;
 
+        /**
+         * Create a new filter.
+         * 
+         * @param options
+         *            The set of values that should pass the filter.
+         */
         @JsonCreator
         public InFilter(List<T> options) {
             this.options = options == null ? List.of() : options;
@@ -191,6 +226,18 @@ public interface TableValueFilter<T> {
         }
     }
 
+    /**
+     * Create a new value filter from the given JsonNode. This will intelligently
+     * select either the range or inclusion based filter.
+     * 
+     * @param node
+     *            The JSON node to create it from.
+     * @return The new value filter.
+     * @throws JsonProcessingException
+     *             In case this is not a valid filter.
+     * @throws IllegalArgumentException
+     *             In case this is not a valid filter.
+     */
     @JsonCreator
     public static TableValueFilter<?> fromJsonNode(JsonNode node)
             throws JsonProcessingException, IllegalArgumentException {
@@ -209,7 +256,7 @@ public interface TableValueFilter<T> {
      *            The row to test against.
      * @return {@code true} in case we match, {@code false} otherwise.
      */
-    public abstract boolean accept(T obj);
+    public abstract boolean accept(T row);
 
     /**
      * Returns an SQL expression that can be used as the condition in a
@@ -237,6 +284,8 @@ public interface TableValueFilter<T> {
      * of this filter. This assumes the filter is on a key, i.e., no two tuples
      * will have the same values.
      * 
+     * @param field
+     *            The field the filter is applied to.
      * @return The estimated cardinality
      */
     public abstract Long estimateCardinality(Field field);

@@ -36,6 +36,7 @@ import java.util.Locale;
  * control headers to allow for browsers to cache the files.
  */
 public class StaticFileHandler implements HttpHandler {
+    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(StaticFileHandler.class);
     /**
      * The data format to be used in `Last-Modified` and `If-Modified-Since` HTTP
@@ -59,8 +60,16 @@ public class StaticFileHandler implements HttpHandler {
         MIME_TYPES.put("svg", "image/svg+xml");
     }
 
+    /** Root directory to serve static files from. */
     private final String rootDir;
 
+    /**
+     * Create a new static file handler that serves data from the given root
+     * directory.
+     * 
+     * @param rootDir
+     *            The directory to serve files from.
+     */
     public StaticFileHandler(String rootDir) {
         this.rootDir = rootDir;
     }
@@ -163,6 +172,15 @@ public class StaticFileHandler implements HttpHandler {
         }
     }
 
+    /**
+     * Send a response to the given exchange indicating that the requested file
+     * could not be found.
+     * 
+     * @param exchange
+     *            The exchange to respond to.
+     * @throws IOException
+     *             In case there is an error writing the response.
+     */
     private void sendNotFound(HttpExchange exchange) throws IOException {
         String response = "404 Not Found";
         exchange.sendResponseHeaders(404, response.length());
@@ -171,6 +189,15 @@ public class StaticFileHandler implements HttpHandler {
         }
     }
 
+    /**
+     * Send a response to the given exchange indicating that the server encountered
+     * an unexpected issue while processing the request.
+     * 
+     * @param exchange
+     *            The exchange to respond to.
+     * @throws IOException
+     *             In case there is an error writing the response.
+     */
     private void sendInternalServerError(HttpExchange exchange) throws IOException {
         String response = "500 Internal Server Error";
         exchange.sendResponseHeaders(500, response.length());

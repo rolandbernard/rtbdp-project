@@ -12,8 +12,26 @@ import com.rolandb.Table.Field;
  * A filter that filters rows of a table.
  */
 public class TableRowFilter {
-    private final Map<String, TableValueFilter<?>> filters = new HashMap<>();
+    /** A set of conjunctive filters to apply. */
+    private final Map<String, TableValueFilter<?>> filters;
 
+    /**
+     * Create a new empty instance. The instance will have no row filters, meaning
+     * it accepts all rows.
+     */
+    public TableRowFilter() {
+        filters = new HashMap<>();
+    }
+
+    /**
+     * Set the filter for a given field name. A single field can only have one
+     * filter and this method will override the existing one if any.
+     * 
+     * @param key
+     *            The name of the field.
+     * @param rule
+     *            The filter to apply for that field.
+     */
     @JsonAnySetter
     public void setKeyFilters(String key, TableValueFilter<?> rule) {
         this.filters.put(key, rule);
@@ -24,6 +42,8 @@ public class TableRowFilter {
      *
      * @param table
      *            The table to check against.
+     * @param inReplay
+     *            Whether this is for a replay of a subscription.
      * @return {@code true} if the filter can be used with the table, {@code false}
      *         otherwise.
      */
@@ -39,7 +59,7 @@ public class TableRowFilter {
         }
         return true;
     }
-    
+
     /**
      * Return whether all fields used for filters are using keys.
      *
@@ -57,13 +77,15 @@ public class TableRowFilter {
             }
         }
         return true;
-    } 
+    }
 
     /**
      * Estimate the maximum number of tuples that can be returned in the presence
      * of this filter. This assumes the filter is on a key, i.e., no two tuples
      * will have the same values.
      * 
+     * @param table
+     *            The table to use for the estimation.
      * @return The estimated cardinality
      */
     public Long estimateCardinality(Table table) {

@@ -23,12 +23,27 @@ import org.slf4j.Logger;
  * control headers to allow for browsers to cache the files.
  */
 public class AuthHandler implements HttpHandler {
+    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthHandler.class);
 
+    /** Password the user must enter to be authenticated. */
     private final String password;
+    /** The value stored in the cookie for authenticated users. */
     private final String secret;
+    /**
+     * The handler that is protected by this handler. Will be called if
+     * authenticated.
+     */
     private final HttpHandler wrapped;
 
+    /**
+     * Create a new authentication handler.
+     * 
+     * @param password
+     *            The password with which users log in.
+     * @param wrapped
+     *            The handler that is to be password protected.
+     */
     public AuthHandler(String password, HttpHandler wrapped) {
         this.password = password != null ? password.trim() : null;
         this.wrapped = wrapped;
@@ -49,10 +64,23 @@ public class AuthHandler implements HttpHandler {
         }
     }
 
+    /**
+     * Get the secret value that is expected to be present in the cookies.
+     * 
+     * @return The secret value.
+     */
     public String getSecret() {
         return secret;
     }
 
+    /**
+     * Retrieve the login page HTML content. It is stored and retrieved as a
+     * resource inside the same package.
+     * 
+     * @return The HTML login page.
+     * @throws IOException
+     *             In case loading fails.
+     */
     private String getLoginPageTemplate() throws IOException {
         return new String(
                 AuthHandler.class.getResourceAsStream("login.html").readAllBytes(),

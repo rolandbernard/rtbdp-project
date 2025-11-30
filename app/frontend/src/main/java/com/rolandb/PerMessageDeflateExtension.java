@@ -26,43 +26,81 @@ import org.java_websocket.framing.Framedata;
  * https://github.com/TooTallNate/Java-WebSocket/issues/1496.
  */
 public class PerMessageDeflateExtension extends CompressionExtension {
-    public static final String PREMESSAGE_DEFLATE = "permessage-deflate";
+    /** Name of the extension used for feature negotiation. */
+    private static final String PREMESSAGE_DEFLATE = "permessage-deflate";
 
-    public static final String CLIENT_NO_CONTEXT_TAKEOVER = "client_no_context_takeover";
-    public static final String SERVER_NO_CONTEXT_TAKEOVER = "server_no_context_takeover";
-    public static final String CLIENT_MAX_WINDOW_BITS = "client_max_window_bits";
-    public static final String SERVER_MAX_WINDOW_BITS = "server_max_window_bits";
-    public static final int MINIMUM_MAX_WINDOW_BITS = 8;
-    public static final int MAXIMUM_MAX_WINDOW_BITS = 15;
-    // This is the default for Deflate implementation in Java, and it does not seem
-    // like it can be changed. For this reason we will have to fall back to
-    // uncompressed if the client does not support it.
-    public static final int DEFAULT_MAX_WINDOW_BITS = 15;
+    /** Name of the client no context feature during negotiation. */
+    private static final String CLIENT_NO_CONTEXT_TAKEOVER = "client_no_context_takeover";
+    /** Name of the server no context feature during negotiation. */
+    private static final String SERVER_NO_CONTEXT_TAKEOVER = "server_no_context_takeover";
+    /** Name of the client maximum window bits during negotiation. */
+    private static final String CLIENT_MAX_WINDOW_BITS = "client_max_window_bits";
+    /** Name of the server maximum window bits during negotiation. */
+    private static final String SERVER_MAX_WINDOW_BITS = "server_max_window_bits";
+    /** The minimum window bits that must be supported. */
+    private static final int MINIMUM_MAX_WINDOW_BITS = 8;
+    /** The maximum window bits that can be supported. */
+    private static final int MAXIMUM_MAX_WINDOW_BITS = 15;
+    /**
+     * This is the default for Deflate implementation in Java, and it does not seem
+     * like it can be changed. For this reason we will have to fall back to
+     * uncompressed if the client does not support it.
+     */
+    private static final int DEFAULT_MAX_WINDOW_BITS = 15;
 
-    public static final byte[] FINAL_DEFLATE_BLOCK = new byte[] { 0x00, 0x00, (byte) 0xff, (byte) 0xff };
-    public static final byte[] EMPTY_DEFLATE_BLOCK = new byte[] { 0x00 };
+    /** The end of every deflate message. */
+    private static final byte[] FINAL_DEFLATE_BLOCK = new byte[] { 0x00, 0x00, (byte) 0xff, (byte) 0xff };
+    /** An empty deflate block. */
+    private static final byte[] EMPTY_DEFLATE_BLOCK = new byte[] { 0x00 };
+    /**
+     * Chunk size used for compression and decompression. Not related to
+     * transmission, only for local buffering.
+     */
     private static final int CHUNK_SIZE = 8192;
 
+    /** The compression level to use. */
     private final int compressionLevel;
+    /** The compressor to use for compression. */
     private final Deflater compressor;
+    /** The decompressor used for decompression. */
     private final Inflater decompressor;
 
+    /** Whether the client will reset the compressor. */
     private boolean clientNoContextTakeover;
+    /** Whether the server will reset the compressor. */
     private boolean serverNoContextTakeover;
+    /** Window bits used by the client. */
     private int clientMaxWindowBits;
+    /** Window bits used by the server. */
     private int serverMaxWindowBits;
 
+    /** Whether we must reset the compressor between messages. */
     private boolean resetCompressor;
+    /** Whether we must reset the decompressor between messages. */
     private boolean resetDecompressor;
 
+    /** The minimum number of bytes for compressing the message. */
     private int compressionThreshold;
+    /** Whether we are currently compressing a set of frames. */
     private boolean isCompressing;
+    /** Whether we are currently decompressing a set of frames. */
     private boolean isDecompressing;
 
+    /**
+     * Create a new instance of the extension with default parameters.
+     */
     public PerMessageDeflateExtension() {
         this(DEFAULT_COMPRESSION, 64);
     }
 
+    /**
+     * Create a new instance if the extension with given parameters.
+     * 
+     * @param compressionLevel
+     *            The compression level to use for transmission.
+     * @param compressionThreshold
+     *            The minimum number of bytes to consider for compression.
+     */
     public PerMessageDeflateExtension(int compressionLevel, int compressionThreshold) {
         this.compressionLevel = compressionLevel;
         this.compressionThreshold = compressionThreshold;
@@ -100,6 +138,17 @@ public class PerMessageDeflateExtension extends CompressionExtension {
         }
     }
 
+    /**
+     * Decompress the given byte buffer.
+     * 
+     * @param buffer
+     *            Thy data to decompress.
+     * @param isFinal
+     *            Whether this is the final part of this set of frames.
+     * @return The decompressed bytes.
+     * @throws InvalidDataException
+     *             In case invalid data has been given.
+     */
     private byte[] decompress(ByteBuffer buffer, boolean isFinal) throws InvalidDataException {
         ByteArrayOutputStream decompressed = new ByteArrayOutputStream();
         try {
@@ -113,6 +162,16 @@ public class PerMessageDeflateExtension extends CompressionExtension {
         return decompressed.toByteArray();
     }
 
+    /**
+     * Decompress from the byte buffer into the output stream.
+     * 
+     * @param buffer
+     *            The buffer to decompress.
+     * @param decompressed
+     *            The stream to push bytes into.
+     * @throws DataFormatException
+     *             In case there data is invalid.
+     */
     private void decompressInto(ByteBuffer buffer, ByteArrayOutputStream decompressed) throws DataFormatException {
         decompressor.setInput(buffer);
         byte[] chunk = new byte[CHUNK_SIZE];
@@ -150,6 +209,15 @@ public class PerMessageDeflateExtension extends CompressionExtension {
         }
     }
 
+    /**
+     * Compress the given byte buffer.
+     * 
+     * @param buffer
+     *            Thy data to compress.
+     * @param isFinal
+     *            Whether this is the final part of this set of frames.
+     * @return The compressed bytes.
+     */
     private byte[] compress(ByteBuffer buffer, boolean isFinal) {
         if (!buffer.hasRemaining() && isFinal) {
             return EMPTY_DEFLATE_BLOCK;
@@ -161,6 +229,14 @@ public class PerMessageDeflateExtension extends CompressionExtension {
                 : compressed.toByteArray();
     }
 
+    /**
+     * Compress the given bytes into the given output stream.
+     * 
+     * @param buffer
+     *            The bytes to compress.
+     * @param compressed
+     *            The stream to output into.
+     */
     private void compressInto(ByteBuffer buffer, ByteArrayOutputStream compressed) {
         compressor.setInput(buffer);
         int flush = NO_FLUSH;
@@ -177,6 +253,14 @@ public class PerMessageDeflateExtension extends CompressionExtension {
         }
     }
 
+    /**
+     * Remove the final block of the compressed data, which is the same for all
+     * messages.
+     * 
+     * @param input
+     *            The frame payload.
+     * @return The same payload but without the final block.
+     */
     private byte[] removeFinalBlock(byte[] input) {
         byte[] block = FINAL_DEFLATE_BLOCK;
         if (input.length < block.length) {
@@ -202,6 +286,15 @@ public class PerMessageDeflateExtension extends CompressionExtension {
         return false;
     }
 
+    /**
+     * Read the parameters from the extensions send by the other party and unify
+     * them with the current configuration of the extension.
+     * 
+     * @param extensionRequestData
+     *            The extension parameters.
+     * @return {@code true} if everything was read successfully, {@code false}
+     *         otherwise.
+     */
     private boolean acceptExtensionParameters(ExtensionRequestData extensionRequestData) {
         for (Map.Entry<String, String> parameter : extensionRequestData.getExtensionParameters().entrySet()) {
             if (CLIENT_NO_CONTEXT_TAKEOVER.equalsIgnoreCase(parameter.getKey())) {
@@ -239,6 +332,15 @@ public class PerMessageDeflateExtension extends CompressionExtension {
         return true;
     }
 
+    /**
+     * Read the parameters from the extensions send by the client and unify
+     * them with the current configuration of the extension.
+     * 
+     * @param extensionRequestData
+     *            The extension parameters.
+     * @return {@code true} if everything was read successfully, {@code false}
+     *         otherwise.
+     */
     private boolean acceptExtensionParametersAsServer(ExtensionRequestData extensionRequestData) {
         if (!acceptExtensionParameters(extensionRequestData)) {
             return false;
@@ -263,6 +365,15 @@ public class PerMessageDeflateExtension extends CompressionExtension {
         return false;
     }
 
+    /**
+     * Read the parameters from the extensions send by the server and unify
+     * them with the current configuration of the extension.
+     * 
+     * @param extensionRequestData
+     *            The extension parameters.
+     * @return {@code true} if everything was read successfully, {@code false}
+     *         otherwise.
+     */
     private boolean acceptExtensionParametersAsClient(ExtensionRequestData extensionRequestData) {
         if (!acceptExtensionParameters(extensionRequestData)) {
             return false;

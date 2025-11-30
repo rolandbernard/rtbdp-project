@@ -12,9 +12,18 @@ import java.util.List;
  * existing open connections will be used.
  */
 public class DbConnectionPool implements AutoCloseable {
+    /** The URL used to connect to the database. */
     private final String jdbcUrl;
+    /** The set of currently maintained active connections. */
     private final List<Connection> connections = new ArrayList<>();
 
+    /**
+     * Create a new connection pool that will create new connection by connecting to
+     * the given JDBC URL.
+     * 
+     * @param jdbcUrl
+     *            The URL to connect to for opening new connections.
+     */
     public DbConnectionPool(String jdbcUrl) {
         this.jdbcUrl = jdbcUrl;
     }
@@ -24,6 +33,7 @@ public class DbConnectionPool implements AutoCloseable {
      *
      * @return The connection.
      * @throws SQLException
+     *             In case we are unable to open a connection.
      */
     public synchronized Connection getConnection() throws SQLException {
         while (true) {

@@ -8,6 +8,16 @@ import java.util.List;
  * additional fields for the fields that must exists for all of them.
  */
 public class RankingTable extends Table {
+    /**
+     * Expand the given fields by adding those that are present in all ranking
+     * tables.
+     * 
+     * @param fields
+     *            The table specific fields.
+     * @param rowCard
+     *            The cardinality to assign to the {@code row_number} field.
+     * @return The table specific field plus the common ranking field.
+     */
     private static List<Field> expandFields(List<Field> fields, Long rowCard) {
         List<Field> expanded = new ArrayList<>();
         expanded.addAll(fields);
@@ -20,6 +30,18 @@ public class RankingTable extends Table {
         return expanded;
     }
 
+    /**
+     * Create a new ranking table.
+     * 
+     * @param name
+     *            The name of the table.
+     * @param maxLimit
+     *            The maximum cardinality to allow for replay requests.
+     * @param rowCard
+     *            The cardinality for a single row number.
+     * @param fields
+     *            The fields that are specific to this ranking table.
+     */
     public RankingTable(String name, Long maxLimit, Long rowCard, List<Field> fields) {
         super(name, maxLimit, expandFields(fields, rowCard));
     }

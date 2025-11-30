@@ -28,21 +28,60 @@ import io.reactivex.rxjava3.subjects.PublishSubject;
 /**
  * In this application, a table consists of both a relational table in
  * PostgreSQL storing the latest state, and a Kafka topic that streams all of
- * the
- * changes to that table. This class provides an abstraction over that.
+ * the changes to that table. This class provides an abstraction over that.
  */
 public class Table {
+    /**
+     * The kinds of fields that we are considering.
+     */
     public static enum FieldKind {
-        NORMAL, INDEXED, KEY, SORTED_KEY
+        /** A normal filed. */
+        NORMAL,
+        /** A field that has some index on it. Allowing for filtering. */
+        INDEXED,
+        /** A field that is a key. Assumed to also be indexed. */
+        KEY,
+        /** A field that is a key and has a significant sort order. */
+        SORTED_KEY
     }
 
+    /**
+     * This class is used for representing a field in a table. It provided the
+     * needed information for correctly applying the filters and reading data from
+     * postgres.
+     */
     public static class Field {
+        /** The name of the field. Must be the same as in the database. */
         public final String name;
+        /** The kind of the field. */
         public final FieldKind kind;
+        /** The domain of the field. Must be either String or Long currently. */
         public final Class<?> type;
+        /**
+         * The estimated cardinality of rows that have the same value for this field.
+         * This is used for limiting the size of replay queries from clients.
+         */
         public final Long cardinality;
+        /**
+         * Indicates whether this field is present in the replay, or only in the Kafka
+         * obtained stream.
+         */
         public final boolean inReplay;
 
+        /**
+         * Create a new field.
+         * 
+         * @param name
+         *            Name of the field in the database.
+         * @param kind
+         *            Kind of the field.
+         * @param type
+         *            Domain of the field.
+         * @param cardinality
+         *            Estimated cardinality of the field.
+         * @param inReplay
+         *            Whether it exists in the database or just in Kafka.
+         */
         public Field(String name, FieldKind kind, Class<?> type, Long cardinality, boolean inReplay) {
             this.name = name;
             this.kind = kind;
@@ -51,41 +90,111 @@ public class Table {
             this.inReplay = inReplay;
         }
 
+        /**
+         * Create a new field that exists in the database and Kafka.
+         * 
+         * @param name
+         *            Name of the field in the database.
+         * @param kind
+         *            Kind of the field.
+         * @param type
+         *            Domain of the field.
+         * @param cardinality
+         *            Estimated cardinality of the field.
+         */
         public Field(String name, FieldKind kind, Class<?> type, Long cardinality) {
             this(name, kind, type, cardinality, true);
         }
 
+        /**
+         * Create a new normal field that has unbounded cardinality and exists in both
+         * the database and Kafka.
+         * 
+         * @param name
+         *            Name of the field in the database.
+         * @param type
+         *            Domain of the field.
+         */
         public Field(String name, Class<?> type) {
             this(name, FieldKind.NORMAL, type, null, true);
         }
 
+        /**
+         * Create a new normal field that has unbounded cardinality and may or may not
+         * exist in the database.
+         * 
+         * @param name
+         *            Name of the field in the database.
+         * @param type
+         *            Domain of the field.
+         * @param inReplay
+         *            Whether it exists in the database or just in Kafka.
+         */
         public Field(String name, Class<?> type, boolean inReplay) {
             this(name, FieldKind.NORMAL, type, null, inReplay);
         }
 
+        /**
+         * Test whether the field can be used in a filter.
+         * 
+         * @return {@code true} if the field can be used in a filter, {@code false}
+         *         otherwise.
+         */
         public boolean canFilter() {
             return kind == FieldKind.INDEXED || kind == FieldKind.KEY || kind == FieldKind.SORTED_KEY;
         }
 
+        /**
+         * Test whether the field is part of the primary key of the table.
+         * 
+         * @return {@code true} if the field is part of the primary key, {@code false}
+         *         otherwise.
+         */
         public boolean isKey() {
             return kind == FieldKind.KEY || kind == FieldKind.SORTED_KEY;
         }
     };
 
+    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
 
+    /** The name of the table. */
     public final String name;
+    /** The maximum cardinality that should be accepted for replay requests. */
     public final Long maxLimit;
+    /** The fields contained in this table. */
     public final List<Field> fields;
+    /**
+     * A thread that runs continuously to get new Kafka events and feed the live
+     * observable.
+     */
     private Thread livePollThread;
+    /** An RxJava observable that is used to feed subscriptions from this table. */
     private Observable<Map<String, ?>> liveObservable;
 
+    /**
+     * Create a new table with the given parameters.
+     * 
+     * @param name
+     *            The name of the table.
+     * @param maxLimit
+     *            The maximum cardinality for replays.
+     * @param fields
+     *            The fields of the table.
+     */
     public Table(String name, Long maxLimit, List<Field> fields) {
         this.name = name;
         this.maxLimit = maxLimit;
         this.fields = fields;
     }
 
+    /**
+     * Start the live observable. At most one thread will ever be started, even if
+     * this function is called multiple times.
+     * 
+     * @param kafkaProperties
+     *            The Kafka properties to use for connection.
+     */
     public void startLiveObservable(Properties kafkaProperties) {
         if (liveObservable == null) {
             PublishSubject<Map<String, ?>> subject = PublishSubject.create();
@@ -127,6 +236,13 @@ public class Table {
         }
     }
 
+    /**
+     * Stop a previously started live observable. This has no effect if no
+     * observable has been started before.
+     * 
+     * @throws InterruptedException
+     *             If interrupted.
+     */
     public void stopLiveObservable() throws InterruptedException {
         if (liveObservable != null) {
             liveObservable = null;

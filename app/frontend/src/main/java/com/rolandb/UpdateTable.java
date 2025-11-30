@@ -9,6 +9,14 @@ import java.util.List;
  * and repos table.
  */
 public class UpdateTable extends Table {
+    /**
+     * Expand the list of filed by adding field for the per-field sequence numbers
+     * present in this kind of table.
+     * 
+     * @param fields
+     *            The base fields.
+     * @return The extended list of fields.
+     */
     private static List<Field> expandFields(List<Field> fields) {
         List<Field> expanded = new ArrayList<>();
         expanded.addAll(fields);
@@ -20,6 +28,16 @@ public class UpdateTable extends Table {
         return expanded;
     }
 
+    /**
+     * Create a new update table.
+     * 
+     * @param name
+     *            The name of the table.
+     * @param maxLimit
+     *            The maximum cardinality allowed for replays.
+     * @param fields
+     *            The field of the table, without the per-field sequence numbers.
+     */
     public UpdateTable(String name, Long maxLimit, List<Field> fields) {
         super(name, maxLimit, expandFields(fields));
     }

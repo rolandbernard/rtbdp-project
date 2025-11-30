@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -48,10 +47,23 @@ public class SocketApiServer extends WebSocketServer {
      * to some number of tables, or to remove some previous subscriptions.
      */
     public static class ClientMessage {
+        /** The list of replay requests. */
         public final List<Subscription> replay;
+        /** The list of subscriptions to start. */
         public final List<Subscription> subscribe;
+        /** The list of subscriptions to cancel. */
         public final List<Long> unsubscribe;
 
+        /**
+         * Create a new client message.
+         * 
+         * @param replay
+         *            The list of replay requests.
+         * @param subscribe
+         *            The list of new subscriptions.
+         * @param unsubscribe
+         *            The list of subscription ids to cancel.
+         */
         @JsonCreator
         public ClientMessage(
                 @JsonProperty("replay") List<Subscription> replay,
@@ -73,19 +85,40 @@ public class SocketApiServer extends WebSocketServer {
          * Subscriptions by table. Required for filtering requests and handling
          * unsubscribing from tables.
          */
-        private final Map<String, Set<Subscription>> subscriptions = new HashMap<>();
+        private final Map<String, Set<Subscription>> subscriptions;
         /**
          * Subscriptions by id. Required for handling unsubscribing.
          */
-        private final Map<Long, Subscription> subscriptionsById = new HashMap<>();
+        private final Map<Long, Subscription> subscriptionsById;
         /**
          * Map from table to disposable. Note that we only ever keep one
          * subscription to each table observable. This means even if the client
          * create more than one subscription, every row will be processed out
          * only once.
          */
-        private final Map<String, Disposable> disposables = new HashMap<>();
+        private final Map<String, Disposable> disposables;
 
+        /**
+         * Create a new empty client state. Each client connection is assigned one such
+         * state on initial connection.
+         */
+        public ClientState() {
+            subscriptions = new HashMap<>();
+            subscriptionsById = new HashMap<>();
+            disposables = new HashMap<>();
+        }
+
+        /**
+         * Subscribe the client with the given subscription to the given table, and send
+         * update events to the given web socket.
+         * 
+         * @param newSubscription
+         *            The subscription to activate.
+         * @param table
+         *            The table to subscribe to.
+         * @param socket
+         *            The socket to send events to.
+         */
         public synchronized void subscribe(Subscription newSubscription, Table table, WebSocket socket) {
             if (!subscriptionsById.containsKey(newSubscription.id)) {
                 subscriptionsById.put(newSubscription.id, newSubscription);
@@ -114,6 +147,12 @@ public class SocketApiServer extends WebSocketServer {
             }
         }
 
+        /**
+         * Cancel the subscription with the given id.
+         * 
+         * @param subscriptionId
+         *            The id of the subscription that should be canceled.
+         */
         public synchronized void unsubscribe(long subscriptionId) {
             Subscription toRemove = subscriptionsById.remove(subscriptionId);
             if (toRemove != null) {
@@ -126,6 +165,10 @@ public class SocketApiServer extends WebSocketServer {
             }
         }
 
+        /**
+         * Unsubscribe from all active subscriptions. This is to be used when a client
+         * disconnects from the server.
+         */
         public synchronized void unsubscribeAll() {
             for (Disposable d : disposables.values()) {
                 d.dispose();
@@ -136,15 +179,23 @@ public class SocketApiServer extends WebSocketServer {
         }
     }
 
+    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketApiServer.class);
 
+    /** The secret we expect in the handshake cookies. */
     private final String secret;
+    /** Properties for connecting to Kafka with. */
     private final Properties kafkaProperties;
+    /** The database connection pool. */
     private final DbConnectionPool connections;
+    /** Object mapper for (un)parsing the messages with the clients. */
     private final ObjectMapper objectMapper = new ObjectMapper();
+    /** The set of tables we have access to. */
     private final Map<String, Table> tables = new HashMap<>();
+    /** Scheduler to subscribe to the observables on. */
     private final Scheduler rxScheduler = Schedulers.from(Executors.newFixedThreadPool(8));
 
+    /** Extension for using compression with WebSockets. */
     private static final Draft perMessageDeflateDraft = new Draft_6455(new PerMessageDeflateExtension());
 
     /**
@@ -152,6 +203,15 @@ public class SocketApiServer extends WebSocketServer {
      *
      * @param address
      *            The address to listen on.
+     * @param bootstrapServer
+     *            The broker address for Kafka.
+     * @param groupId
+     *            The group id to use for Kafka consumer.
+     * @param jdbcUrl
+     *            The JDBC URL with with to connect to the database.
+     * @param secret
+     *            The secret that should be present in the cookies of the handshake
+     *            to allow clients to connect.
      */
     public SocketApiServer(
             InetSocketAddress address, String bootstrapServer, String groupId, String jdbcUrl, String secret) {
@@ -172,8 +232,6 @@ public class SocketApiServer extends WebSocketServer {
      *
      * @param table
      *            The table to add.
-     * @throws ExecutionException
-     * @throws InterruptedException
      */
     private void addTable(Table table) {
         table.startLiveObservable(kafkaProperties);

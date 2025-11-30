@@ -27,25 +27,51 @@ import net.sourceforge.argparse4j.inf.Namespace;
  * then receive updates
  */
 public class Frontend {
+    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(Frontend.class);
 
+    /** The port to listen for HTTP on. */
     private final int httpPort;
+    /** The port to listen for WebSocket on. */
     private final int wsPort;
+    /** The address of the Kafka broker. */
     private final String bootstrapServer;
+    /** The group id to use for Kafka connections. */
     private final String groupId;
+    /** The JDBC URL to use for connecting to PostgreSQL. */
     private final String jdbcUrl;
+    /** The directory from which to serve static files. */
     private final String staticDir;
+    /** The secret that is to be used for authentication. */
     private final String secret;
+    /** The HTTP sever instance. */
     private HttpServer httpServer;
+    /** The WebSocket server instance. */
     private WebSocketServer webSocketServer;
 
     /**
      * Create a new server.
-     *
+     * 
      * @param httpPort
-     *            The port the server should listen on.
+     *            The port the server should listen for HTTP requests on.
+     * @param wsPort
+     *            The port the server should listen to WebSocket connections to.
+     *            Must be different from {@code httpPort}.
+     * @param bootstrapServer
+     *            The address of a Kafka broker to connect to for the live API data.
+     * @param groupId
+     *            The group id to use when connecting to Kafka.
+     * @param staticDir
+     *            The static directory from which to server the frontend client
+     *            code.
+     * @param secret
+     *            The secret to use for protecting the application. Can be
+     *            {@code null} to be unprotected.
+     * @param jdbcUrl
+     *            The JDBC URL to use for connecting to the database for replay
+     *            requests.
      * @throws IOException
-     *             In case the events data can not be loaded.
+     *             In case the the server can not be started..
      */
     public Frontend(
             int httpPort, int wsPort, String bootstrapServer, String groupId, String staticDir,
