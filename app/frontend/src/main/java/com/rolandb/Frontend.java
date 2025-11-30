@@ -124,7 +124,7 @@ public class Frontend {
     }
 
     /**
-     * Run the GitHub Events API server.
+     * Run the frontend static file and API server.
      *
      * @param args
      *            Arguments to configure the server.

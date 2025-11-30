@@ -20,8 +20,12 @@ import java.util.concurrent.ExecutionException;
  * Utility methods related to the Kafka Java client. These have been taken from
  * the lab exercises, with some minor modifications.
  */
-public class KafkaUtil {
+public final class KafkaUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaUtil.class);
+
+    /** This class is only for static methods. You should not instantiate it. */
+    private KafkaUtil() {
+    }
 
     /**
      * Ensures that the given topic exists with the supplied number of partitions
@@ -43,7 +47,9 @@ public class KafkaUtil {
      *            The desired retention time for teh topic in milliseconds
      * @return true, if the topic was created, false if it already exists
      * @throws ExecutionException
+     *             If topic setup fails in the Kafka admin client.
      * @throws InterruptedException
+     *             If interrupted.
      */
     public static boolean setupTopic(
             String topic, String bootstrapServers, int numPartitions, int replicationFactor, long retentionMs)

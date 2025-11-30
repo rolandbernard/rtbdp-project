@@ -9,6 +9,7 @@ import java.time.Instant;
  * requests should be made before the retry after instant.
  */
 public class RateLimitException extends IOException {
+    /** The timestamp after which we can try again to access the API. */
     private final Instant retryAfter;
 
     /**

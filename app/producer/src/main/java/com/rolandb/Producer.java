@@ -32,6 +32,20 @@ import net.sourceforge.argparse4j.inf.Namespace;
 public class Producer {
     private static final Logger LOGGER = LoggerFactory.getLogger(Producer.class);
 
+    /** This class is only for static methods. You should not instantiate it. */
+    private Producer() {
+    }
+
+    /**
+     * Run a custom Kafka producer that will poll the GitHub Events API.
+     * 
+     * @param args
+     *            The arguments to configure the producer.
+     * @throws ExecutionException
+     *             If Kafka client operations fail.
+     * @throws InterruptedException
+     *             If interrupted.
+     */
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         // Parse command line.
         ArgumentParser parser = ArgumentParsers.newFor("Producer").build()

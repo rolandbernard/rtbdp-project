@@ -17,9 +17,7 @@ import java.util.concurrent.ExecutionException;
 public final class KafkaUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaUtil.class);
 
-    /**
-     * This class is only for static methods. You should not instantiate it.
-     */
+    /** This class is only for static methods. You should not instantiate it. */
     private KafkaUtil() {
     }
 

@@ -12,10 +12,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class GithubEvent {
     private final String id;
     private final JsonNode rawEvent;
-    // A sequence number that is guaranteed to not appear twice in the stream of
-    // events and is in process time order. This is currently generated from the
-    // current timestamp, but should not be interpreted that way. This is used
-    // in later processing to ensure ordering of updates.
+    /**
+     * A sequence number that is guaranteed to not appear twice in the stream of
+     * events and is in process time order. This is currently generated from the
+     * current timestamp, but should not be interpreted that way. This is used
+     * in later processing to ensure ordering of updates.
+     */
     public long seqNum;
 
     /**
