@@ -25,7 +25,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 
 /**
  * This is a dummy server that can be used as a replacement for the official
- * {@code api.github.com\ server for testing the rest of the application. This
+ * {@code api.github.com} server for testing the rest of the application. This
  * avoids the need for a GitHub API access token and also avoids running into
  * rate limits.
  * The data that is served has been collected from the real GitHub API on the
@@ -125,6 +125,8 @@ public class DummyServer {
      *
      * @param port
      *            The port the server should listen on.
+     * @param data
+     *            The object used for retrieving the data.
      * @throws IOException
      *             In case the dummy events data can not be loaded.
      */
@@ -152,7 +154,7 @@ public class DummyServer {
     /**
      * Stop the server from running.
      * 
-     * @throws InterruptedException
+     * @throws InterruptedException If interrupted.
      */
     public void stopListen() throws InterruptedException {
         data.stopWorker();

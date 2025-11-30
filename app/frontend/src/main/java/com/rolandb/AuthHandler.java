@@ -23,7 +23,6 @@ import org.slf4j.Logger;
  * control headers to allow for browsers to cache the files.
  */
 public class AuthHandler implements HttpHandler {
-    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthHandler.class);
 
     /** Password the user must enter to be authenticated. */

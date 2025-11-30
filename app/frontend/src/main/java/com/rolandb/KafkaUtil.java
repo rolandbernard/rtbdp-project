@@ -15,7 +15,6 @@ import java.util.concurrent.ExecutionException;
  * the lab exercises, with some minor modifications.
  */
 public final class KafkaUtil {
-    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaUtil.class);
 
     /**

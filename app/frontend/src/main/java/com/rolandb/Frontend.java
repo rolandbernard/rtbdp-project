@@ -27,7 +27,6 @@ import net.sourceforge.argparse4j.inf.Namespace;
  * then receive updates
  */
 public class Frontend {
-    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(Frontend.class);
 
     /** The port to listen for HTTP on. */

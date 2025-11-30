@@ -155,7 +155,6 @@ public class Table {
         }
     };
 
-    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(Table.class);
 
     /** The name of the table. */

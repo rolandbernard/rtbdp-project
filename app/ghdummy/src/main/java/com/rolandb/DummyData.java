@@ -40,12 +40,28 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  */
 public class DummyData {
     private static final Logger LOGGER = LoggerFactory.getLogger(DummyData.class);
+    /** The name of the file that contains the fallback data. */
     private static final String RESOURCE_NAME = "dummy.json.gz";
 
+    /**
+     * Class used to represent the events in the dummy server. We only care about
+     * the creation timestamp, not any other data in the payload so the rest is
+     * represented as the raw JSON string.
+     */
     public static class Event {
+        /** The timestamp at which the event was created. */
         public final Instant timestamp;
+        /** The JSON payload representing the event. */
         public final String json;
 
+        /***
+         * Create a new event with the given timestamp and JSON string.
+         * 
+         * @param timestamp
+         *            Creation time of the event.
+         * @param json
+         *            JSON representation of the event.
+         */
         public Event(Instant timestamp, String json) {
             this.timestamp = timestamp;
             this.json = json;
@@ -263,6 +279,17 @@ public class DummyData {
      * Crate a new instance of the dummy data. The dummy data will loop starting
      * from the time this instance is created.
      *
+     * @param speedUp
+     *            The speed up in time compared to real time that the dummy server
+     *            should simulate.
+     * @param delay
+     *            The delay with respect to real time that the dummy server should
+     *            start at.
+     * @param archiveUrl
+     *            The url to download data from. Must accept the same API as
+     *            GhArchive.
+     * @param dataDir
+     *            A directory to cache downloaded file in.
      * @throws IOException
      *             In case the dummy resources can not be accessed.
      */
@@ -276,6 +303,13 @@ public class DummyData {
         LOGGER.info("Loaded dummy data timestamps");
     }
 
+    /**
+     * Load data for the current, previous, and following hour in case we have not
+     * already done so.
+     * 
+     * @throws InterruptedException
+     *             If interrupted.
+     */
     public void loadCurrentData() throws InterruptedException {
         Instant now = currentTimestamp();
         Instant prev = now.minus(Duration.ofHours(1));
@@ -341,6 +375,7 @@ public class DummyData {
      * {@link DummyData#startWorker}.
      * 
      * @throws InterruptedException
+     *             If interrupted.
      */
     public void stopWorker() throws InterruptedException {
         backgroundWorker.interrupt();

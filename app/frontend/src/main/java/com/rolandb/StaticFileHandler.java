@@ -36,7 +36,6 @@ import java.util.Locale;
  * control headers to allow for browsers to cache the files.
  */
 public class StaticFileHandler implements HttpHandler {
-    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(StaticFileHandler.class);
     /**
      * The data format to be used in `Last-Modified` and `If-Modified-Since` HTTP

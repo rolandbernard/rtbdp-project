@@ -179,7 +179,6 @@ public class SocketApiServer extends WebSocketServer {
         }
     }
 
-    /** Logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketApiServer.class);
 
     /** The secret we expect in the handshake cookies. */
