@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -16,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.observables.ConnectableObservable;
@@ -69,14 +67,15 @@ public class EventPollService {
     public EventPollService(RestApiClient apiClient, int pollingIntervalMs, int pollingDepth) {
         // Create the observable that will emit the events.
         long[] errorDelay = new long[] { 1 };
-        Scheduler ioScheduler = Schedulers.from(Executors.newFixedThreadPool(8));
         Observable<GithubEvent> coldObservable = Observable.interval(pollingIntervalMs, TimeUnit.MILLISECONDS)
-                .observeOn(ioScheduler)
+                .subscribeOn(Schedulers.io())
                 .flatMapSingle(tick -> {
                     int numPages = (pollingDepth + 99) / 100;
                     int perPage = (pollingDepth + numPages - 1) / numPages;
                     List<Single<List<GithubEvent>>> pages = IntStream.rangeClosed(1, numPages)
-                            .mapToObj(page -> Single.fromCallable(() -> apiClient.getEvents(page, perPage)))
+                            .mapToObj(page -> Single.fromCallable(() -> apiClient.getEvents(page, perPage))
+                                    .subscribeOn(Schedulers.io())
+                                    .observeOn(Schedulers.computation()))
                             .collect(Collectors.toList());
                     errorDelay[0] = 1;
                     Single<List<GithubEvent>> ret = Single.zip(pages, (lists) -> {

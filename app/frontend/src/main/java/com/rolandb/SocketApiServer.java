@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -33,7 +32,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rolandb.Table.Field;
 import com.rolandb.Table.FieldKind;
 
-import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
@@ -129,13 +127,14 @@ public class SocketApiServer extends WebSocketServer {
                     sameTable = new HashSet<>();
                     subscriptions.put(newSubscription.tableName, sameTable);
                     Disposable disposable = table.getLiveObservable()
-                            .subscribeOn(rxScheduler)
+                            .observeOn(Schedulers.computation())
                             .filter(row -> {
                                 synchronized (sameTable) {
                                     return sameTable.stream().anyMatch(s -> s.accept(row));
                                 }
                             })
                             .buffer(50, TimeUnit.MILLISECONDS, 1024)
+                            .observeOn(Schedulers.io())
                             .subscribe(rows -> {
                                 sendRows(socket, table.name, rows);
                             });
@@ -191,8 +190,6 @@ public class SocketApiServer extends WebSocketServer {
     private final ObjectMapper objectMapper = new ObjectMapper();
     /** The set of tables we have access to. */
     private final Map<String, Table> tables = new HashMap<>();
-    /** Scheduler to subscribe to the observables on. */
-    private final Scheduler rxScheduler = Schedulers.from(Executors.newFixedThreadPool(8));
 
     /** Extension for using compression with WebSockets. */
     private static final Draft perMessageDeflateDraft = new Draft_6455(new PerMessageDeflateExtension());
@@ -372,7 +369,6 @@ public class SocketApiServer extends WebSocketServer {
     @Override
     public void stop() throws InterruptedException {
         super.stop();
-        rxScheduler.shutdown();
         for (Table table : tables.values()) {
             table.stopLiveObservable();
         }
@@ -523,7 +519,7 @@ public class SocketApiServer extends WebSocketServer {
                 if (table != null && replay.applicableTo(table, true)) {
                     List<Map<String, ?>> rows = new ArrayList<>();
                     table.getReplayObservable(replay, connections)
-                            .subscribeOn(rxScheduler)
+                            .subscribeOn(Schedulers.io())
                             .subscribe(row -> {
                                 rows.add(row);
                                 if (rows.size() >= 1024) {

@@ -7,6 +7,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -144,6 +145,7 @@ public class DummyServer {
      */
     public void startListen() throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.setExecutor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
         server.createContext("/ok", this::handleStatusRequest);
         server.createContext("/events", this::handleDataRequest);
         server.start();
@@ -154,7 +156,8 @@ public class DummyServer {
     /**
      * Stop the server from running.
      * 
-     * @throws InterruptedException If interrupted.
+     * @throws InterruptedException
+     *             If interrupted.
      */
     public void stopListen() throws InterruptedException {
         data.stopWorker();

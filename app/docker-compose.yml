@@ -7,7 +7,11 @@ services:
     restart: always
     ports:
       - "${PORT_BROKER:-29092}:29092"
-    profiles: []
+    profiles:
+      - dbui
+      - producer
+      - processor
+      - frontend
     volumes:
       - broker-data:/var/lib/kafka/data:z
     environment:
@@ -61,7 +65,11 @@ services:
     restart: always
     ports:
       - "${PORT_POSTGRES:-25432}:5432"
-    profiles: []
+    profiles:
+      - dbui
+      - processor
+      - ghareplay
+      - frontend
     volumes:
       - ./postgres:/docker-entrypoint-initdb.d:z
       - postgres-data:/var/lib/postgresql/data:z
@@ -100,7 +108,9 @@ services:
     image: zookeeper:3.9.4-jre-17
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-zookeeper"
     restart: always
-    profiles: []
+    profiles:
+      - processor
+      - ghareplay
     volumes:
       - ./flink/logback.xml:/conf/logback.xml:z
     environment:
@@ -120,7 +130,9 @@ services:
     depends_on:
       zookeeper:
         condition: service_healthy
-    profiles: []
+    profiles:
+      - processor
+      - ghareplay
     ports:
       - "${PORT_FLINK:-8081}:8081"
     volumes:
@@ -161,7 +173,9 @@ services:
     depends_on:
       flink-jobmanager:
         condition: service_healthy
-    profiles: []
+    profiles:
+      - processor
+      - ghareplay
     volumes:
       - flink-checkpoints:/opt/flink/checkpoints:z
       - flink-savepoints:/opt/flink/savepoints:z
@@ -212,8 +226,6 @@ services:
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-producer"
     restart: always
     depends_on:
-      ghdummy:
-        condition: service_healthy
       broker:
         condition: service_healthy
     profiles:

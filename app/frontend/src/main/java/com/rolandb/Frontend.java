@@ -3,6 +3,7 @@ package com.rolandb;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.concurrent.Executors;
 
 import org.java_websocket.server.WebSocketServer;
 import org.slf4j.Logger;
@@ -94,6 +95,7 @@ public class Frontend {
      */
     public void startListen() throws IOException {
         httpServer = HttpServer.create(new InetSocketAddress(httpPort), 0);
+        httpServer.setExecutor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
         StaticFileHandler fileHandler = new StaticFileHandler(staticDir);
         AuthHandler authHandler = new AuthHandler(secret, fileHandler);
         httpServer.createContext("/", authHandler);

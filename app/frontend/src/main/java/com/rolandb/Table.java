@@ -230,6 +230,7 @@ public class Table {
                     subject.onComplete();
                 }
             });
+            livePollThread.setName("Kafka Poll Thread (" + name + ")");
             livePollThread.start();
             liveObservable = subject.share();
         }

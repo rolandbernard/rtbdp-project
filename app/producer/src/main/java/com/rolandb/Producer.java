@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -117,7 +118,7 @@ public class Producer {
         EventPollService pollingService = new EventPollService(restApiClient, pollMs, pollDepth);
         ObjectMapper objectMapper = new ObjectMapper();
         // Subscribe to the event observable and send events to Kafka.
-        pollingService.getEventsStream().subscribe(
+        pollingService.getEventsStream().observeOn(Schedulers.io()).subscribe(
                 event -> {
                     try {
                         ObjectNode rawEvent = (ObjectNode) event.getRawEvent();
