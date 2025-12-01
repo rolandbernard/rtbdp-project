@@ -28,13 +28,19 @@ export type ClientMessage<R> = {
 export function getFreshConnection() {
     // Determine the URL that the API will be available at.
     let url;
-    if (document.location.hostname == "localhost") {
-        url = "ws://localhost:8887";
+    const params = new URLSearchParams(document.location.search);
+    if (params.has("api")) {
+        url = params.get("api")!;
     } else {
-        url =
-            (document.location.protocol == "https:" ? "wss://" : "ws://") +
-            document.location.host +
-            "/api";
+        if (
+            document.location.port == "8888" ||
+            document.location.hostname == "localhost"
+        ) {
+            url = `ws://${document.location.hostname}:8887`;
+        } else {
+            const proto = document.location.protocol == "https:" ? "wss" : "ws";
+            url = `${proto}://${document.location.host}/api`;
+        }
     }
     return webSocket<ServerMessage<unknown> | ClientMessage<unknown>>(url);
 }

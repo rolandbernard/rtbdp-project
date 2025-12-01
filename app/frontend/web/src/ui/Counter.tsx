@@ -94,11 +94,14 @@ export default function Counter(props: Props) {
                 "relative inline-block contain-paint " + (props.className ?? "")
             }
         >
-            <div className="absolute top-0 right-0 text-transparent select-text">
+            <div
+                className="absolute top-0 right-0 text-transparent select-text
+                    motion-reduce:text-content motion-reduce:relative flex flex-row justify-end"
+            >
                 {props.value}
             </div>
             <div
-                className="flex flex-row justify-end pointer-events-none select-none"
+                className="flex flex-row justify-end pointer-events-none select-none motion-reduce:hidden"
                 aria-hidden="true"
             >
                 {[...Array(digits)]

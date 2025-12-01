@@ -130,3 +130,9 @@
     --outside: rgb(from var(--color-content) r g b / 2%);
     --inside: rgb(from var(--color-content) r g b / 10%);
 }
+
+@media (prefers-reduced-motion: reduce) {
+    .loading::after {
+        animation: none;
+    }
+}

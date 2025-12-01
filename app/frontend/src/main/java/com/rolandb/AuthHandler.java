@@ -115,7 +115,7 @@ public class AuthHandler implements HttpHandler {
                     }
                     exchange.getResponseHeaders().add("Location", url.isEmpty() ? "/" : url);
                     exchange.getResponseHeaders().add("Set-Cookie",
-                            "rtgh_secret=" + secret + "; Secure; HTTPOnly; SameSite=Lax");
+                            "rtgh_secret=" + secret + "; HTTPOnly; SameSite=Lax");
                     String response = "303 See Other";
                     exchange.sendResponseHeaders(303, response.length());
                     try (OutputStream os = exchange.getResponseBody()) {
