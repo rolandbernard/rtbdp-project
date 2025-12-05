@@ -177,12 +177,15 @@ function BasicEventList(props: Props) {
     return (
         <div
             className={
-                "grow not-md:h-[50dvh] min-h-0 min-w-0 " + (loaded ? "" : "loading")
+                "grow not-md:h-[50dvh] min-h-0 min-w-0 " +
+                (loaded ? "" : "loading")
             }
-            ref={props.listRef}
         >
             {results.length !== 0 ? (
-                <div className="h-full w-full min-h-0 overflow-y-scroll overflow-x-hidden">
+                <div
+                    className="h-full w-full min-h-0 overflow-y-scroll overflow-x-hidden"
+                    ref={props.listRef}
+                >
                     {results.map(row => (
                         <Event
                             key={row.id}
