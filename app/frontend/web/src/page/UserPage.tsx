@@ -238,7 +238,7 @@ export default function UserPage() {
                     )}
                 </div>
                 <div
-                    className="md:flex-1 not-md:h-[30dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
+                    className="md:flex-1 not-md:h-85 m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
                     style={{
                         viewTransitionName:
                             navigating || location.state?.from === "ranking"
@@ -258,7 +258,7 @@ export default function UserPage() {
                     </div>
                 </div>
                 <div
-                    className="md:flex-2 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
+                    className="md:flex-2 not-md:w-full not-md:h-128 m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
                     style={{
                         viewTransitionName:
                             navigating || location.state?.from === "ranking"

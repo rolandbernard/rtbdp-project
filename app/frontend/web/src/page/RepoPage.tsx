@@ -419,7 +419,7 @@ export default function RepoPage() {
                     )}
                 </div>
                 <div
-                    className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
+                    className="md:flex-1 not-md:h-150 m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
                     style={{
                         viewTransitionName:
                             navigating || location.state?.from === "ranking"
@@ -447,7 +447,7 @@ export default function RepoPage() {
                                 : "none",
                     }}
                 >
-                    <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                    <div className="md:flex-1 not-md:w-full not-md:h-128 m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                         <div className="text-xs">Activity History</div>
                         <div className="w-full h-full">
                             <HistoryLong
@@ -455,7 +455,7 @@ export default function RepoPage() {
                             />
                         </div>
                     </div>
-                    <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                    <div className="md:flex-1 not-md:w-full not-md:h-128 m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                         <div className="text-xs">Stars History</div>
                         <div className="w-full h-full">
                             <HistoryLong

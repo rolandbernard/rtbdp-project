@@ -38,7 +38,10 @@ public class DbConnectionPool implements AutoCloseable {
     public synchronized Connection getConnection() throws SQLException {
         while (true) {
             if (connections.isEmpty()) {
-                return DriverManager.getConnection(jdbcUrl);
+                Connection newConnection = DriverManager.getConnection(jdbcUrl);
+                newConnection.setReadOnly(true);
+                newConnection.setAutoCommit(false);
+                return newConnection;
             } else {
                 Connection connection = connections.remove(connections.size() - 1);
                 try {

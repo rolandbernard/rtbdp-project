@@ -18,7 +18,7 @@ export default function Rankings() {
                     onChange={value => setKind(value)}
                 />
             </div>
-            <div className="grow not-md:h-[50dvh] min-w-0 min-h-0 flex flex-row">
+            <div className="grow not-md:h-140 min-w-0 min-h-0 flex flex-row">
                 <div
                     className={
                         "w-full min-w-0 flex flex-col" +

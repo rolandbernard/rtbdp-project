@@ -42,8 +42,8 @@ CREATE INDEX ON events(user_id);
 
 -- This is a high volume table, so we setup a partition based on the creation
 -- timestamp and then a retention period of one month.
--- ~100 events/second * 60 seconds/minute * 10 minutes/partition = 60000 /partition
-SELECT create_hypertable('events', by_range('created_at', INTERVAL '10 minutes'));
+-- ~100 events/second * 60 seconds/minute * 60 minutes/hour * 24 hours/partition = 8.6M /partition
+SELECT create_hypertable('events', by_range('created_at', INTERVAL '1 day'));
 -- We only keep one month worth of events (~250M events), due to the volume of data.
 SELECT add_retention_policy('events', INTERVAL '30 days');
 
@@ -149,8 +149,8 @@ CREATE TABLE counts_history (
 
 -- We partition by week. This table does not contain such a large amount of data
 -- so we can use a larger time period.
--- ~20 kinds * 0.2 events/kind/minute * 60 minutes/hour * 24 hours/day * 7 days/partition = 40320 /partition
-SELECT create_hypertable('counts_history', by_range('ts_start', INTERVAL '7 day'));
+-- ~20 kinds * 0.2 events/kind/minute * 60 minutes/hour * 24 hours/day * 30 days/partition = 173k /partition
+SELECT create_hypertable('counts_history', by_range('ts_start', INTERVAL '30 days'));
 
 CREATE TABLE counts_history_fine (
     kind EventKind NOT NULL,
@@ -162,7 +162,7 @@ CREATE TABLE counts_history_fine (
 );
 
 -- We partition by four hours.
-SELECT create_hypertable('counts_history_fine', by_range('ts_start', INTERVAL '4 hours'));
+SELECT create_hypertable('counts_history_fine', by_range('ts_start', INTERVAL '1 day'));
 -- We only keep one week worth of fine history, due to the volume of data.
 SELECT add_retention_policy('counts_history_fine', INTERVAL '7 days');
 
@@ -223,7 +223,7 @@ CREATE TABLE users_history (
 );
 
 -- We partition by hour because this is relatively high volume.
-SELECT create_hypertable('users_history', by_range('ts_start', INTERVAL '1 hour'));
+SELECT create_hypertable('users_history', by_range('ts_start', INTERVAL '7 days'));
 
 CREATE TABLE users_history_fine (
     user_id BIGINT NOT NULL,
@@ -235,7 +235,7 @@ CREATE TABLE users_history_fine (
 );
 
 -- We partition by 10 minutes.
-SELECT create_hypertable('users_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
+SELECT create_hypertable('users_history_fine', by_range('ts_start', INTERVAL '1 day'));
 -- We only keep one week worth of fine history, due to the volume of data.
 SELECT add_retention_policy('users_history_fine', INTERVAL '7 days');
 
@@ -296,7 +296,7 @@ CREATE TABLE repos_history (
 );
 
 -- We partition by hour because this is relatively high volume.
-SELECT create_hypertable('repos_history', by_range('ts_start', INTERVAL '1 hour'));
+SELECT create_hypertable('repos_history', by_range('ts_start', INTERVAL '7 days'));
 
 CREATE TABLE repos_history_fine (
     repo_id BIGINT NOT NULL,
@@ -308,7 +308,7 @@ CREATE TABLE repos_history_fine (
 );
 
 -- We partition by 10 minutes.
-SELECT create_hypertable('repos_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
+SELECT create_hypertable('repos_history_fine', by_range('ts_start', INTERVAL '1 day'));
 -- We only keep one week worth of fine history, due to the volume of data.
 SELECT add_retention_policy('repos_history_fine', INTERVAL '7 days');
 
@@ -369,7 +369,7 @@ CREATE TABLE stars_history (
 );
 
 -- We partition by four hours because this is relatively high volume.
-SELECT create_hypertable('stars_history', by_range('ts_start', INTERVAL '4 hour'));
+SELECT create_hypertable('stars_history', by_range('ts_start', INTERVAL '7 days'));
 
 CREATE TABLE stars_history_fine (
     repo_id BIGINT NOT NULL,
@@ -381,7 +381,7 @@ CREATE TABLE stars_history_fine (
 );
 
 -- We partition by 10 minutes.
-SELECT create_hypertable('stars_history_fine', by_range('ts_start', INTERVAL '10 minutes'));
+SELECT create_hypertable('stars_history_fine', by_range('ts_start', INTERVAL '1 day'));
 -- We only keep one week worth of fine history, due to the volume of data.
 SELECT add_retention_policy('stars_history_fine', INTERVAL '7 days');
 

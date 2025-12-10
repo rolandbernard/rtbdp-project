@@ -177,8 +177,7 @@ function BasicEventList(props: Props) {
     return (
         <div
             className={
-                "grow not-md:h-[50dvh] min-h-0 min-w-0 " +
-                (loaded ? "" : "loading")
+                "grow not-md:h-140 min-h-0 min-w-0 " + (loaded ? "" : "loading")
             }
         >
             {results.length !== 0 ? (

@@ -351,39 +351,53 @@ public class Table {
                         return pool.getConnection();
                     },
                     con -> Observable.create(emitter -> {
-                        try (Statement st = con.createStatement(
-                                ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
-                            st.setFetchSize(1024);
-                            String query = asSqlQuery(subscription) + " WHERE " + subscription.asSqlQueryCondition();
-                            if (subscription.isSorted()) {
-                                query += asSqlQueryOrder() + subscription.asSqlQueryLimit();
-                            }
-                            ResultSet rs = st
-                                    .executeQuery(query);
-                            while (rs.next() && !emitter.isDisposed()) {
-                                Map<String, Object> row = new HashMap<>();
-                                for (Field field : fields) {
-                                    if (field.inReplay) {
-                                        Object value = rs.getObject(field.name);
-                                        if (value == null || value.getClass() == field.type) {
-                                            row.put(field.name, value);
-                                        } else if (value instanceof Integer && field.type == Long.class) {
-                                            row.put(field.name, Long.valueOf((int) value));
-                                        } else if (value instanceof Float && field.type == Double.class) {
-                                            row.put(field.name, Double.valueOf((float) value));
-                                        } else if (value instanceof Timestamp && field.type == String.class) {
-                                            row.put(field.name, ((Timestamp) value).toInstant().toString());
-                                        } else {
-                                            throw new IllegalArgumentException("Unsupported conversion from "
-                                                    + value.getClass() + " to " + field.type);
+                        try {
+                            con.beginRequest();
+                            try (Statement st = con.createStatement(
+                                    ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+                                st.setFetchSize(1024);
+                                String query = asSqlQuery(subscription) + " WHERE "
+                                        + subscription.asSqlQueryCondition();
+                                if (subscription.isSorted()) {
+                                    query += asSqlQueryOrder() + subscription.asSqlQueryLimit();
+                                }
+                                try (ResultSet rs = st.executeQuery(query)) {
+                                    while (rs.next() && !emitter.isDisposed()) {
+                                        Map<String, Object> row = new HashMap<>();
+                                        for (Field field : fields) {
+                                            if (field.inReplay) {
+                                                Object value = rs.getObject(field.name);
+                                                if (value == null || value.getClass() == field.type) {
+                                                    row.put(field.name, value);
+                                                } else if (value instanceof Integer && field.type == Long.class) {
+                                                    row.put(field.name, Long.valueOf((int) value));
+                                                } else if (value instanceof Float && field.type == Double.class) {
+                                                    row.put(field.name, Double.valueOf((float) value));
+                                                } else if (value instanceof Timestamp && field.type == String.class) {
+                                                    row.put(field.name, ((Timestamp) value).toInstant().toString());
+                                                } else {
+                                                    throw new IllegalArgumentException("Unsupported conversion from "
+                                                            + value.getClass() + " to " + field.type);
+                                                }
+                                            }
                                         }
+                                        emitter.onNext(row);
                                     }
                                 }
-                                emitter.onNext(row);
+                                con.commit();
+                            } catch (SQLException exc) {
+                                con.rollback();
+                                throw exc;
+                            } finally {
+                                con.endRequest();
                             }
-                            rs.close(); // Close the result set
                             emitter.onComplete();
                         } catch (SQLException e) {
+                            try {
+                                con.close();
+                            } catch (SQLException ex) {
+                                // Ignore the error. Something else is wrong here.
+                            }
                             emitter.onError(e);
                         }
                     }),

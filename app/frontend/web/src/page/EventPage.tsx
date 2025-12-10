@@ -48,7 +48,7 @@ export default function EventPage() {
             </div>
             <div className="flex flex-col grow">
                 <div
-                    className="md:flex-1 not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
+                    className="md:flex-1 not-md:h-128 m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0"
                     style={{ viewTransitionName: "chart" }}
                 >
                     <div className="text-xs">Number of Events</div>
@@ -62,14 +62,14 @@ export default function EventPage() {
                     />
                 </div>
                 <div className="flex flex-wrap grow">
-                    <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                    <div className="md:flex-1 not-md:w-full not-md:h-128 m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                         <div className="text-xs">Events by Type</div>
                         <HistoryMulti
                             table={multiHistoryTable}
                             highlight={kind === "all" ? undefined : kind}
                         />
                     </div>
-                    <div className="md:flex-1 not-md:w-full not-md:h-[50dvh] m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
+                    <div className="md:flex-1 not-md:w-full not-md:h-128 m-2 p-2 flex flex-col border border-border/50 rounded-box min-w-0">
                         <div className="text-xs">Events in Last Hour</div>
                         <Proportions
                             table={proportionsTable}
