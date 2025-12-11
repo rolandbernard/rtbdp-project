@@ -2,6 +2,7 @@ package com.rolandb;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,7 +33,7 @@ public class EventPollService {
      * The assumption is that events will only be present for a short amount of
      * time and then be removed and never seen again.
      */
-    private static final int MAX_PROCESSED_EVENTS = 6_000;
+    private static final int MAX_PROCESSED_EVENTS = 32_000;
 
     private final ConnectableObservable<GithubEvent> observable;
     private Disposable disposable;
@@ -72,19 +73,40 @@ public class EventPollService {
                 .flatMapSingle(tick -> {
                     int numPages = (pollingDepth + 99) / 100;
                     int perPage = (pollingDepth + numPages - 1) / numPages;
-                    List<Single<List<GithubEvent>>> pages = IntStream.rangeClosed(1, numPages)
-                            .mapToObj(page -> Single.fromCallable(() -> apiClient.getEvents(page, perPage))
-                                    .subscribeOn(Schedulers.io())
-                                    .observeOn(Schedulers.computation()))
+                    List<Single<Result<List<GithubEvent>>>> pages = IntStream.rangeClosed(1, numPages)
+                            .mapToObj(
+                                    page -> Single
+                                            .fromCallable(() -> Result
+                                                    .<List<GithubEvent>>ok(apiClient.getEvents(page, perPage)))
+                                            .subscribeOn(Schedulers.io())
+                                            .onErrorReturn(throwable -> Result.err(throwable))
+                                            .observeOn(Schedulers.computation()))
                             .collect(Collectors.toList());
-                    errorDelay[0] = 1;
-                    Single<List<GithubEvent>> ret = Single.zip(pages, (lists) -> {
-                        LOGGER.info("Successfully fetched data from {} pages", numPages);
-                        Observable<GithubEvent> combinedObservable = Observable.empty();
-                        long index = 0;
-                        for (int i = lists.length - 1; i >= 0; i--) {
+                    return Single.zip(pages, rawLists -> {
+                        List<Throwable> errors = new ArrayList<>();
+                        List<List<GithubEvent>> lists = new ArrayList<>();
+                        for (Object rawList : rawLists) {
                             @SuppressWarnings("unchecked")
-                            List<GithubEvent> pageList = (List<GithubEvent>) lists[i];
+                            Result<List<GithubEvent>> result = (Result<List<GithubEvent>>) rawList;
+                            if (result.isError()) {
+                                errors.add(result.getError());
+                            } else {
+                                lists.add(result.getValue());
+                            }
+                        }
+                        if (!errors.isEmpty()) {
+                            if (lists.isEmpty()) {
+                                throw errors.get(0);
+                            } else {
+                                LOGGER.warn("Continuing to process even with errors.", errors.get(0));
+                            }
+                        }
+                        LOGGER.info("Successfully fetched data from {} pages", lists.size());
+                        errorDelay[0] = 1;
+                        long index = 0;
+                        List<GithubEvent> allEvents = new ArrayList<>();
+                        Collections.reverse(lists);
+                        for (List<GithubEvent> pageList : lists) {
                             // we reverse so the oldest ones are first
                             Collections.reverse(pageList);
                             for (int j = 0; j < pageList.size(); j++) {
@@ -94,11 +116,10 @@ public class EventPollService {
                                 pageList.get(j).seqNum = timestamp + index;
                                 index++;
                             }
-                            combinedObservable = combinedObservable.concatWith(Observable.fromIterable(pageList));
+                            allEvents.addAll(pageList);
                         }
-                        return combinedObservable.toList().blockingGet();
+                        return allEvents;
                     });
-                    return ret;
                 })
                 // If an exception occurs, here we catch it and control the retry based on the
                 // exception type and info.

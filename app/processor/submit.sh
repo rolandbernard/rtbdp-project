@@ -16,7 +16,9 @@ if [ -n "$JOB_ID" ]; then
     echo "Found running job $JOB_ID. Triggering savepoint..."
     
     # Create a savepoint of the currently running process.
-    RESTORE_PATH=$(flink stop -m $JM_ADDRESS $JOB_ID | grep "Path: " | cut -d" " -f4)
+    while [ -z "$RESTORE_PATH" ]; do
+        RESTORE_PATH=$(flink stop -m $JM_ADDRESS $JOB_ID | grep "Path: " | cut -d" " -f4)
+    done
 else
     echo "No running job found. Searching for a checkpoint..."
 
@@ -25,7 +27,7 @@ else
 fi
 
 # If we found a restore path, use it, otherwise submit a fresh job.
-if [ -n "$RESTORE_PATH" ] && [ "$RESTORE_PATH" != "null" ]; then
+if [ -n "$RESTORE_PATH" ]; then
     echo "--- Restoring from: $RESTORE_PATH ---"
     RESTORE_ARGS="-s $RESTORE_PATH"
 else
@@ -34,4 +36,4 @@ else
 fi
 
 # Execute the flink run command with the original arguments
-flink run -m $JM_ADDRESS -d $RESTORE_ARGS $@
+flink run -m $JM_ADDRESS $RESTORE_ARGS $@

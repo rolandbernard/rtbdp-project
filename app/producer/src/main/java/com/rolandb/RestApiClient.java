@@ -61,56 +61,63 @@ public class RestApiClient {
      *             If the operation is interrupted.
      */
     public List<GithubEvent> getEvents(int page, int perPage) throws IOException, InterruptedException {
-        String url = baseUrl + "/events?page=" + page + "&per_page=" + perPage;
-        LOGGER.info("Fetching events from url {}", url);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Accept", "application/vnd.github+json")
-                .header("X-GitHub-Api-Version", "2022-11-28")
-                .header("Authorization", "token " + accessToken[lastToken])
-                .GET()
-                .build();
-        lastToken = (lastToken + 1) % accessToken.length;
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        int status = response.statusCode();
-        if (status == 200) {
-            return objectMapper.readValue(response.body(), new TypeReference<List<GithubEvent>>() {
-            });
-        } else {
-            LOGGER.warn("Failed to fetch events. status code {}", status);
-            if (status == 403 || status == 429) {
-                // If this is an issue of hitting the rate limit, try to figure
-                // out when it will be safe again to call the API.
-                HttpHeaders headers = response.headers();
-                if (headers.map().containsKey("x-ratelimit-remaining") &&
-                        headers.map().containsKey("x-ratelimit-reset")
-                        && headers.map().get("x-ratelimit-remaining").stream().anyMatch(e -> e.equals("0"))) {
-                    for (String val : headers.map().get("x-ratelimit-reset")) {
-                        try {
-                            long epoch = Long.parseLong(val);
-                            throw new RateLimitException(Instant.EPOCH.plusSeconds(epoch));
-                        } catch (NumberFormatException ex) {
-                            // Simply ignore the header
+        for (int retries = 0;; retries++) {
+            String url = baseUrl + "/events?page=" + page + "&per_page=" + perPage;
+            LOGGER.info("Fetching events from url {}", url);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", "2022-11-28")
+                    .header("Authorization", "token " + accessToken[lastToken])
+                    .GET()
+                    .build();
+            lastToken = (lastToken + 1) % accessToken.length;
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            int status = response.statusCode();
+            if (status == 200) {
+                return objectMapper.readValue(response.body(), new TypeReference<List<GithubEvent>>() {
+                });
+            } else {
+                LOGGER.warn("Failed to fetch events. status code {}", status);
+                if (status == 403 || status == 429) {
+                    // If this is an issue of hitting the rate limit, try to figure
+                    // out when it will be safe again to call the API.
+                    HttpHeaders headers = response.headers();
+                    if (headers.map().containsKey("x-ratelimit-remaining") &&
+                            headers.map().containsKey("x-ratelimit-reset")
+                            && headers.map().get("x-ratelimit-remaining").stream().anyMatch(e -> e.equals("0"))) {
+                        for (String val : headers.map().get("x-ratelimit-reset")) {
+                            try {
+                                long epoch = Long.parseLong(val);
+                                throw new RateLimitException(Instant.EPOCH.plusSeconds(epoch));
+                            } catch (NumberFormatException ex) {
+                                // Simply ignore the header
+                            }
                         }
                     }
-                }
-                if (headers.map().containsKey("retry-after")) {
-                    for (String val : headers.map().get("retry-after")) {
-                        try {
-                            int toWait = Integer.parseInt(val);
-                            throw new RateLimitException(Instant.now().plusSeconds(toWait));
-                        } catch (NumberFormatException ex) {
-                            // Simply ignore the header
+                    if (headers.map().containsKey("retry-after")) {
+                        for (String val : headers.map().get("retry-after")) {
+                            try {
+                                int toWait = Integer.parseInt(val);
+                                throw new RateLimitException(Instant.now().plusSeconds(toWait));
+                            } catch (NumberFormatException ex) {
+                                // Simply ignore the header
+                            }
                         }
                     }
+                    if (status == 429) {
+                        // We are given no information about when to resume. Simply
+                        // wait for one minute before restarting.
+                        throw new RateLimitException(Instant.now().plusSeconds(60));
+                    }
                 }
-                if (status == 429) {
-                    // We are given no information about when to resume. Simply
-                    // wait for one minute before restarting.
-                    throw new RateLimitException(Instant.now().plusSeconds(60));
+                if (status / 100 == 5 && retries < 3) {
+                    // The GitHub API sometimes has sporadic server errors. In this case we just
+                    // retry immediately as that most often fixes the issue.
+                    continue;
                 }
+                throw new IOException("Failed to fetch events. status code " + response.statusCode());
             }
-            throw new IOException("Failed to fetch events. status code " + response.statusCode());
         }
     }
 }

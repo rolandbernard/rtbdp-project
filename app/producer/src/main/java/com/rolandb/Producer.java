@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -97,6 +98,10 @@ public class Producer {
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
         loggerContext.getLogger("com.rolandb").setLevel(Level.toLevel(logLevel));
         KafkaProducer<String, String> kafkaProducer;
+		// Set global RxJava error handler.
+		RxJavaPlugins.setErrorHandler(e -> {
+			LOGGER.error("Unhandled exception in RxJava.", e);
+		});
         if (!dryRun) {
             // Create & check topic.
             KafkaUtil.setupTopic(topic, bootstrapServers, numPartitions, replicationFactor, retentionMs);

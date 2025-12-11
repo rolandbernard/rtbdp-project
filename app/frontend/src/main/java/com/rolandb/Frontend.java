@@ -13,6 +13,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
@@ -177,6 +178,10 @@ public class Frontend {
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.toLevel(logLevel));
         loggerContext.getLogger("com.rolandb").setLevel(Level.toLevel(logLevel));
+        // Set global RxJava error handler.
+        RxJavaPlugins.setErrorHandler(e -> {
+            LOGGER.error("Unhandled exception in RxJava.", e);
+        });
         // Create and start HTTP server
         try {
             Frontend server = new Frontend(

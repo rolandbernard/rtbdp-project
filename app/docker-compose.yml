@@ -143,6 +143,8 @@ services:
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
+        jobmanager.scheduler: adaptive
+        parallelism.default: ${FLINK_DEFAULT_PARALLELISM:-1}
         # Fault Tolerance Config
         state.backend: rocksdb
         state.backend.incremental: true
