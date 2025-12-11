@@ -74,7 +74,7 @@ public class StarsRankingTable extends AbstractRankingTable<StarsRankingTable.Re
                                     return event;
                                 },
                                 Long.class, Long.class))
-                .setParallelism(Integer.min(4, env.getParallelism()))
+                .setParallelism(4)
                 .returns(RepoStarsRank.class)
                 .uid("ranking-stars-01")
                 .name("Per Repo Stars Rankings");

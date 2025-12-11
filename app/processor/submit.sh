@@ -27,7 +27,7 @@ else
 fi
 
 # If we found a restore path, use it, otherwise submit a fresh job.
-if [ -n "$RESTORE_PATH" ]; then
+if [ -n "$RESTORE_PATH" ] && [ -z "$FRESH_START" ]; then
     echo "--- Restoring from: $RESTORE_PATH ---"
     RESTORE_ARGS="-s $RESTORE_PATH"
 else
@@ -36,4 +36,4 @@ else
 fi
 
 # Execute the flink run command with the original arguments
-flink run -m $JM_ADDRESS $RESTORE_ARGS $@
+flink run -m $JM_ADDRESS -d $RESTORE_ARGS $@

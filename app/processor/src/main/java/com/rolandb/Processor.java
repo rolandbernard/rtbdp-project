@@ -10,11 +10,13 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ExternalizedCheckpointRetention;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.PipelineOptions;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.configuration.JobManagerOptions.SchedulerType;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions.JdbcConnectionOptionsBuilder;
 import org.apache.flink.connector.kafka.source.KafkaSource;
@@ -22,6 +24,7 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.core.execution.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,6 +90,8 @@ public class Processor {
                 .setDefault("user").help("username for accessing output database");
         parser.addArgument("--db-password").metavar("PASSWORD")
                 .setDefault("user").help("password for accessing output database");
+        parser.addArgument("--parallelism").metavar("TASKS").type(Integer.class)
+                .setDefault(1).help("set the desired level of parallelism");
         parser.addArgument("--ui-port").metavar("PORT").type(Integer.class).setDefault(8081)
                 .help("enables Flink UI at specified port when running standalone (mini-cluster mode)");
         parser.addArgument("--num-partitions").metavar("PARTITIONS").type(Integer.class)
@@ -117,6 +122,7 @@ public class Processor {
         String dbUrl = cmd.getString("db_url");
         String dbUsername = cmd.getString("db_username");
         String dbPassword = cmd.getString("db_password");
+        int parallelism = cmd.getInt("parallelism");
         int uiPort = cmd.getInt("ui_port");
         int numPartitions = cmd.getInt("num_partitions");
         int replicationFactor = cmd.getInt("replication_factor");
@@ -137,7 +143,10 @@ public class Processor {
         conf.set(CheckpointingOptions.EXTERNALIZED_CHECKPOINT_RETENTION,
                 ExternalizedCheckpointRetention.RETAIN_ON_CANCELLATION);
         conf.set(PipelineOptions.AUTO_GENERATE_UIDS, false);
+        // Configure parallelism.
+        conf.set(JobManagerOptions.SCHEDULER, SchedulerType.Adaptive);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
+        env.setParallelism(parallelism);
         // Enable checkpointing. At-least-once semantics are fine because we basically
         // always use upserts with a primary key.
         env.enableCheckpointing(60_000, CheckpointingMode.AT_LEAST_ONCE);
@@ -183,11 +192,10 @@ public class Processor {
                         "Kafka Source")
                 .uid("kafka-source-01")
                 // We can not use more parallelism for the Kafka source than we have partitions,
-                // because for some reason it messes up the watermarks. In the sense that
-                // subtasks that don't get any events seems to hold back the watermarks.
-                .setParallelism(Integer.min(
-                        KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic),
-                        env.getParallelism()));
+                // because each subtask is assigned a partition and there is no point in having
+                // idle subtasks, also because they would hold back watermarks.
+                .setParallelism(KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic))
+                .rebalance();
         // Setup parameters for table builder.
         TableBuilder builder = (new TableBuilder())
                 .setEnv(env)
@@ -241,8 +249,17 @@ public class Processor {
         builder.build("stars_ranking", StarsRankingTable.class);
         builder.build("trending_live", TrendingLiveTable.class);
         builder.build("trending_ranking", TrendingRankingTable.class);
+        // Adjusting parallelism. We do this here because I want to limit the
+        // parallelism of every operator to the one given in the command line.
+        StreamGraph graph = env.getStreamGraph();
+        graph.getStreamNodes().forEach(node -> {
+            if (node.getParallelism() > parallelism) {
+                node.setParallelism(parallelism);
+            }
+        });
+        graph.setJobName("GitHub Event Analysis");
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
-        env.execute("GitHub Event Analysis");
+        env.execute(graph);
     }
 }

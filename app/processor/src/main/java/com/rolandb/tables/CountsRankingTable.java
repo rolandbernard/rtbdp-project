@@ -87,7 +87,7 @@ public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.
                                     return event;
                                 },
                                 GithubEventType.class, Long.class))
-                .setParallelism(Integer.min(4, env.getParallelism()))
+                .setParallelism(4)
                 .returns(CountsRank.class)
                 .uid("ranking-event-counts-01")
                 .name("Event Count Rankings");

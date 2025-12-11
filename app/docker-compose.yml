@@ -144,7 +144,6 @@ services:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         jobmanager.scheduler: adaptive
-        parallelism.default: ${FLINK_DEFAULT_PARALLELISM:-1}
         # Fault Tolerance Config
         state.backend: rocksdb
         state.backend.incremental: true
@@ -188,7 +187,8 @@ services:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: ${FLINK_TASK_SLOTS:-4}
-        parallelism.default: ${FLINK_DEFAULT_PARALLELISM:-1}
+        # Increase Memory a Bit
+        taskmanager.memory.process.size: 4096m
         # Fault Tolerance Config
         state.backend: rocksdb
         state.backend.incremental: true
@@ -265,7 +265,8 @@ services:
       "--bootstrap-servers", "broker:9092",
       "--db-url", "jdbc:postgresql://postgres:5432/db",
       "--db-username", "${USERID:-user}",
-      "--db-password", "${USERPWD:-user}"
+      "--db-password", "${USERPWD:-user}",
+      "--parallelism", "${FLINK_DEFAULT_PARALLELISM:-1}"
     ]
 
   ghareplay:
@@ -293,7 +294,8 @@ services:
       "--end-date", "${GHAREPLAY_END}",
       "--db-url", "jdbc:postgresql://postgres:5432/db",
       "--db-username", "${USERID:-user}",
-      "--db-password", "${USERPWD:-user}"
+      "--db-password", "${USERPWD:-user}",
+      "--parallelism", "${FLINK_DEFAULT_PARALLELISM:-1}"
     ]
 
   frontend:

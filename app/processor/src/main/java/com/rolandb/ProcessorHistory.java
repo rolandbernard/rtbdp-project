@@ -6,13 +6,16 @@ import java.time.Instant;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.PipelineOptions;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.configuration.JobManagerOptions.SchedulerType;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions.JdbcConnectionOptionsBuilder;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +71,8 @@ public class ProcessorHistory {
                 .setDefault("user").help("username for accessing output database");
         parser.addArgument("--db-password").metavar("PASSWORD")
                 .setDefault("user").help("password for accessing output database");
+        parser.addArgument("--parallelism").metavar("TASKS").type(Integer.class)
+                .setDefault(1).help("set the desired level of parallelism");
         parser.addArgument("--ui-port").metavar("PORT").type(Integer.class).setDefault(8081)
                 .help("enables Flink UI at specified port when running standalone (mini-cluster mode)");
         parser.addArgument("--dry-run").action(Arguments.storeTrue())
@@ -86,6 +91,7 @@ public class ProcessorHistory {
         String archiveUrl = cmd.getString("archive_url");
         String startDate = cmd.getString("start_date");
         String endDate = cmd.getString("end_date");
+        int parallelism = cmd.getInt("parallelism");
         int uiPort = cmd.getInt("ui_port");
         boolean dryRun = cmd.getBoolean("dry_run");
         // Obtain and configure Flink environments.
@@ -95,9 +101,12 @@ public class ProcessorHistory {
         conf.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.ofMebiBytes(2048));
         conf.set(TaskManagerOptions.NETWORK_MEMORY_MAX, MemorySize.ofMebiBytes(512));
         conf.set(PipelineOptions.AUTO_GENERATE_UIDS, false);
+        // Configure parallelism.
+        conf.set(JobManagerOptions.SCHEDULER, SchedulerType.AdaptiveBatch);
         // Set RocksDB as state backend to allow large and more durable state.
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         env.setRuntimeMode(RuntimeExecutionMode.BATCH);
+        env.setParallelism(parallelism);
         // Define Kafka source.
         GhArchiveSource ghArchiveSource = new GhArchiveSource(archiveUrl, startDate, endDate);
         // Parse into a stream of events.
@@ -138,8 +147,17 @@ public class ProcessorHistory {
         builder.build("repos_history", ReposHistoryTable.class);
         // Trending repository detection
         builder.build("stars_history", StarsHistoryTable.class);
+        // Adjusting parallelism. We do this here because I want to limit the
+        // parallelism of every operator to the one given in the command line.
+        StreamGraph graph = env.getStreamGraph();
+        graph.getStreamNodes().forEach(node -> {
+            if (node.getParallelism() > parallelism) {
+                node.setParallelism(parallelism);
+            }
+        });
+        graph.setJobName("GitHub Historical Event Analysis");
         // Execute all statements as a single job
         LOGGER.info("Submitting Flink job");
-        env.execute("GitHub Historical Event Analysis");
+        env.execute(graph);
     }
 }

@@ -8,6 +8,7 @@ import com.rolandb.GithubEvent;
 import com.rolandb.GithubEventType;
 import com.rolandb.SequencedRow;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -405,7 +406,14 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
     protected DataStream<DetailedGithubEvent> computeTable() {
         return getRawEventStream().map(jsonNode -> new DetailedGithubEvent(jsonNode))
                 .uid("detailed-events-01")
-                .name("Detailed Event Stream");
+                .name("Detailed Event Stream")
+                // Sometimes the GitHub API sporadically give events a very old timestamp (even
+                // going back to 2015). We don't really care about these (they are only a very
+                // small fraction of events) and they cause the creation of many partitions in
+                // PostgreSQL, so we filter them out here.
+                .filter(event -> event.createdAt.isAfter(Instant.now().minus(Duration.ofDays(30))))
+                .uid("detailed-filtered-01")
+                .name("Filtered Detailed Events");
     }
 
     @Override
