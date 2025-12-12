@@ -27,6 +27,9 @@ public class DbConnectionPool implements AutoCloseable {
      * 
      * @param jdbcUrl
      *            The URL to connect to for opening new connections.
+     * @param maxConnections
+     *            The maximum number of concurrent connections allowed by this
+     *            connection pool.
      */
     public DbConnectionPool(String jdbcUrl, int maxConnections) {
         this.jdbcUrl = jdbcUrl;
