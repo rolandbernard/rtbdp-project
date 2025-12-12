@@ -133,6 +133,7 @@ public class ProcessorHistory {
                         .withDriverName("org.postgresql.Driver")
                         .withProperty("stringtype", "unspecified")
                         .withProperty("reWriteBatchedInserts", "true")
+                        .withProperty("ApplicationName", "Flink Processor Historical")
                         .build())
                 .setDryRun(dryRun);
         // Actually setup table computations.

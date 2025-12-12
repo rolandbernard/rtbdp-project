@@ -79,7 +79,7 @@ export function formatDate(
     if (dur > 365 * 24 * 60 * 60 * 1000) {
         result += date.getFullYear();
     }
-    if (dur > 24 * 60 * 60 * 1000) {
+    if (window >= 24 * 60 * 60 || dur > 24 * 60 * 60 * 1000) {
         result += " " + MONTHS[date.getMonth()] + " " + date.getDate();
     }
     if (window !== 0 || dur > 60 * 1000) {
@@ -93,19 +93,28 @@ export function formatDate(
         result += ":" + twoDigitString(date.getSeconds());
     }
     if (window !== 0) {
+        const endDate = new Date(date.getTime() + 1000 * window);
         result += "-";
+        if (window >= 24 * 60 * 60) {
+            result += MONTHS[endDate.getMonth()] + " " + endDate.getDate();
+        }
+        if (window >= 60 * 60) {
+            if (result[result.length - 1] !== "-") {
+                result += " ";
+            }
+            result += twoDigitString(endDate.getHours());
+        }
         if (window >= 60) {
-            result += twoDigitString(
-                new Date(date.getTime() + 1000 * window).getMinutes()
-            );
+            if (result[result.length - 1] !== "-") {
+                result += ":";
+            }
+            result += twoDigitString(endDate.getMinutes());
         }
         if (window < 60 || dur < 5 * 60 * 1000) {
             if (result[result.length - 1] !== "-") {
                 result += ":";
             }
-            result += twoDigitString(
-                new Date(date.getTime() + 1000 * window).getSeconds()
-            );
+            result += twoDigitString(endDate.getSeconds());
         }
     }
     return result.trim();

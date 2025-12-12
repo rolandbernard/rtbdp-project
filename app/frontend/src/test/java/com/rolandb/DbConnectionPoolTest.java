@@ -12,7 +12,7 @@ public class DbConnectionPoolTest {
 
     @BeforeEach
     public void setUp() throws SQLException {
-        dbConnectionPool = new DbConnectionPool("dummy");
+        dbConnectionPool = new DbConnectionPool("dummy", 10);
     }
 
     @Test

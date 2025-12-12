@@ -207,6 +207,7 @@ public class Processor {
                         .withDriverName("org.postgresql.Driver")
                         .withProperty("stringtype", "unspecified")
                         .withProperty("reWriteBatchedInserts", "true")
+                        .withProperty("ApplicationName", "Flink Processor")
                         .build())
                 .setBootstrapServers(bootstrapServers)
                 .setDryRun(dryRun)

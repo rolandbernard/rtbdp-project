@@ -19,7 +19,9 @@ export default function HistoryMulti<
 >(props: Props<R>) {
     const navigate = useNavigate();
     const historyTable = props.table;
-    const [loaded, rawHistory] = useTable(historyTable);
+    const [loaded, rawHistory] = useTable(
+        historyTable.limit(12 * 24 * 30 * (Object.keys(EVENT_KINDS).length - 1))
+    );
     const lastTime = useHistoryTime(false);
     const [keys, cleanHistory] = useMemo(() => {
         if ((!loaded && rawHistory.length < 10) || rawHistory.length === 0) {
@@ -37,14 +39,7 @@ export default function HistoryMulti<
                 );
                 const complete = [];
                 let last = {
-                    x: new Date(
-                        (
-                            lastTime ??
-                            sorted[sorted.length - 1]?.x ??
-                            new Date()
-                        ).getTime() -
-                            60 * 60 * 1000
-                    ),
+                    x: new Date(lastTime.getTime() - 60 * 60 * 1000),
                     y: 0,
                 };
                 for (const row of sorted) {
@@ -58,14 +53,12 @@ export default function HistoryMulti<
                     complete.push(row);
                     last = row;
                 }
-                if (lastTime) {
-                    while (last.x < lastTime) {
-                        last = {
-                            x: new Date(last.x.getTime() + diff),
-                            y: loaded ? 0 : NaN,
-                        };
-                        complete.push(last);
-                    }
+                while (last.x < lastTime) {
+                    last = {
+                        x: new Date(last.x.getTime() + diff),
+                        y: loaded ? 0 : NaN,
+                    };
+                    complete.push(last);
                 }
                 return { name: EVENT_KINDS[rows[0]!.kind], data: complete };
             });
@@ -98,6 +91,7 @@ export default function HistoryMulti<
                 result.push(row);
                 cur = new Date(cur.getTime() + diff);
             }
+            result.splice(0, Math.max(0, result.length - 12 * 24 * 30));
             return [keys, result];
         }
     }, [loaded, rawHistory, lastTime]);

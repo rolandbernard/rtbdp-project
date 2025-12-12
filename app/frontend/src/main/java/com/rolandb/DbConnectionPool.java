@@ -14,8 +14,12 @@ import java.util.List;
 public class DbConnectionPool implements AutoCloseable {
     /** The URL used to connect to the database. */
     private final String jdbcUrl;
+    /** The maximum number of concurrently open connections. */
+    private final int maxConnections;
     /** The set of currently maintained active connections. */
     private final List<Connection> connections = new ArrayList<>();
+    /** The current number of open connections. */
+    private int openConnections = 0;
 
     /**
      * Create a new connection pool that will create new connection by connecting to
@@ -24,8 +28,9 @@ public class DbConnectionPool implements AutoCloseable {
      * @param jdbcUrl
      *            The URL to connect to for opening new connections.
      */
-    public DbConnectionPool(String jdbcUrl) {
+    public DbConnectionPool(String jdbcUrl, int maxConnections) {
         this.jdbcUrl = jdbcUrl;
+        this.maxConnections = maxConnections;
     }
 
     /**
@@ -34,14 +39,22 @@ public class DbConnectionPool implements AutoCloseable {
      * @return The connection.
      * @throws SQLException
      *             In case we are unable to open a connection.
+     * @throws InterruptedException
+     *             If interrupted.
      */
-    public synchronized Connection getConnection() throws SQLException {
+    public synchronized Connection getConnection() throws SQLException, InterruptedException {
         while (true) {
             if (connections.isEmpty()) {
-                Connection newConnection = DriverManager.getConnection(jdbcUrl);
-                newConnection.setReadOnly(true);
-                newConnection.setAutoCommit(false);
-                return newConnection;
+                if (openConnections < maxConnections) {
+                    Connection newConnection = DriverManager.getConnection(jdbcUrl);
+                    newConnection.setReadOnly(true);
+                    newConnection.setAutoCommit(false);
+                    openConnections++;
+                    return newConnection;
+                } else {
+                    // Retry when someone has returned a connection.
+                    this.wait();
+                }
             } else {
                 Connection connection = connections.remove(connections.size() - 1);
                 try {
@@ -56,7 +69,7 @@ public class DbConnectionPool implements AutoCloseable {
                         // Ignore the error. We are closing the connection new.
                     }
                 }
-
+                openConnections--;
             }
         }
     }
@@ -71,6 +84,7 @@ public class DbConnectionPool implements AutoCloseable {
      */
     public synchronized void returnConnection(Connection connection) {
         connections.add(connection);
+        this.notify();
     }
 
     @Override

@@ -6,7 +6,8 @@ import type { Row } from "./client";
 
 export function useTable<R, V>(
     table: Table<R, V>,
-    suppress = false
+    suppress = false,
+    dedicated?: string
 ): [boolean, Row<R>[]] {
     // The view keeps rows from the table between different connections.
     const view = useRef(table.createView());
@@ -32,7 +33,7 @@ export function useTable<R, V>(
                     return () => {};
                 } else {
                     const subscription = table
-                        .connect(view.current)
+                        .connect(view.current, dedicated)
                         .subscribe(replayed => {
                             snapshot = [
                                 replayed,
@@ -50,7 +51,7 @@ export function useTable<R, V>(
     return useSyncExternalStore(subscribe, snapshot);
 }
 
-let latestCoarseHistoryTime: Date | undefined = undefined;
+let latestCoarseHistoryTime: Date = new Date();
 const coarseListeners = new Set<() => void>();
 const coarseView = new Map();
 const coarseTable = countsHistory.where("kind", ["all"]).limit(1);
@@ -76,7 +77,7 @@ function getCoarse() {
     return latestCoarseHistoryTime;
 }
 
-let latestFineHistoryTime: Date | undefined = undefined;
+let latestFineHistoryTime: Date = new Date();
 const fineListeners = new Set<() => void>();
 const fineView = new Map();
 const fineTable = countsHistoryFine.where("kind", ["all"]).limit(1);

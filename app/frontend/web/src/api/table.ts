@@ -21,7 +21,7 @@ export abstract class Table<R, V> {
 
     abstract extractFromView(view: V): Row<R>[];
 
-    abstract connect(view: V): Observable<boolean>;
+    abstract connect(view: V, dedicated?: string): Observable<boolean>;
 
     abstract dependencies(): unknown[];
 }
@@ -192,7 +192,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         }
     }
 
-    connect(view: Map<string, Row<R>>) {
+    connect(view: Map<string, Row<R>>, dedicated?: string) {
         const subscriptionId = getSubscriptionId();
         const subscription = {
             id: subscriptionId,
@@ -201,7 +201,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
             limit: this.limited,
         };
         let replayed = false;
-        return (getConnection() as WebSocketSubject<ServerMessage<R>>)
+        return (getConnection(dedicated) as WebSocketSubject<ServerMessage<R>>)
             .multiplex(
                 () => ({
                     subscribe: [subscription],

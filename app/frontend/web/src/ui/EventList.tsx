@@ -170,7 +170,7 @@ function BasicEventList(props: Props) {
     if (props.repoIds.length !== 0) {
         filtered = filtered.where("repo_id", props.repoIds);
     }
-    const [loaded, rawResults] = useTable(filtered);
+    const [loaded, rawResults] = useTable(filtered, false, "events");
     const results = useMemo(() => {
         return sort(rawResults, [e => e.created_at, e => e.id], true);
     }, [rawResults]);

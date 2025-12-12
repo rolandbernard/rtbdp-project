@@ -218,7 +218,7 @@ public class SocketApiServer extends WebSocketServer {
         kafkaProperties.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         kafkaProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         kafkaProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        connections = new DbConnectionPool(jdbcUrl);
+        connections = new DbConnectionPool(jdbcUrl, 32);
         objectMapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
     }
 

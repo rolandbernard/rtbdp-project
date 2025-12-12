@@ -24,8 +24,11 @@ export type ClientMessage<R> = {
     replay?: Subscription<R>[];
     unsubscribe?: number[];
 };
+type Connection = WebSocketSubject<
+    ServerMessage<unknown> | ClientMessage<unknown>
+>;
 
-export function getFreshConnection() {
+function getFreshConnection() {
     // Determine the URL that the API will be available at.
     let url;
     const params = new URLSearchParams(document.location.search);
@@ -45,46 +48,54 @@ export function getFreshConnection() {
     return webSocket<ServerMessage<unknown> | ClientMessage<unknown>>(url);
 }
 
+function getAndStartConnection() {
+    const connection = getFreshConnection();
+    // Determine the URL to login at.
+    let loginUrl = "/login";
+    if (document.location.hostname == "localhost") {
+        loginUrl = "http://localhost:8888/login";
+    }
+    connection
+        .pipe(
+            // @ts-expect-error Wrong type signature in rxjs.
+            catchError(e => {
+                if (e.reason === "missing auth") {
+                    location.href =
+                        loginUrl + "?url=" + encodeURIComponent(location.href);
+                } else {
+                    console.error(e);
+                }
+            }),
+            retry({ delay: 1000 })
+        )
+        .subscribe(() => {
+            // We need this to keep the connection constantly open, instead
+            // of opening and closing possible whenever there are temporarily
+            // no users between renders.
+        });
+    return connection;
+}
+
 // We create up to eight connection for better parallelism.
-const MAX_CONNECTIONS = 4;
-const connectionPool: WebSocketSubject<
-    ServerMessage<unknown> | ClientMessage<unknown>
->[] = [];
+const MAX_CONNECTIONS = 3;
+const connectionPool: Connection[] = [];
+const dedicatedConnections = new Map<string, Connection>();
 let nextConnection = 0;
 
-export function getConnection() {
-    if (connectionPool.length < MAX_CONNECTIONS) {
-        const connection = getFreshConnection();
-        // Determine the URL to login at.
-        let loginUrl = "/login";
-        if (document.location.hostname == "localhost") {
-            loginUrl = "http://localhost:8888/login";
+export function getConnection(dedicated?: string) {
+    if (dedicated) {
+        if (!dedicatedConnections.has(dedicated)) {
+            dedicatedConnections.set(dedicated, getAndStartConnection());
         }
-        connection
-            .pipe(
-                // @ts-expect-error Wrong type signature in rxjs.
-                catchError(e => {
-                    if (e.reason === "missing auth") {
-                        location.href =
-                            loginUrl +
-                            "?url=" +
-                            encodeURIComponent(location.href);
-                    } else {
-                        console.error(e);
-                    }
-                }),
-                retry({ delay: 1000 })
-            )
-            .subscribe(() => {
-                // We need this to keep the connection constantly open, instead
-                // of opening and closing possible whenever there are temporarily
-                // no users between renders.
-            });
-        connectionPool.push(connection);
+        return dedicatedConnections.get(dedicated)!;
+    } else {
+        if (connectionPool.length < MAX_CONNECTIONS) {
+            connectionPool.push(getAndStartConnection());
+        }
+        const connection = connectionPool[nextConnection]!;
+        nextConnection = (nextConnection + 1) % MAX_CONNECTIONS;
+        return connection;
     }
-    const connection = connectionPool[nextConnection]!;
-    nextConnection = (nextConnection + 1) % MAX_CONNECTIONS;
-    return connection;
 }
 
 // Subscriptions each get a unique id that can be used to unsubscribe them again.

@@ -15,7 +15,7 @@ export default function HistoryLong<
     R extends { ts_start: string; num_events?: number; num_stars?: number }
 >(props: Props<R>) {
     const historyTable = props.table;
-    const [loaded, rawHistory] = useTable(historyTable);
+    const [loaded, rawHistory] = useTable(historyTable.limit(12 * 24 * 30));
     const lastTime = useHistoryTime(false);
     const cleanHistory = useMemo(() => {
         if (!loaded && rawHistory.length < 10) {
@@ -32,14 +32,7 @@ export default function HistoryLong<
             );
             const complete = [];
             let last = {
-                x: new Date(
-                    (
-                        lastTime ??
-                        sorted[sorted.length - 1]?.x ??
-                        new Date()
-                    ).getTime() -
-                        60 * 60 * 1000
-                ),
+                x: new Date(lastTime.getTime() - 60 * 60 * 1000),
                 y: 0,
             };
             for (const row of sorted) {
@@ -53,15 +46,14 @@ export default function HistoryLong<
                 complete.push(row);
                 last = row;
             }
-            if (lastTime) {
-                while (last.x < lastTime) {
-                    last = {
-                        x: new Date(last.x.getTime() + diff),
-                        y: loaded ? 0 : NaN,
-                    };
-                    complete.push(last);
-                }
+            while (last.x < lastTime) {
+                last = {
+                    x: new Date(last.x.getTime() + diff),
+                    y: loaded ? 0 : NaN,
+                };
+                complete.push(last);
             }
+            complete.splice(0, Math.max(0, complete.length - 12 * 24 * 30));
             return complete;
         }
     }, [loaded, rawHistory, lastTime]);
