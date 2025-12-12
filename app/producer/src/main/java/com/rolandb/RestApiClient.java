@@ -22,9 +22,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class RestApiClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestApiClient.class);
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final String baseUrl;
+    private final HttpClient[] httpClients;
     private final String[] accessToken;
     private int lastToken = 0;
 
@@ -40,7 +40,10 @@ public class RestApiClient {
     public RestApiClient(String baseUrl, String accessToken) {
         this.baseUrl = baseUrl;
         this.accessToken = accessToken.split(",");
-        httpClient = HttpClient.newHttpClient();
+        httpClients = new HttpClient[this.accessToken.length];
+        for (int i = 0; i < httpClients.length; i++) {
+            httpClients[i] = HttpClient.newHttpClient();
+        }
         objectMapper = new ObjectMapper();
     }
 
@@ -64,17 +67,20 @@ public class RestApiClient {
         for (int retries = 0;; retries++) {
             String url = baseUrl + "/events?page=" + page + "&per_page=" + perPage;
             LOGGER.info("Fetching events from url {}", url);
+            int index = (lastToken++) % accessToken.length;
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Accept", "application/vnd.github+json")
                     .header("X-GitHub-Api-Version", "2022-11-28")
-                    .header("Authorization", "token " + accessToken[lastToken])
+                    .header("Authorization", "token " + accessToken[index])
                     .GET()
                     .build();
-            lastToken = (lastToken + 1) % accessToken.length;
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClients[index].send(request, HttpResponse.BodyHandlers.ofString());
             int status = response.statusCode();
+            HttpHeaders headers = response.headers();
             if (status == 200) {
+                LOGGER.info("Finished fetching from {}. Rate limit: {}", url,
+                        headers.map().getOrDefault("x-ratelimit-remaining", List.of("unknown")));
                 return objectMapper.readValue(response.body(), new TypeReference<List<GithubEvent>>() {
                 });
             } else {
@@ -82,7 +88,6 @@ public class RestApiClient {
                 if (status == 403 || status == 429) {
                     // If this is an issue of hitting the rate limit, try to figure
                     // out when it will be safe again to call the API.
-                    HttpHeaders headers = response.headers();
                     if (headers.map().containsKey("x-ratelimit-remaining") &&
                             headers.map().containsKey("x-ratelimit-reset")
                             && headers.map().get("x-ratelimit-remaining").stream().anyMatch(e -> e.equals("0"))) {

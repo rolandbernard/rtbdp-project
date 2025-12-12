@@ -344,13 +344,13 @@ public class DummyData {
                 cached.removeFirst();
             }
         }
-        Thread.sleep(5_000);
     }
 
     private void runBackgroundWorker() {
         while (!Thread.interrupted()) {
             try {
                 loadCurrentData();
+                Thread.sleep(5_000);
             } catch (InterruptedException e) {
                 // We have been interrupted. We should just terminate.
                 break;

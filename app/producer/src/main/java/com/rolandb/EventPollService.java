@@ -15,10 +15,10 @@ import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.observables.ConnectableObservable;
+import io.reactivex.rxjava3.flowables.ConnectableFlowable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
 /**
@@ -35,7 +35,7 @@ public class EventPollService {
      */
     private static final int MAX_PROCESSED_EVENTS = 32_000;
 
-    private final ConnectableObservable<GithubEvent> observable;
+    private final ConnectableFlowable<GithubEvent> observable;
     private Disposable disposable;
 
     /**
@@ -66,20 +66,31 @@ public class EventPollService {
      *            for testing at lower throughput.
      */
     public EventPollService(RestApiClient apiClient, int pollingIntervalMs, int pollingDepth) {
-        // Create the observable that will emit the events.
+        int numPages = (pollingDepth + 99) / 100;
+        int perPage = (pollingDepth + numPages - 1) / numPages;
         long[] errorDelay = new long[] { 1 };
-        Observable<GithubEvent> coldObservable = Observable.interval(pollingIntervalMs, TimeUnit.MILLISECONDS)
+        // Create the observable that will emit the events.
+        Flowable<GithubEvent> coldObservable = Flowable.interval(pollingIntervalMs, TimeUnit.MILLISECONDS)
+                .startWithItem(0L)
                 .subscribeOn(Schedulers.io())
+                .onBackpressureDrop()
                 .flatMapSingle(tick -> {
-                    int numPages = (pollingDepth + 99) / 100;
-                    int perPage = (pollingDepth + numPages - 1) / numPages;
                     List<Single<Result<List<GithubEvent>>>> pages = IntStream.rangeClosed(1, numPages)
                             .mapToObj(
                                     page -> Single
-                                            .fromCallable(() -> Result
-                                                    .<List<GithubEvent>>ok(apiClient.getEvents(page, perPage)))
+                                            .fromCallable(() -> {
+                                                try {
+                                                    return Result
+                                                            .<List<GithubEvent>>ok(apiClient.getEvents(page, perPage));
+                                                } catch (Exception ex) {
+                                                    if (ex instanceof InterruptedException) {
+                                                        // Make the interruption signal is cleared.
+                                                        Thread.interrupted();
+                                                    }
+                                                    return Result.<List<GithubEvent>>err(ex);
+                                                }
+                                            })
                                             .subscribeOn(Schedulers.io())
-                                            .onErrorReturn(throwable -> Result.err(throwable))
                                             .observeOn(Schedulers.computation()))
                             .collect(Collectors.toList());
                     return Single.zip(pages, rawLists -> {
@@ -120,7 +131,7 @@ public class EventPollService {
                         }
                         return allEvents;
                     });
-                })
+                }, false, 8)
                 // If an exception occurs, here we catch it and control the retry based on the
                 // exception type and info.
                 .retryWhen(errors -> errors.flatMap(ex -> {
@@ -132,13 +143,13 @@ public class EventPollService {
                             delaySeconds = 0;
                         }
                         LOGGER.warn("Rate limit exceeded. Retrying in {} seconds, at {}", delaySeconds, retryAfter);
-                        return Observable.timer(delaySeconds, TimeUnit.SECONDS);
+                        return Flowable.timer(delaySeconds, TimeUnit.SECONDS);
                     } else {
                         LOGGER.error("An error occurred during polling. Retrying in " + errorDelay[0] + " seconds", ex);
                         if (errorDelay[0] < 60) {
                             errorDelay[0] *= 2;
                         }
-                        return Observable.timer(errorDelay[0], TimeUnit.SECONDS);
+                        return Flowable.timer(errorDelay[0], TimeUnit.SECONDS);
                     }
                 }))
                 .observeOn(Schedulers.computation())
@@ -153,7 +164,7 @@ public class EventPollService {
      *
      * @return An Observable of new {@code GithubEvent} objects.
      */
-    public Observable<GithubEvent> getEventsStream() {
+    public Flowable<GithubEvent> getEventsStream() {
         return observable;
     }
 
@@ -184,7 +195,7 @@ public class EventPollService {
      * @param event
      *            The event to unmark.
      */
-    public void unmarkEvent(GithubEvent event) {
+    public synchronized void unmarkEvent(GithubEvent event) {
         processedEvents.remove(event.getId());
     }
 
@@ -197,9 +208,11 @@ public class EventPollService {
      *            The list of events from the REST endpoint.
      * @return A list of new (not yet processed) events.
      */
-    private List<GithubEvent> filterNewEvents(List<GithubEvent> events) {
-        return events.stream()
+    private synchronized List<GithubEvent> filterNewEvents(List<GithubEvent> events) {
+        List<GithubEvent> filtered = events.stream()
                 .filter(event -> processedEvents.add(event.getId()))
                 .toList();
+        LOGGER.info("Found {} new events out of {}", filtered.size(), events.size());
+        return filtered;
     }
 }
