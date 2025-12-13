@@ -22,8 +22,9 @@ import com.rolandb.AbstractUpdateTable.UpdateSeqRow;
  *            The type of event we try to deduplicate.
  */
 public class UpdateDeduplicate<T extends UpdateSeqRow> extends RichFilterFunction<T> {
-    // Stores the last values that have already been stored. This is used to prevent
-    // duplicate events that don't add any new information.
+    /**
+     * Stores the last values that have already been stored. This is used to prevent
+     */
     private transient ValueState<Object[]> lastState;
 
     /**

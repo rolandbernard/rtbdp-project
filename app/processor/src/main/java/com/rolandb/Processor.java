@@ -194,8 +194,7 @@ public class Processor {
                 // We can not use more parallelism for the Kafka source than we have partitions,
                 // because each subtask is assigned a partition and there is no point in having
                 // idle subtasks, also because they would hold back watermarks.
-                .setParallelism(KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic))
-                .rebalance();
+                .setParallelism(KafkaUtil.partitionsForTopic(bootstrapServers, inputTopic));
         // Setup parameters for table builder.
         TableBuilder builder = (new TableBuilder())
                 .setEnv(env)

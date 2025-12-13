@@ -305,7 +305,13 @@ public abstract class AbstractTable<E extends SequencedRow> {
      * @return The raw event stream.
      */
     protected DataStream<JsonNode> getRawEventStream() {
-        return getStream("rawEvents");
+        return getStream("rawEventsDedup", () -> {
+            return this.<DataStream<JsonNode>>getStream("rawEvents")
+                    .keyBy(jsonNode -> jsonNode.at("/id").asText())
+                    .filter(new Deduplicate<>())
+                    .uid("event-dedup-01")
+                    .name("Events Deduplicated");
+        });
     }
 
     /**
