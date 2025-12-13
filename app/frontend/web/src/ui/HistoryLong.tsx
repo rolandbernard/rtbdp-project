@@ -47,9 +47,10 @@ export default function HistoryLong<
                 last = row;
             }
             while (last.x < lastTime) {
+                const time = last.x.getTime() + diff;
                 last = {
-                    x: new Date(last.x.getTime() + diff),
-                    y: loaded ? 0 : NaN,
+                    x: new Date(time),
+                    y: loaded && time != lastTime.getTime() ? 0 : NaN,
                 };
                 complete.push(last);
             }

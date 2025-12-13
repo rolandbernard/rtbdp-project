@@ -146,7 +146,8 @@ export default function StackedAreaBrush(props: Props) {
                 setStartStop={(start, stop) => {
                     setStart(start);
                     setStop(
-                        stop === props.data[props.data.length - 1]?.x
+                        stop?.getTime() ==
+                            props.data[props.data.length - 1]?.x.getTime()
                             ? undefined
                             : stop
                     );

@@ -5,7 +5,9 @@ import java.time.Instant;
 
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.configuration.ClusterOptions;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.PipelineOptions;
@@ -73,6 +75,8 @@ public class ProcessorHistory {
                 .setDefault("user").help("password for accessing output database");
         parser.addArgument("--parallelism").metavar("TASKS").type(Integer.class)
                 .setDefault(1).help("set the desired level of parallelism");
+        parser.addArgument("--working-dir").metavar("DIR").type(String.class)
+                .help("working directory to use for mini-cluster");
         parser.addArgument("--ui-port").metavar("PORT").type(Integer.class).setDefault(8081)
                 .help("enables Flink UI at specified port when running standalone (mini-cluster mode)");
         parser.addArgument("--dry-run").action(Arguments.storeTrue())
@@ -91,12 +95,17 @@ public class ProcessorHistory {
         String archiveUrl = cmd.getString("archive_url");
         String startDate = cmd.getString("start_date");
         String endDate = cmd.getString("end_date");
+        String workDir = cmd.getString("working_dir");
         int parallelism = cmd.getInt("parallelism");
         int uiPort = cmd.getInt("ui_port");
         boolean dryRun = cmd.getBoolean("dry_run");
         // Obtain and configure Flink environments.
         Configuration conf = new Configuration();
         conf.set(RestOptions.PORT, uiPort);
+        if (workDir != null && !workDir.isBlank()) {
+            conf.set(ClusterOptions.PROCESS_WORKING_DIR_BASE, workDir);
+            conf.set(CoreOptions.TMP_DIRS, workDir);
+        }
         // Increase memory size a bit.
         conf.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.ofMebiBytes(2048));
         conf.set(TaskManagerOptions.NETWORK_MEMORY_MAX, MemorySize.ofMebiBytes(512));

@@ -54,9 +54,10 @@ export default function HistorySpark<
                 last = row;
             }
             while (last.x < lastTime) {
+                const time = last.x.getTime() + diff;
                 last = {
-                    x: new Date(last.x.getTime() + diff),
-                    y: 0,
+                    x: new Date(time),
+                    y: time != lastTime.getTime() ? 0 : NaN,
                 };
                 complete.push(last);
             }
