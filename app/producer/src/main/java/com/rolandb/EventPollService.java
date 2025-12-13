@@ -138,12 +138,12 @@ public class EventPollService {
                     if (ex instanceof RateLimitException) {
                         RateLimitException rateLimitException = (RateLimitException) ex;
                         Instant retryAfter = rateLimitException.getRetryAfter();
-                        long delaySeconds = ChronoUnit.SECONDS.between(Instant.now(), retryAfter);
-                        if (delaySeconds < 0) {
-                            delaySeconds = 0;
+                        long delayMillis = ChronoUnit.MILLIS.between(Instant.now(), retryAfter);
+                        if (delayMillis < 0) {
+                            delayMillis = 0;
                         }
-                        LOGGER.warn("Rate limit exceeded. Retrying in {} seconds, at {}", delaySeconds, retryAfter);
-                        return Flowable.timer(delaySeconds, TimeUnit.SECONDS);
+                        LOGGER.warn("Rate limit exceeded. Retrying in {}ms, at {}", delayMillis, retryAfter);
+                        return Flowable.timer(delayMillis, TimeUnit.MILLISECONDS);
                     } else {
                         LOGGER.error("An error occurred during polling. Retrying in " + errorDelay[0] + " seconds", ex);
                         if (errorDelay[0] < 60) {
@@ -213,6 +213,9 @@ public class EventPollService {
                 .filter(event -> processedEvents.add(event.getId()))
                 .toList();
         LOGGER.info("Found {} new events out of {}", filtered.size(), events.size());
+        if (filtered.size() > events.size() * 2 / 3 || filtered.size() < 32) {
+            LOGGER.warn("{} out of {} events were new", filtered.size(), events.size());
+        }
         return filtered;
     }
 }
