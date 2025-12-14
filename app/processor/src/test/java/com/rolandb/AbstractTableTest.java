@@ -10,6 +10,8 @@ import com.rolandb.AbstractTable.TableEventKey;
 
 import java.lang.reflect.Method;
 import java.time.Instant;
+
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -41,6 +43,11 @@ public class AbstractTableTest {
         @Override
         protected Class<TestRow> getOutputType() {
             return TestRow.class;
+        }
+
+        @Override
+        protected KeySelector<TestRow, ?> tableOrderingKeySelector() {
+            return row -> row.id;
         }
     }
 

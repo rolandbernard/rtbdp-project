@@ -187,7 +187,7 @@ public class Frontend {
             Frontend server = new Frontend(
                     httpPort, wsPort, bootstrapServer, groupId, staticDir, secret,
                     dbUrl + "?stringtype=unspecified" + "&user=" + dbUsername + "&password=" + dbPassword
-                            + "&ApplicationName=Frontend");
+                            + "&ApplicationName=Frontend&idle_session_timeout=60000");
             // Add a shutdown hook to ensure a clean exit.
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 LOGGER.info("Shutting down servers");

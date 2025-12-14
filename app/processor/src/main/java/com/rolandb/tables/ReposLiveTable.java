@@ -9,6 +9,7 @@ import com.rolandb.tables.CountsLiveTable.WindowSize;
 import java.time.Duration;
 import java.util.List;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -52,6 +53,16 @@ public class ReposLiveTable extends AbstractTable<ReposLiveTable.RepoEventCounts
      */
     public ReposLiveTable() {
         super();
+    }
+
+    @Override
+    protected KeySelector<RepoEventCounts, ?> tableOrderingKeySelector() {
+        return row -> row.windowSize.toString();
+    }
+
+    @Override
+    protected int tableParallelism() {
+        return WindowSize.values().length;
     }
 
     @Override

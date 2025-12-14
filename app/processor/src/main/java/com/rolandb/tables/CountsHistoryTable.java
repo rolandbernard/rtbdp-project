@@ -2,7 +2,9 @@ package com.rolandb.tables;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 
@@ -62,6 +64,11 @@ public class CountsHistoryTable extends AbstractTable<CountsHistoryTable.EventCo
     public CountsHistoryTable() {
         super();
         window = Duration.ofMinutes(5);
+    }
+
+    @Override
+    protected KeySelector<EventCounts, ?> tableOrderingKeySelector() {
+        return row -> List.of(row.winStart, row.eventType.toString());
     }
 
     /**

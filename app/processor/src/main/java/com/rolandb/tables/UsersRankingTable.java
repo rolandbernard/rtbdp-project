@@ -7,6 +7,7 @@ import com.rolandb.DynamicRanking;
 import com.rolandb.tables.CountsLiveTable.WindowSize;
 import com.rolandb.tables.UsersLiveTable.UserEventCounts;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -17,7 +18,6 @@ public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.Us
     /** Type of event for this table. */
     public static class UserCountsRank extends RankingSeqRow {
         /** The window size. */
-        @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
         /** The user id. */
@@ -67,6 +67,16 @@ public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.Us
     }
 
     @Override
+    protected KeySelector<UserCountsRank, ?> tableOrderingKeySelector() {
+        return row -> row.windowSize.toString();
+    }
+
+    @Override
+    protected int tableParallelism() {
+        return WindowSize.values().length;
+    }
+
+    @Override
     protected DataStream<UserCountsRank> computeTable() {
         return this.<DataStream<UserEventCounts>>getStream("[table]users_live")
                 .keyBy(e -> e.windowSize.toString())
@@ -81,7 +91,7 @@ public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.Us
                                     return event;
                                 },
                                 Long.class, Long.class))
-                .setParallelism(4)
+                .setParallelism(tableParallelism())
                 .returns(UserCountsRank.class)
                 .uid("ranking-user-counts-01")
                 .name("Per User Count Rankings");

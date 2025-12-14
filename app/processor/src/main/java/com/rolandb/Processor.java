@@ -207,6 +207,7 @@ public class Processor {
                         .withProperty("stringtype", "unspecified")
                         .withProperty("reWriteBatchedInserts", "true")
                         .withProperty("ApplicationName", "Flink Processor")
+                        .withProperty("idle_session_timeout", "60000")
                         .build())
                 .setBootstrapServers(bootstrapServers)
                 .setDryRun(dryRun)

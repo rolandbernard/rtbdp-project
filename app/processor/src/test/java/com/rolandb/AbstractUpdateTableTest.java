@@ -12,6 +12,8 @@ import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +44,11 @@ public class AbstractUpdateTableTest {
         @Override
         protected Class<TestUpdateRow> getOutputType() {
             return TestUpdateRow.class;
+        }
+
+        @Override
+        protected KeySelector<TestUpdateRow, ?> tableOrderingKeySelector() {
+            return row -> row.id;
         }
     }
 

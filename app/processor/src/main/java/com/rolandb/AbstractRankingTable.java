@@ -1,10 +1,9 @@
 package com.rolandb;
 
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSink;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -92,16 +91,14 @@ public abstract class AbstractRankingTable<E extends AbstractRankingTable.Rankin
         // there we can just always take the latest state based on sequence numbers.
         // However, for the ranking, it is important because applying the updates
         // out-of-order would result in a different overall ranking.
-        stream
-                .keyBy(new KeySelector<E, List<Object>>() {
-                    @SuppressWarnings("unchecked")
-                    @Override
-                    public List<Object> getKey(E event) throws Exception {
-                        return (List<Object>) event.getKey();
-                    }
-                })
+        DataStreamSink<E> sink = stream
+                .keyBy(tableOrderingKeySelector())
                 .sinkTo(buildKafkaSink())
                 .uid("kafka-sink-01-" + tableName)
                 .name("Kafka Sink");
+        int tableP = tableParallelism();
+        if (tableP != -1) {
+            sink.setParallelism(tableP);
+        }
     }
 }

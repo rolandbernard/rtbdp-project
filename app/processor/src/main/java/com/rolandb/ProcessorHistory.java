@@ -143,6 +143,7 @@ public class ProcessorHistory {
                         .withProperty("stringtype", "unspecified")
                         .withProperty("reWriteBatchedInserts", "true")
                         .withProperty("ApplicationName", "Flink Processor Historical")
+                        .withProperty("idle_session_timeout", "60000")
                         .build())
                 .setDryRun(dryRun);
         // Actually setup table computations.

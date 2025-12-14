@@ -11,6 +11,7 @@ import com.rolandb.MultiSlidingBuckets.WindowSpec;
 import java.time.Duration;
 import java.util.List;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -102,6 +103,16 @@ public class CountsLiveTable extends AbstractTable<CountsLiveTable.EventCounts> 
      */
     public CountsLiveTable() {
         super();
+    }
+
+    @Override
+    protected KeySelector<EventCounts, ?> tableOrderingKeySelector() {
+        return row -> row.windowSize.toString();
+    }
+
+    @Override
+    protected int tableParallelism() {
+        return WindowSize.values().length;
     }
 
     @Override

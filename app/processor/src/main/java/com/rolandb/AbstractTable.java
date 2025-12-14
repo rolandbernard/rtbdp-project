@@ -12,16 +12,21 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
+import org.apache.flink.streaming.api.datastream.AsyncDataStream;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
@@ -548,6 +553,9 @@ public abstract class AbstractTable<E extends SequencedRow> {
 
     private static void jdbcSinkSetStatementValues(PreparedStatement statement, SequencedRow row)
             throws SQLException {
+        if (row.seqNum == null) {
+            throw new IllegalStateException("Attempting to store event without sequence number: " + row);
+        }
         int idx = 1;
         for (Object value : row.getValues()) {
             if (value instanceof Instant) {
@@ -562,17 +570,16 @@ public abstract class AbstractTable<E extends SequencedRow> {
         }
     }
 
-    private JdbcSinkAndContinue<String, E> buildJdbcSinkAndContinue() {
+    private JdbcSinkAndContinue<E> buildJdbcSinkAndContinue() {
         return new JdbcSinkAndContinue<>(
                 // Use connection setting from setter.
                 jdbcOptions,
                 // JDBC execution options.
-                5, 1024, Duration.ofMillis(100),
+                5,
                 // The UPSERT SQL statement for PostgreSQL.
                 buildJdbcSinkStatement(getOutputType()),
                 // A lambda function to map the Row objects to the prepared statement.
-                AbstractTable::jdbcSinkSetStatementValues,
-                getOutputType());
+                AbstractTable::jdbcSinkSetStatementValues);
     }
 
     /**
@@ -599,6 +606,25 @@ public abstract class AbstractTable<E extends SequencedRow> {
     }
 
     /**
+     * An object with which to key the stream before writing it out to the
+     * PostgreSQL database. This is important only for cases in which the sequence
+     * numbers need to be guaranteed to be in order.
+     * 
+     * @return The object with which to key the stream.
+     */
+    protected abstract KeySelector<E, ?> tableOrderingKeySelector();
+
+    /**
+     * Get the parallelism of this table. That is, the number of unique values
+     * possible returned by {@link AbstractTable#tableOrderingKeySelector}.
+     * 
+     * @return The desired parallelism or -1 to be unbounded.
+     */
+    protected int tableParallelism() {
+        return -1;
+    }
+
+    /**
      * Sink the given data stream to this tables PostgreSQL table.
      * 
      * @param stream
@@ -607,15 +633,34 @@ public abstract class AbstractTable<E extends SequencedRow> {
      *         outputs them after they have been committed in PostgreSQL.
      */
     protected DataStream<E> sinkToPostgres(DataStream<E> stream) {
-        return stream
-                .keyBy(row -> "dummyKey")
-                .process(buildJdbcSinkAndContinue())
+        int tableP = tableParallelism();
+        KeySelector<E, ?> keySelector = tableOrderingKeySelector();
+        SingleOutputStreamOperator<E> sequencedStream = stream
+                .keyBy(keySelector)
+                .map(new SequenceAssigner<>())
+                .uid("sequence-assigner-01-" + tableName)
+                .name("Sequence Assigner");
+        if (tableP != -1) {
+            sequencedStream.setParallelism(tableP);
+        }
+        int parallelism = tableP == -1 ? env.getParallelism() : tableP;
+        SingleOutputStreamOperator<List<E>> batchedStream = sequencedStream
+                .keyBy(row -> Math.abs(keySelector.getKey(row).hashCode() % parallelism))
+                .process(new CountAndTimeBatcher<>(1024, Duration.ofMillis(100), getOutputType()))
+                .uid("event-batcher-01-" + tableName)
+                .name("Event Batcher");
+        if (tableP != -1) {
+            batchedStream.setParallelism(tableP);
+        }
+        SingleOutputStreamOperator<E> committedStream = AsyncDataStream.orderedWait(
+                batchedStream, buildJdbcSinkAndContinue(), 30, TimeUnit.SECONDS, 32)
                 .returns(getOutputType())
                 .uid("postgres-sink-01-" + tableName)
-                .name("PostgreSQL Sink")
-                // One writer per-table/topic should be sufficient. Also, we
-                // key by a dummy, so there is no parallelism anyway.
-                .setParallelism(1);
+                .name("PostgreSQL Sink");
+        if (tableP != -1) {
+            committedStream.setParallelism(tableP);
+        }
+        return committedStream;
     }
 
     /**

@@ -37,6 +37,7 @@ public class EventPollService {
 
     private final ConnectableFlowable<GithubEvent> observable;
     private Disposable disposable;
+    private int noEventsCount = 0;
 
     /**
      * This set contains the recently processed event ids. We wrap it in a
@@ -213,8 +214,15 @@ public class EventPollService {
                 .filter(event -> processedEvents.add(event.getId()))
                 .toList();
         LOGGER.info("Found {} new events out of {}", filtered.size(), events.size());
-        if (filtered.size() > events.size() * 2 / 3 || filtered.size() < 32) {
+        if (filtered.size() > events.size() * 7 / 8) {
             LOGGER.warn("{} out of {} events were new", filtered.size(), events.size());
+        } else if (filtered.isEmpty()) {
+            noEventsCount++;
+            if (noEventsCount >= 2) {
+                LOGGER.warn("no new events for {} requests in a row", noEventsCount);
+            }
+        } else {
+            noEventsCount = 0;
         }
         return filtered;
     }

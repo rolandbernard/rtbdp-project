@@ -9,6 +9,7 @@ import com.rolandb.tables.CountsLiveTable.WindowSize;
 import java.time.Duration;
 import java.util.List;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -53,6 +54,16 @@ public class UsersLiveTable extends AbstractTable<UsersLiveTable.UserEventCounts
      */
     public UsersLiveTable() {
         super();
+    }
+
+    @Override
+    protected KeySelector<UserEventCounts, ?> tableOrderingKeySelector() {
+        return row -> row.windowSize.toString();
+    }
+
+    @Override
+    protected int tableParallelism() {
+        return WindowSize.values().length;
     }
 
     @Override

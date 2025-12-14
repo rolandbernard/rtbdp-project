@@ -5,7 +5,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
+import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +19,9 @@ import org.slf4j.LoggerFactory;
 public class DbConnectionPool implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(DbConnectionPool.class);
 
+    /** This is a global instance of the connection pool. */
+    private static DbConnectionPool globalInstance;
+
     /** The URL used to connect to the database. */
     private final String jdbcUrl;
     /** The maximum number of concurrently open connections. */
@@ -25,6 +30,8 @@ public class DbConnectionPool implements AutoCloseable {
     private final List<Connection> connections = new ArrayList<>();
     /** The current number of open connections. */
     private int openConnections = 0;
+    /** The number of references to the DbConnectionPool. */
+    private int references = 0;
 
     /**
      * Create a new connection pool that will create new connection by connecting to
@@ -36,9 +43,57 @@ public class DbConnectionPool implements AutoCloseable {
      *            The maximum number of concurrent connections allowed by this
      *            connection pool.
      */
-    public DbConnectionPool(String jdbcUrl, int maxConnections) {
+    private DbConnectionPool(String jdbcUrl, int maxConnections) {
         this.jdbcUrl = jdbcUrl;
         this.maxConnections = maxConnections;
+    }
+
+    /**
+     * Get the global instance of the connection pool, creating it in case one does
+     * not already exist using the given parameters, and checking that the
+     * parameters are the same in the case one already exists.
+     * 
+     * @param jdbcUrl
+     *            The JDBC URL to connect with to the database.
+     * @param maxConnections
+     *            The maximum number of allowed concurrent connections.
+     * @return The global connection pool.
+     */
+    public static synchronized DbConnectionPool getGlobalInstance(String jdbcUrl, int maxConnections) {
+        if (globalInstance != null && !globalInstance.jdbcUrl.equals(jdbcUrl)
+                && globalInstance.maxConnections != maxConnections) {
+            throw new IllegalArgumentException("Conflicting parameters for global connection pool.");
+        }
+        if (globalInstance == null) {
+            globalInstance = new DbConnectionPool(jdbcUrl, maxConnections);
+        }
+        return globalInstance;
+    }
+
+    /**
+     * Like {@link DbConnectionPool#getGlobalInstance(String, int)} but taking the
+     * options not the URL and with the default number of concurrent connections.
+     * 
+     * @param jdbcOption
+     *            The JDBC connection options to connect with.
+     * @return The global connection pool.
+     */
+    public static DbConnectionPool getGlobalInstance(JdbcConnectionOptions jdbcOption) {
+        Properties props = jdbcOption.getProperties();
+        StringBuffer fullUrl = new StringBuffer(jdbcOption.getDbURL());
+        boolean first = true;
+        for (String name : props.stringPropertyNames().stream().sorted().toList()) {
+            if (first) {
+                fullUrl.append("?");
+                first = false;
+            } else {
+                fullUrl.append("&");
+            }
+            fullUrl.append(name);
+            fullUrl.append("=");
+            fullUrl.append(props.getProperty(name));
+        }
+        return getGlobalInstance(fullUrl.toString(), 32);
     }
 
     /**
@@ -55,7 +110,6 @@ public class DbConnectionPool implements AutoCloseable {
             if (connections.isEmpty()) {
                 if (openConnections < maxConnections) {
                     Connection newConnection = DriverManager.getConnection(jdbcUrl);
-                    newConnection.setReadOnly(true);
                     newConnection.setAutoCommit(false);
                     openConnections++;
                     return newConnection;
@@ -94,6 +148,21 @@ public class DbConnectionPool implements AutoCloseable {
     public synchronized void returnConnection(Connection connection) {
         connections.add(connection);
         this.notify();
+    }
+
+    public synchronized void upRef() {
+        references++;
+    }
+
+    public synchronized void downRef() {
+        references--;
+        if (references == 0) {
+            try {
+                close();
+            } catch (SQLException e) {
+                LOGGER.warn("Failed to close db connection pool", e);
+            }
+        }
     }
 
     @Override

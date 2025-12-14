@@ -50,7 +50,7 @@ public abstract class SequencedRow {
      * @return The key values.
      */
     @JsonIgnore
-    public List<?> getKey() {
+    public List<Object> getKey() {
         return readKeyFrom(this);
     }
 
@@ -126,7 +126,7 @@ public abstract class SequencedRow {
      *            The object to read keys from.
      * @return The objects keys.
      */
-    public static List<?> readKeyFrom(Object obj) {
+    public static List<Object> readKeyFrom(Object obj) {
         List<Object> keys = new ArrayList<>();
         for (Field field : obj.getClass().getFields()) {
             if (field.getAnnotation(TableEventKey.class) != null) {

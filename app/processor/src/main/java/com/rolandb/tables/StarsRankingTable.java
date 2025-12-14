@@ -7,6 +7,7 @@ import com.rolandb.DynamicRanking;
 import com.rolandb.tables.CountsLiveTable.WindowSize;
 import com.rolandb.tables.StarsLiveTable.RepoStarCounts;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -17,7 +18,6 @@ public class StarsRankingTable extends AbstractRankingTable<StarsRankingTable.Re
     /** Type of event for this table. */
     public static class RepoStarsRank extends RankingSeqRow {
         /** The window size considered. */
-        @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
         /** The repository id. */
@@ -60,6 +60,16 @@ public class StarsRankingTable extends AbstractRankingTable<StarsRankingTable.Re
     }
 
     @Override
+    protected KeySelector<RepoStarsRank, ?> tableOrderingKeySelector() {
+        return row -> row.windowSize.toString();
+    }
+
+    @Override
+    protected int tableParallelism() {
+        return WindowSize.values().length;
+    }
+
+    @Override
     protected DataStream<RepoStarsRank> computeTable() {
         return this.<DataStream<RepoStarCounts>>getStream("[table]stars_live")
                 .keyBy(e -> e.windowSize.toString())
@@ -74,7 +84,7 @@ public class StarsRankingTable extends AbstractRankingTable<StarsRankingTable.Re
                                     return event;
                                 },
                                 Long.class, Long.class))
-                .setParallelism(4)
+                .setParallelism(tableParallelism())
                 .returns(RepoStarsRank.class)
                 .uid("ranking-stars-01")
                 .name("Per Repo Stars Rankings");

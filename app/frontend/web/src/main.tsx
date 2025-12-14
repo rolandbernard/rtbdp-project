@@ -13,6 +13,21 @@ import RepoPage from "./page/RepoPage";
 import "./api/client";
 import "./styles.css";
 
+const originalWarn = console.warn;
+console.warn = (...data: unknown[]) => {
+    if (
+        typeof data[0] === "string" &&
+        data[0].includes(
+            "The width(-1) and height(-1) of chart should be greater than 0"
+        )
+    ) {
+        // These are false warnings from Recharts whenever a new chart component
+        // is mounted. These make the output very noisy so we ignore them.
+        return;
+    }
+    originalWarn(...data);
+};
+
 const router = createHashRouter([
     {
         element: <Root />,

@@ -8,6 +8,7 @@ import com.rolandb.AbstractRankingTable.RankingSeqRow;
 import com.rolandb.tables.CountsLiveTable.EventCounts;
 import com.rolandb.tables.CountsLiveTable.WindowSize;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -16,11 +17,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.CountsRank> {
     /** Type of event for this table. */
     public static class CountsRank extends RankingSeqRow {
-        // We put only the window size as the key, so that we put all for the same
-        // ranking into the same Kafka partition, ensuring in-order delivery to the
-        // frontend client.
         /** The size of window considered. */
-        @TableEventKey
         @JsonProperty("window_size")
         public WindowSize windowSize;
         /** The type of event considered. */
@@ -70,6 +67,16 @@ public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.
     }
 
     @Override
+    protected KeySelector<CountsRank, ?> tableOrderingKeySelector() {
+        return row -> row.windowSize.toString();
+    }
+
+    @Override
+    protected int tableParallelism() {
+        return WindowSize.values().length;
+    }
+
+    @Override
     protected DataStream<CountsRank> computeTable() {
         return this.<DataStream<EventCounts>>getStream("[table]counts_live")
                 .keyBy(e -> e.windowSize.toString())
@@ -87,7 +94,7 @@ public class CountsRankingTable extends AbstractRankingTable<CountsRankingTable.
                                     return event;
                                 },
                                 GithubEventType.class, Long.class))
-                .setParallelism(4)
+                .setParallelism(tableParallelism())
                 .returns(CountsRank.class)
                 .uid("ranking-event-counts-01")
                 .name("Event Count Rankings");

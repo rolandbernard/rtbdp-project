@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -225,6 +226,11 @@ public class RepositoriesTable extends AbstractUpdateTable<RepositoriesTable.Rep
      */
     public RepositoriesTable() {
         super();
+    }
+
+    @Override
+    protected KeySelector<RepoUpdateEvent, ?> tableOrderingKeySelector() {
+        return row -> row.id;
     }
 
     @Override

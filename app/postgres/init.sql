@@ -180,26 +180,28 @@ CREATE TABLE users_live (
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON users_live(window_size, num_events DESC, user_id ASC);
-CREATE INDEX ON users_live(seq_num DESC);
+CREATE INDEX ON users_live(window_size, seq_num DESC);
 
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW users_ranking AS
 SELECT window_size, user_id, num_events,
-		(SELECT MAX(seq_num) AS seq_num FROM users_live) AS seq_num,
+		(SELECT MAX(i.seq_num) AS seq_num
+            FROM users_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         ROW_NUMBER() OVER (
             PARTITION BY window_size ORDER BY num_events DESC, user_id ASC
         ) - 1 AS row_number,
         RANK() OVER (
             PARTITION BY window_size ORDER BY num_events DESC
         ) - 1 AS rank
-    FROM users_live
+    FROM users_live AS o
     WHERE num_events > 0;
 
 -- This is a version of the above that is semantically equivalent but much more
 -- efficient when querying individual rows only.
 CREATE VIEW users_ranking_point AS
 SELECT window_size, user_id, num_events,
-		(SELECT MAX(seq_num) AS seq_num FROM users_live) AS seq_num,
+		(SELECT MAX(i.seq_num) AS seq_num
+            FROM users_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         (SELECT COUNT(*)
             FROM users_live AS i
             WHERE i.window_size = o.window_size
@@ -253,26 +255,28 @@ CREATE TABLE repos_live (
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON repos_live(window_size, num_events DESC, repo_id ASC);
-CREATE INDEX ON repos_live(seq_num DESC);
+CREATE INDEX ON repos_live(window_size, seq_num DESC);
 
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW repos_ranking AS
 SELECT window_size, repo_id, num_events,
-		(SELECT MAX(seq_num) AS seq_num FROM repos_live) AS seq_num,
+		(SELECT MAX(i.seq_num) AS seq_num
+            FROM repos_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         ROW_NUMBER() OVER (
             PARTITION BY window_size ORDER BY num_events DESC, repo_id ASC
         ) - 1 AS row_number,
         RANK() OVER (
             PARTITION BY window_size ORDER BY num_events DESC
         ) - 1 AS rank
-    FROM repos_live
+    FROM repos_live AS o
     WHERE num_events > 0;
 
 -- This is a version of the above that is semantically equivalent but much more
 -- efficient when querying individual rows only.
 CREATE VIEW repos_ranking_point AS
 SELECT window_size, repo_id, num_events,
-		(SELECT MAX(seq_num) AS seq_num FROM repos_live) AS seq_num,
+		(SELECT MAX(i.seq_num) AS seq_num
+            FROM repos_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         (SELECT COUNT(*)
             FROM repos_live AS i
             WHERE i.window_size = o.window_size
@@ -326,26 +330,28 @@ CREATE TABLE stars_live (
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON stars_live(window_size, num_stars DESC, repo_id ASC);
-CREATE INDEX ON stars_live(seq_num DESC);
+CREATE INDEX ON stars_live(window_size, seq_num DESC);
 
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW stars_ranking AS
 SELECT window_size, repo_id, num_stars,
-		(SELECT MAX(seq_num) AS seq_num FROM stars_live) AS seq_num,
+		(SELECT MAX(i.seq_num) AS seq_num
+            FROM stars_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         ROW_NUMBER() OVER (
             PARTITION BY window_size ORDER BY num_stars DESC, repo_id ASC
         ) - 1 AS row_number,
         RANK() OVER (
             PARTITION BY window_size ORDER BY num_stars DESC
         ) - 1 AS rank
-    FROM stars_live
+    FROM stars_live AS o
     WHERE num_stars > 0;
 
 -- This is a version of the above that is semantically equivalent but much more
 -- efficient when querying individual rows only.
 CREATE VIEW stars_ranking_point AS
 SELECT window_size, repo_id, num_stars,
-		(SELECT MAX(seq_num) AS seq_num FROM stars_live) AS seq_num,
+		(SELECT MAX(i.seq_num) AS seq_num
+            FROM stars_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         (SELECT COUNT(*)
             FROM stars_live AS i
             WHERE i.window_size = o.window_size

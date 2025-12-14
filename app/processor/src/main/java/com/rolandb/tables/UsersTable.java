@@ -9,6 +9,7 @@ import com.rolandb.AbstractUpdateTable.UpdateSeqRow;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -150,6 +151,11 @@ public class UsersTable extends AbstractUpdateTable<UsersTable.UserUpdateEvent> 
      */
     public UsersTable() {
         super();
+    }
+
+    @Override
+    protected KeySelector<UserUpdateEvent, ?> tableOrderingKeySelector() {
+        return row -> row.id;
     }
 
     @Override

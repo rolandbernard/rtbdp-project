@@ -50,6 +50,9 @@ public class KafkaTimedRowSerializer<T extends SequencedRow> implements KafkaRec
     @Override
     @Nullable
     public ProducerRecord<byte[], byte[]> serialize(SequencedRow row, KafkaSinkContext context, Long timestamp) {
+        if (row.seqNum == null) {
+            throw new IllegalStateException("Attempting to store event without sequence number: " + row);
+        }
         try {
             // Set as key the combination of key columns. This ensures in-order
             // delivery per-key, ensuring timestamps are monotonic.

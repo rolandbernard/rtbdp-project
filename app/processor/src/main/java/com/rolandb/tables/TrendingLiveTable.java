@@ -6,6 +6,7 @@ import com.rolandb.SequencedRow;
 import com.rolandb.TrendingScoreFunction;
 import com.rolandb.tables.StarsLiveTable.RepoStarCounts;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -53,6 +54,16 @@ public class TrendingLiveTable extends AbstractTable<TrendingLiveTable.RepoTrend
      */
     public TrendingLiveTable() {
         super();
+    }
+
+    @Override
+    protected KeySelector<RepoTrendingScore, ?> tableOrderingKeySelector() {
+        return row -> "dummyKey";
+    }
+
+    @Override
+    protected int tableParallelism() {
+        return 1;
     }
 
     @Override

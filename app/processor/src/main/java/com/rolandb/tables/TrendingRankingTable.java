@@ -6,6 +6,7 @@ import com.rolandb.AbstractRankingTable.RankingSeqRow;
 import com.rolandb.DynamicRanking;
 import com.rolandb.tables.TrendingLiveTable.RepoTrendingScore;
 
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
 
 /**
@@ -59,6 +60,17 @@ public class TrendingRankingTable extends AbstractRankingTable<TrendingRankingTa
     }
 
     @Override
+    protected KeySelector<RepoTrendingRank, ?> tableOrderingKeySelector() {
+        return row -> "dummyKey";
+    }
+
+    @Override
+    protected int tableParallelism() {
+        // We only have one trending ranking, so no parallelism make sense here.
+        return 1;
+    }
+
+    @Override
     protected DataStream<RepoTrendingRank> computeTable() {
         return this.<DataStream<RepoTrendingScore>>getStream("[table]trending_live")
                 .keyBy(e -> "dummyKey")
@@ -73,8 +85,7 @@ public class TrendingRankingTable extends AbstractRankingTable<TrendingRankingTa
                                     return event;
                                 },
                                 Long.class, Long.class))
-                // We only have one trending ranking, so no parallelism make sense here.
-                .setParallelism(1)
+                .setParallelism(tableParallelism())
                 .returns(RepoTrendingRank.class)
                 .uid("ranking-trending-01")
                 .name("Per Repo Trending Rankings");
