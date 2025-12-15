@@ -9,7 +9,7 @@ import {
 } from "recharts";
 
 import CatTooltip from "./CatTooltip";
-import { colorFor, sort } from "../../util";
+import { colorFor, toSorted } from "../../util";
 
 function labels({ percent }: PieLabelRenderProps) {
     if (percent && percent > 0.01) {
@@ -25,7 +25,7 @@ interface Props {
 }
 
 export default function PieChart(props: Props) {
-    const data = sort(props.data, [e => e.x]);
+    const data = toSorted(props.data, [e => e.x]);
     return (
         <ResponsiveContainer
             width="100%"

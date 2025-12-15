@@ -23,6 +23,7 @@ import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.core.execution.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.slf4j.Logger;
@@ -149,9 +150,12 @@ public class Processor {
         env.setParallelism(parallelism);
         // Enable checkpointing. At-least-once semantics are fine because we basically
         // always use upserts with a primary key.
-        env.enableCheckpointing(60_000, CheckpointingMode.AT_LEAST_ONCE);
-        env.getCheckpointConfig()
-                .setExternalizedCheckpointRetention(ExternalizedCheckpointRetention.RETAIN_ON_CANCELLATION);
+        env.enableCheckpointing(600_000, CheckpointingMode.AT_LEAST_ONCE);
+        CheckpointConfig checkpointConf = env.getCheckpointConfig();
+        checkpointConf.setExternalizedCheckpointRetention(ExternalizedCheckpointRetention.RETAIN_ON_CANCELLATION);
+        checkpointConf.setMinPauseBetweenCheckpoints(300_000);
+        checkpointConf.enableUnalignedCheckpoints();
+        checkpointConf.setTolerableCheckpointFailureNumber(4);
         // Define Kafka source.
         @SuppressWarnings("deprecation") // Ignoring the warning because there seems to be no alternative.
         KafkaSource<JsonNode> kafkaSource = KafkaSource.<JsonNode>builder()

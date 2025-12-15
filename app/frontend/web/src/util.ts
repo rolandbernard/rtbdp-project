@@ -26,12 +26,20 @@ export function sortedKey<T>(
     }
 }
 
-export function sort<T>(
+export function toSorted<T>(
     array: T[],
     fn: ((a: T) => Comparable)[],
     rev?: boolean
 ): T[] {
     return array.toSorted(sortedKey<T>(fn, rev));
+}
+
+export function sort<T>(
+    array: T[],
+    fn: ((a: T) => Comparable)[],
+    rev?: boolean
+): T[] {
+    return array.sort(sortedKey<T>(fn, rev));
 }
 
 export function groupKey<R>(row: R, keys: (keyof R)[]): string {

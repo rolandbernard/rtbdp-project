@@ -15,11 +15,11 @@ import { colorFor, findTicks, formatDate } from "../../util";
 import TimeTooltip from "./TimeTooltip";
 import { computeFactor, filterData, VarBrush } from "./VarBrush";
 
-type DataRow = { x: Date; y: number; [k: string]: number | Date };
+export type MultiDataRow = { x: Date; y: number; [k: string]: number | Date };
 
 interface Props {
     keys: string[];
-    data: DataRow[];
+    data: MultiDataRow[];
     chartColor: string;
     className?: string;
     window: number;
@@ -61,7 +61,7 @@ export default function StackedAreaBrush(props: Props) {
             for (let i = filtered.length - 1; i >= 0; i -= factor) {
                 const row = {
                     x: filtered[Math.max(0, i + 1 - factor)]!.x,
-                } as DataRow;
+                } as MultiDataRow;
                 for (const key of [...props.keys, "y"]) {
                     let sum = 0;
                     for (let j = 0; j < factor && i - j >= 0; j++) {

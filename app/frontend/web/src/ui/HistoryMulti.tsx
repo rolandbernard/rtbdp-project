@@ -3,11 +3,11 @@ import { useNavigate } from "react-router";
 
 import { useHistoryTime, useTable } from "../api/hooks";
 import type { NormalTable } from "../api/table";
-import { groupBy, sort } from "../util";
+import { groupBy, sortedKey } from "../util";
 
 import { EVENT_KINDS, type EventKind } from "../api/tables";
 
-import StackedAreaBrush from "./charts/StackedAreaBrush";
+import StackedAreaBrush, { type MultiDataRow } from "./charts/StackedAreaBrush";
 
 interface Props<R> {
     table: NormalTable<R>;
@@ -29,68 +29,46 @@ export default function HistoryMulti<
             return [[], []];
         } else {
             const diff = 300_000;
-            const groups = groupBy(rawHistory, "kind").map(rows => {
-                const sorted = sort(
-                    rows.map(row => ({
-                        x: new Date(row.ts_start),
-                        y: row.num_events,
-                    })),
-                    [r => r.x]
-                );
-                const complete = [];
-                let last = {
-                    x: new Date(lastTime.getTime() - 60 * 60 * 1000),
-                    y: 0,
-                };
-                for (const row of sorted) {
-                    while (last.x.getTime() + diff < row.x.getTime()) {
-                        last = {
-                            x: new Date(last.x.getTime() + diff),
-                            y: loaded ? 0 : NaN,
-                        };
-                        complete.push(last);
-                    }
-                    complete.push(row);
-                    last = row;
-                }
-                while (last.x < lastTime) {
-                    const time = last.x.getTime() + diff;
-                    last = {
-                        x: new Date(time),
-                        y: loaded && time != lastTime.getTime() ? 0 : NaN,
-                    };
-                    complete.push(last);
-                }
-                return { name: EVENT_KINDS[rows[0]!.kind], data: complete };
-            });
-            const start = groups
-                .map(e => e.data[0]!.x)
-                .reduce((a, b) => (a < b ? a : b));
+            const firstDate = new Date(
+                lastTime.getTime() - 12 * 24 * 30 * diff
+            ).toISOString();
+            const groups = groupBy(
+                rawHistory.filter(r => r.ts_start > firstDate),
+                "kind"
+            ).map(e => e.sort(sortedKey([r => r.ts_start])));
+            if (groups.length === 0) {
+                return [[], []];
+            }
+            const starts = groups.map(e => new Date(e[0]!.ts_start));
+            const start = starts.reduce((a, b) => (a < b ? a : b));
             const end = groups
-                .map(e => e.data[e.data.length - 1]!.x)
+                .map(e => new Date(e[e.length - 1]!.ts_start))
                 .reduce((a, b) => (a > b ? a : b));
-            const keys = groups.map(e => e.name);
+            const keys = groups.map(e => EVENT_KINDS[e[0]!.kind]);
             const result = [];
             let cur = start;
             while (cur <= end) {
-                const row = {
+                const row: MultiDataRow = {
                     x: cur,
                     y: 0,
-                    ...Object.fromEntries(
-                        groups.map(each => [
-                            each.name,
-                            each.data[
-                                (cur.getTime() - each.data[0]!.x.getTime()) /
-                                    diff
-                            ]?.y ?? (loaded ? 0 : NaN),
-                        ])
-                    ),
                 };
-                for (const k of keys) {
-                    row.y += (row as unknown as { [k: string]: number })[k]!;
+                const time = cur.getTime();
+                for (const i in groups) {
+                    const value =
+                        groups[i]![(time - starts[i]!.getTime()) / diff]
+                            ?.num_events ?? (loaded ? 0 : NaN);
+                    row.y += value;
+                    row[keys[i]!] = value;
                 }
                 result.push(row);
-                cur = new Date(cur.getTime() + diff);
+                cur = new Date(time + diff);
+            }
+            while (cur < lastTime) {
+                const time = cur.getTime() + diff;
+                result.push({
+                    x: new Date(time),
+                    y: loaded && time != lastTime.getTime() ? 0 : NaN,
+                });
             }
             result.splice(0, Math.max(0, result.length - 12 * 24 * 30));
             return [keys, result];

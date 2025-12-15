@@ -71,7 +71,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         view.set(key, row);
         const globalView = this.globalView();
         globalView.set(key, row);
-        if (globalView.size > 100_000) {
+        if (globalView.size > 10_000) {
             globalView.clear();
         }
     }

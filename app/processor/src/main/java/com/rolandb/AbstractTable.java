@@ -653,7 +653,7 @@ public abstract class AbstractTable<E extends SequencedRow> {
             batchedStream.setParallelism(tableP);
         }
         SingleOutputStreamOperator<E> committedStream = AsyncDataStream.orderedWait(
-                batchedStream, buildJdbcSinkAndContinue(), 30, TimeUnit.SECONDS, 32)
+                batchedStream, buildJdbcSinkAndContinue(), 10, TimeUnit.MINUTES, 8)
                 .returns(getOutputType())
                 .uid("postgres-sink-01-" + tableName)
                 .name("PostgreSQL Sink");

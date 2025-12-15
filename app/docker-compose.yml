@@ -77,6 +77,27 @@ services:
       POSTGRES_DB: "db"
       POSTGRES_USER: "${USERID:-user}"
       POSTGRES_PASSWORD: "${USERPWD:-user}"
+    command: [
+      "postgres",
+      "-c", "shared_buffers=2GB",
+      "-c", "effective_cache_size=6GB",
+      "-c", "maintenance_work_mem=512MB",
+      "-c", "work_mem=16MB",
+      "-c", "max_connections=200",
+      "-c", "checkpoint_timeout=15min",
+      "-c", "checkpoint_completion_target=0.9",
+      "-c", "max_wal_size=4GB",
+      "-c", "min_wal_size=1GB",
+      "-c", "wal_compression=lz4",
+      "-c", "wal_buffers=16MB",
+      "-c", "synchronous_commit=off",
+      "-c", "random_page_cost=1.1",
+      "-c", "effective_io_concurrency=200",
+      "-c", "idle_session_timeout=160000",
+      "-c", "huge_pages=try",
+      "-c", "max_parallel_workers_per_gather=4",
+      "-c", "default_toast_compression=lz4"
+    ]
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${USERID:-user}", "-d", "db"]
       interval: 5s
@@ -144,6 +165,8 @@ services:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         jobmanager.scheduler: adaptive
+        taskmanager.network.memory.buffer-debloat.enabled: true
+        pekko.ask.timeout: 300000
         # Fault Tolerance Config
         state.backend: rocksdb
         state.backend.incremental: true
@@ -187,12 +210,15 @@ services:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: ${FLINK_TASK_SLOTS:-4}
+        taskmanager.network.memory.buffer-debloat.enabled: true
+        pekko.ask.timeout: 300000
         # Increase Memory a Bit
-        taskmanager.memory.process.size: 4096m
+        taskmanager.memory.process.size: 6144m
         # Fault Tolerance Config
         state.backend: rocksdb
         state.backend.incremental: true
         state.backend.rocksdb.localdir: /opt/flink/rocksdb-data
+        state.backend.rocksdb.predefined-options: FLASH_SSD_OPTIMIZED
         execution.checkpointing.storage: filesystem
         execution.checkpointing.dir: file:///opt/flink/checkpoints
         execution.checkpointing.savepoint-dir: file:///opt/flink/savepoints

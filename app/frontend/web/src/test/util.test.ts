@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 
 import {
     sortedKey,
-    sort,
     groupKey,
     groupBy,
     formatDate,
     findTicks,
     colorFor,
+    toSorted,
 } from "../util";
 
 describe("sortedKey", () => {
@@ -55,7 +55,7 @@ describe("sort", () => {
             { name: "Alice", age: 25 },
             { name: "Bob", age: 25 },
         ];
-        const sorted = sort(users, [(u: User) => u.age, (u: User) => u.name]);
+        const sorted = toSorted(users, [(u: User) => u.age, (u: User) => u.name]);
         expect(sorted).toEqual([
             { name: "Alice", age: 25 },
             { name: "Bob", age: 25 },
@@ -69,7 +69,7 @@ describe("sort", () => {
             { name: "Bob", age: 25 },
             { name: "Charlie", age: 30 },
         ];
-        const sorted = sort(users, [(u: User) => u.age], true);
+        const sorted = toSorted(users, [(u: User) => u.age], true);
         expect(sorted).toEqual([
             { name: "Charlie", age: 30 },
             { name: "Alice", age: 25 },

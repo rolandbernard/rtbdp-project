@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.Semaphore;
 
 import org.apache.flink.connector.jdbc.JdbcConnectionOptions;
 import org.slf4j.Logger;
@@ -24,12 +25,12 @@ public class DbConnectionPool implements AutoCloseable {
 
     /** The URL used to connect to the database. */
     private final String jdbcUrl;
-    /** The maximum number of concurrently open connections. */
-    private final int maxConnections;
     /** The set of currently maintained active connections. */
+    private final List<Connection> allConnections = new ArrayList<>();
+    /** Available connections that are not currently given out. */
     private final List<Connection> connections = new ArrayList<>();
-    /** The current number of open connections. */
-    private int openConnections = 0;
+    /** Semaphore with the number of allowed connections as permits. */
+    private Semaphore connectionSemaphore;
     /** The number of references to the DbConnectionPool. */
     private int references = 0;
 
@@ -45,7 +46,7 @@ public class DbConnectionPool implements AutoCloseable {
      */
     private DbConnectionPool(String jdbcUrl, int maxConnections) {
         this.jdbcUrl = jdbcUrl;
-        this.maxConnections = maxConnections;
+        this.connectionSemaphore = new Semaphore(maxConnections, true);
     }
 
     /**
@@ -60,8 +61,7 @@ public class DbConnectionPool implements AutoCloseable {
      * @return The global connection pool.
      */
     public static synchronized DbConnectionPool getGlobalInstance(String jdbcUrl, int maxConnections) {
-        if (globalInstance != null && !globalInstance.jdbcUrl.equals(jdbcUrl)
-                && globalInstance.maxConnections != maxConnections) {
+        if (globalInstance != null && !globalInstance.jdbcUrl.equals(jdbcUrl)) {
             throw new IllegalArgumentException("Conflicting parameters for global connection pool.");
         }
         if (globalInstance == null) {
@@ -105,35 +105,38 @@ public class DbConnectionPool implements AutoCloseable {
      * @throws InterruptedException
      *             If interrupted.
      */
-    public synchronized Connection getConnection() throws SQLException, InterruptedException {
-        while (true) {
-            if (connections.isEmpty()) {
-                if (openConnections < maxConnections) {
-                    Connection newConnection = DriverManager.getConnection(jdbcUrl);
-                    newConnection.setAutoCommit(false);
-                    openConnections++;
-                    return newConnection;
-                } else {
-                    // Retry when someone has returned a connection.
-                    this.wait();
-                }
-            } else {
-                Connection connection = connections.remove(connections.size() - 1);
-                try {
-                    if (connection.isValid(5)) {
-                        return connection;
+    public Connection getConnection() throws SQLException, InterruptedException {
+        connectionSemaphore.acquire();
+        try {
+            synchronized (connections) {
+                while (true) {
+                    if (connections.isEmpty()) {
+                        Connection newConnection = DriverManager.getConnection(jdbcUrl);
+                        allConnections.add(newConnection);
+                        newConnection.setAutoCommit(false);
+                        return newConnection;
+                    } else {
+                        Connection connection = connections.remove(connections.size() - 1);
+                        try {
+                            if (connection.isValid(5)) {
+                                return connection;
+                            }
+                        } catch (SQLException ex) {
+                            // Close the connection since it is seemingly broken.
+                        }
+                        try {
+                            connection.close();
+                        } catch (SQLException e) {
+                            // Ignore the error. We are closing the connection new.
+                            LOGGER.warn("Failed to close invalid connection", e);
+                        }
+                        allConnections.remove(connection);
                     }
-                } catch (SQLException ex) {
-                    // Close the connection since it is seemingly broken.
                 }
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    // Ignore the error. We are closing the connection new.
-                    LOGGER.warn("Failed to close invalid connection", e);
-                }
-                openConnections--;
             }
+        } catch (Exception e) {
+            connectionSemaphore.release();
+            throw e;
         }
     }
 
@@ -145,9 +148,15 @@ public class DbConnectionPool implements AutoCloseable {
      * @param connection
      *            The connection to return.
      */
-    public synchronized void returnConnection(Connection connection) {
-        connections.add(connection);
-        this.notify();
+    public void returnConnection(Connection connection) {
+        synchronized (connections) {
+            if (allConnections.contains(connection)) {
+                connections.add(connection);
+            } else {
+                LOGGER.error("Trying to return a connection not originating from this pool");
+            }
+        }
+        connectionSemaphore.release();
     }
 
     public synchronized void upRef() {
@@ -167,9 +176,12 @@ public class DbConnectionPool implements AutoCloseable {
 
     @Override
     public synchronized void close() throws SQLException {
-        for (Connection connection : connections) {
-            connection.close();
+        synchronized (connections) {
+            for (Connection connection : allConnections) {
+                connection.close();
+            }
+            allConnections.clear();
+            connections.clear();
         }
-        connections.clear();
     }
 }

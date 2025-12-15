@@ -23,11 +23,16 @@ export default function HistoryLong<
             return [];
         } else {
             const diff = 300_000;
+            const firstDate = new Date(
+                lastTime.getTime() - 12 * 24 * 30 * diff
+            ).toISOString();
             const sorted = sort(
-                rawHistory.map(row => ({
-                    x: new Date(row.ts_start),
-                    y: row.num_events ?? row.num_stars ?? 0,
-                })),
+                rawHistory
+                    .filter(r => r.ts_start > firstDate)
+                    .map(row => ({
+                        x: new Date(row.ts_start),
+                        y: row.num_events ?? row.num_stars ?? 0,
+                    })),
                 [r => r.x]
             );
             const complete = [];

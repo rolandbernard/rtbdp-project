@@ -30,11 +30,16 @@ export default function HistorySpark<
             return [];
         } else {
             const diff = useFine ? 10_000 : 300_000;
+            const firstDate = new Date(
+                lastTime.getTime() - limit * diff
+            ).toISOString();
             const sorted = sort(
-                rawHistory.map(row => ({
-                    x: new Date(row.ts_start),
-                    y: row.num_events ?? row.num_stars ?? 0,
-                })),
+                rawHistory
+                    .filter(r => r.ts_start > firstDate)
+                    .map(row => ({
+                        x: new Date(row.ts_start),
+                        y: row.num_events ?? row.num_stars ?? 0,
+                    })),
                 [r => r.x]
             );
             const complete = [];
