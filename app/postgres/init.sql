@@ -176,7 +176,31 @@ CREATE TABLE users_live (
     num_events BIGINT NOT NULL,
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (window_size, user_id)
-);
+) PARTITION BY LIST (window_size);
+
+CREATE TABLE users_live_5m PARTITION OF users_live FOR VALUES IN ('5m');
+CREATE TABLE users_live_1h PARTITION OF users_live FOR VALUES IN ('1h');
+CREATE TABLE users_live_6h PARTITION OF users_live FOR VALUES IN ('6h');
+CREATE TABLE users_live_24 PARTITION OF users_live FOR VALUES IN ('24h');
+
+-- Delete rows that are inserted with a event count of zero. If there is no entry
+-- we already assume the count is zero. This reduces the table size.
+CREATE FUNCTION delete_if_zero_users_live()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.num_events = 0 THEN
+        DELETE FROM users_live
+            WHERE (window_size, user_id) = (NEW.window_size, NEW.user_id)
+            AND seq_num < NEW.seq_num;
+        RETURN NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_cleanup_users_live
+BEFORE INSERT OR UPDATE ON users_live FOR EACH ROW
+EXECUTE FUNCTION delete_if_zero_users_live();
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON users_live(window_size, num_events DESC, user_id ASC);
@@ -185,22 +209,24 @@ CREATE INDEX ON users_live(window_size, seq_num DESC);
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW users_ranking AS
 SELECT window_size, user_id, num_events,
-		(SELECT MAX(i.seq_num) AS seq_num
+        (SELECT MAX(i.seq_num) AS seq_num
             FROM users_live AS i WHERE i.window_size = o.window_size) AS seq_num,
-        ROW_NUMBER() OVER (
-            PARTITION BY window_size ORDER BY num_events DESC, user_id ASC
-        ) - 1 AS row_number,
-        RANK() OVER (
-            PARTITION BY window_size ORDER BY num_events DESC
-        ) - 1 AS rank
-    FROM users_live AS o
-    WHERE num_events > 0;
+        row_number, rank
+    FROM (SELECT window_size, user_id, num_events,
+            ROW_NUMBER() OVER (
+                PARTITION BY window_size ORDER BY num_events DESC, user_id ASC
+            ) - 1 AS row_number,
+            RANK() OVER (
+                PARTITION BY window_size ORDER BY num_events DESC
+            ) - 1 AS rank
+        FROM users_live WHERE num_events > 0
+    ) AS o;
 
 -- This is a version of the above that is semantically equivalent but much more
 -- efficient when querying individual rows only.
 CREATE VIEW users_ranking_point AS
 SELECT window_size, user_id, num_events,
-		(SELECT MAX(i.seq_num) AS seq_num
+        (SELECT MAX(i.seq_num) AS seq_num
             FROM users_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         (SELECT COUNT(*)
             FROM users_live AS i
@@ -251,7 +277,32 @@ CREATE TABLE repos_live (
     num_events BIGINT NOT NULL,
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (window_size, repo_id)
-);
+) PARTITION BY LIST (window_size);
+
+CREATE TABLE repos_live_5m PARTITION OF repos_live FOR VALUES IN ('5m');
+CREATE TABLE repos_live_1h PARTITION OF repos_live FOR VALUES IN ('1h');
+CREATE TABLE repos_live_6h PARTITION OF repos_live FOR VALUES IN ('6h');
+CREATE TABLE repos_live_24 PARTITION OF repos_live FOR VALUES IN ('24h');
+
+-- Delete rows that are inserted with a event count of zero. If there is no entry
+-- we already assume the count is zero, so this is a solution to reduced the size
+--- of the table.
+CREATE FUNCTION delete_if_zero_repos_live()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.num_events = 0 THEN
+        DELETE FROM repos_live
+            WHERE (window_size, repo_id) = (NEW.window_size, NEW.repo_id)
+            AND seq_num < NEW.seq_num;
+        RETURN NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_cleanup_repos_live
+BEFORE INSERT OR UPDATE ON repos_live FOR EACH ROW
+EXECUTE FUNCTION delete_if_zero_repos_live();
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON repos_live(window_size, num_events DESC, repo_id ASC);
@@ -260,22 +311,24 @@ CREATE INDEX ON repos_live(window_size, seq_num DESC);
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW repos_ranking AS
 SELECT window_size, repo_id, num_events,
-		(SELECT MAX(i.seq_num) AS seq_num
+        (SELECT MAX(i.seq_num) AS seq_num
             FROM repos_live AS i WHERE i.window_size = o.window_size) AS seq_num,
-        ROW_NUMBER() OVER (
-            PARTITION BY window_size ORDER BY num_events DESC, repo_id ASC
-        ) - 1 AS row_number,
-        RANK() OVER (
-            PARTITION BY window_size ORDER BY num_events DESC
-        ) - 1 AS rank
-    FROM repos_live AS o
-    WHERE num_events > 0;
+        row_number, rank
+    FROM (SELECT window_size, repo_id, num_events,
+            ROW_NUMBER() OVER (
+                PARTITION BY window_size ORDER BY num_events DESC, repo_id ASC
+            ) - 1 AS row_number,
+            RANK() OVER (
+                PARTITION BY window_size ORDER BY num_events DESC
+            ) - 1 AS rank
+        FROM repos_live WHERE num_events > 0
+    ) AS o;
 
 -- This is a version of the above that is semantically equivalent but much more
 -- efficient when querying individual rows only.
 CREATE VIEW repos_ranking_point AS
 SELECT window_size, repo_id, num_events,
-		(SELECT MAX(i.seq_num) AS seq_num
+        (SELECT MAX(i.seq_num) AS seq_num
             FROM repos_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         (SELECT COUNT(*)
             FROM repos_live AS i
@@ -326,7 +379,31 @@ CREATE TABLE stars_live (
     num_stars BIGINT NOT NULL,
     seq_num BIGINT NOT NULL,
     PRIMARY KEY (window_size, repo_id)
-);
+) PARTITION BY LIST (window_size);
+
+CREATE TABLE stars_live_5m PARTITION OF stars_live FOR VALUES IN ('5m');
+CREATE TABLE stars_live_1h PARTITION OF stars_live FOR VALUES IN ('1h');
+CREATE TABLE stars_live_6h PARTITION OF stars_live FOR VALUES IN ('6h');
+CREATE TABLE stars_live_24 PARTITION OF stars_live FOR VALUES IN ('24h');
+
+-- Delete rows that are inserted with a star count of zero. If there is no entry
+-- we already assume the count is zero. This reduces the table size.
+CREATE FUNCTION delete_if_zero_stars_live()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.num_stars = 0 THEN
+        DELETE FROM stars_live
+            WHERE (window_size, repo_id) = (NEW.window_size, NEW.repo_id)
+            AND seq_num < NEW.seq_num;
+        RETURN NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_cleanup_stars_live
+BEFORE INSERT OR UPDATE ON stars_live FOR EACH ROW
+EXECUTE FUNCTION delete_if_zero_stars_live();
 
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON stars_live(window_size, num_stars DESC, repo_id ASC);
@@ -335,22 +412,24 @@ CREATE INDEX ON stars_live(window_size, seq_num DESC);
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW stars_ranking AS
 SELECT window_size, repo_id, num_stars,
-		(SELECT MAX(i.seq_num) AS seq_num
+        (SELECT MAX(i.seq_num) AS seq_num
             FROM stars_live AS i WHERE i.window_size = o.window_size) AS seq_num,
-        ROW_NUMBER() OVER (
-            PARTITION BY window_size ORDER BY num_stars DESC, repo_id ASC
-        ) - 1 AS row_number,
-        RANK() OVER (
-            PARTITION BY window_size ORDER BY num_stars DESC
-        ) - 1 AS rank
-    FROM stars_live AS o
-    WHERE num_stars > 0;
+        row_number, rank
+    FROM (SELECT window_size, repo_id, num_stars,
+            ROW_NUMBER() OVER (
+                PARTITION BY window_size ORDER BY num_stars DESC, repo_id ASC
+            ) - 1 AS row_number,
+            RANK() OVER (
+                PARTITION BY window_size ORDER BY num_stars DESC
+            ) - 1 AS rank
+        FROM stars_live WHERE num_stars > 0
+    ) AS o;
 
 -- This is a version of the above that is semantically equivalent but much more
 -- efficient when querying individual rows only.
 CREATE VIEW stars_ranking_point AS
 SELECT window_size, repo_id, num_stars,
-		(SELECT MAX(i.seq_num) AS seq_num
+        (SELECT MAX(i.seq_num) AS seq_num
             FROM stars_live AS i WHERE i.window_size = o.window_size) AS seq_num,
         (SELECT COUNT(*)
             FROM stars_live AS i
@@ -398,6 +477,23 @@ CREATE TABLE trending_live (
     PRIMARY KEY (repo_id)
 );
 
+-- Delete rows that are inserted with a score of zero. If there is no entry
+-- we already assume the score is zero. This reduces the table size.
+CREATE FUNCTION delete_if_zero_trending_live()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.trending_score = 0 THEN
+        DELETE FROM trending_live WHERE repo_id = NEW.repo_id AND seq_num < NEW.seq_num;
+        RETURN NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_cleanup_trending_live
+BEFORE INSERT OR UPDATE ON trending_live FOR EACH ROW
+EXECUTE FUNCTION delete_if_zero_trending_live();
+
 -- This index helps slightly with the performance of the ranking view.
 CREATE INDEX ON trending_live(trending_score DESC, repo_id ASC);
 CREATE INDEX ON trending_live(seq_num DESC);
@@ -405,21 +501,23 @@ CREATE INDEX ON trending_live(seq_num DESC);
 -- This is a virtual view that also contains row numbers and ranks.
 CREATE VIEW trending_ranking AS
 SELECT repo_id, trending_score,
-		(SELECT MAX(seq_num) AS seq_num FROM trending_live) AS seq_num,
-        ROW_NUMBER() OVER (
-            ORDER BY trending_score DESC, repo_id ASC
-        ) - 1 AS row_number,
-        RANK() OVER (
-            ORDER BY trending_score DESC
-        ) - 1 AS rank
-    FROM trending_live
-    WHERE trending_score > 0;
+        (SELECT MAX(seq_num) AS seq_num FROM trending_live) AS seq_num,
+        row_number, rank
+    FROM (SELECT repo_id, trending_score,
+            ROW_NUMBER() OVER (
+                ORDER BY trending_score DESC, repo_id ASC
+            ) - 1 AS row_number,
+            RANK() OVER (
+                ORDER BY trending_score DESC
+            ) - 1 AS rank
+        FROM trending_live WHERE trending_score > 0
+    );
 
 -- This is a version of the above that is semantically equivalent but much more
 -- efficient when querying individual rows only.
 CREATE VIEW trending_ranking_point AS
 SELECT repo_id, trending_score,
-		(SELECT MAX(seq_num) AS seq_num FROM trending_live) AS seq_num,
+        (SELECT MAX(seq_num) AS seq_num FROM trending_live) AS seq_num,
         (SELECT COUNT(*)
             FROM trending_live AS i
             WHERE (i.trending_score > o.trending_score

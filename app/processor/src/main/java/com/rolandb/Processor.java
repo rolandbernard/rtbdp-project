@@ -149,11 +149,11 @@ public class Processor {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         env.setParallelism(parallelism);
         // Enable checkpointing. At-least-once semantics are fine because we basically
-        // always use upserts with a primary key.
-        env.enableCheckpointing(600_000, CheckpointingMode.AT_LEAST_ONCE);
+        // always use upserts with a primary key. Checkpoint every 15 minutes.
+        env.enableCheckpointing(900_000, CheckpointingMode.AT_LEAST_ONCE);
         CheckpointConfig checkpointConf = env.getCheckpointConfig();
         checkpointConf.setExternalizedCheckpointRetention(ExternalizedCheckpointRetention.RETAIN_ON_CANCELLATION);
-        checkpointConf.setMinPauseBetweenCheckpoints(300_000);
+        checkpointConf.setMinPauseBetweenCheckpoints(600_000);
         checkpointConf.enableUnalignedCheckpoints();
         checkpointConf.setTolerableCheckpointFailureNumber(4);
         // Define Kafka source.

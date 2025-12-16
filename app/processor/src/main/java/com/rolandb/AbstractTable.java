@@ -645,7 +645,9 @@ public abstract class AbstractTable<E extends SequencedRow> {
         }
         int parallelism = tableP == -1 ? env.getParallelism() : tableP;
         SingleOutputStreamOperator<List<E>> batchedStream = sequencedStream
-                .keyBy(row -> Math.abs(keySelector.getKey(row).hashCode() % parallelism))
+                .keyBy(tableP != -1 && tableP <= parallelism
+                        ? (row -> keySelector.getKey(row).hashCode())
+                        : (row -> Math.abs(keySelector.getKey(row).hashCode() % parallelism)))
                 .process(new CountAndTimeBatcher<>(1024, Duration.ofMillis(100), getOutputType()))
                 .uid("event-batcher-01-" + tableName)
                 .name("Event Batcher");
