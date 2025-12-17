@@ -102,9 +102,9 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     builder.append(username);
                     builder.append("}{");
                     builder.append(userId);
-                    builder.append("}> added a <link{comment}{");
+                    builder.append("}> <link{commented}{");
                     builder.append(commentUrl);
-                    builder.append("}> to commit <link{#");
+                    builder.append("}> on commit <link{#");
                     builder.append(commitId.substring(0, 10));
                     builder.append("}{");
                     builder.append(commentUrl.substring(0, commentUrl.indexOf("#")));
@@ -234,12 +234,15 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                 case ISSUE_OPEN: {
                     String issueUrl = rawEvent.at("/payload/issue/html_url").asText();
                     String title = rawEvent.at("/payload/issue/title").asText();
+                    String action = rawEvent.at("/payload/action").asText();
                     JsonNode content = rawEvent.at("/payload/issue/body");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
                     builder.append(userId);
-                    builder.append("}> opened an <link{issue}{");
+                    builder.append("}> ");
+                    builder.append(action);
+                    builder.append(" an <link{issue}{");
                     builder.append(issueUrl);
                     builder.append("}> in repository <repo{");
                     builder.append(reponame);
@@ -260,12 +263,15 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     String issueUrl = pullRequest.has("html_url")
                             ? pullRequest.at("/html_url").asText()
                             : apiToHtmlUrl(pullRequest.at("/url").asText());
+                    String action = rawEvent.at("/payload/action").asText();
                     String title = pullRequest.at("/title").asText();
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
                     builder.append(userId);
-                    builder.append("}> closed a <link{pull request}{");
+                    builder.append("}> ");
+                    builder.append(action);
+                    builder.append(" a <link{pull request}{");
                     builder.append(issueUrl);
                     builder.append("}> in repository <repo{");
                     builder.append(reponame);
@@ -313,13 +319,16 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     String issueUrl = pullRequest.has("html_url")
                             ? pullRequest.at("/html_url").asText()
                             : apiToHtmlUrl(pullRequest.at("/url").asText());
+                    String action = rawEvent.at("/payload/action").asText();
                     String title = pullRequest.at("/title").asText();
                     JsonNode content = pullRequest.at("/body");
                     builder.append("<user{");
                     builder.append(username);
                     builder.append("}{");
                     builder.append(userId);
-                    builder.append("}> opened a <link{pull request}{");
+                    builder.append("}> ");
+                    builder.append(action);
+                    builder.append(" a <link{pull request}{");
                     builder.append(issueUrl);
                     builder.append("}> in repository <repo{");
                     builder.append(reponame);
@@ -387,9 +396,239 @@ public class GithubEventsTable extends AbstractTable<GithubEventsTable.DetailedG
                     break;
                 }
                 default:
-                    builder.append("This is an unknown event type <code{");
-                    builder.append(rawEvent.at("/type").asText());
-                    builder.append("}>.");
+                    switch (rawEvent.at("/type").asText()) {
+                        case "CreateEvent": {
+                            String type = rawEvent.at("/payload/ref_type").asText();
+                            String name = rawEvent.at("/payload/ref").asText();
+                            JsonNode description = rawEvent.at("/payload/description");
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> created the ");
+                            if (!type.equals("repository")) {
+                                builder.append(type);
+                                builder.append(" <code{");
+                                builder.append(name);
+                                builder.append("}> in");
+                            }
+                            builder.append(" repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}>.");
+                            if (description.isTextual()) {
+                                builder.append("<quote{");
+                                builder.append(description.asText());
+                                builder.append("}>");
+                            }
+                            break;
+                        }
+                        case "DeleteEvent": {
+                            String type = rawEvent.at("/payload/ref_type").asText();
+                            String name = rawEvent.at("/payload/ref").asText();
+                            JsonNode description = rawEvent.at("/payload/description");
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> deleted the ");
+                            if (!type.equals("repository")) {
+                                builder.append(type);
+                                builder.append(" <code{");
+                                builder.append(name);
+                                builder.append("}> in");
+                            }
+                            builder.append(" repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}>.");
+                            if (description.isTextual()) {
+                                builder.append("<quote{");
+                                builder.append(description.asText());
+                                builder.append("}>");
+                            }
+                            break;
+                        }
+                        case "IssuesEvent": {
+                            String issueUrl = rawEvent.at("/payload/issue/html_url").asText();
+                            String title = rawEvent.at("/payload/issue/title").asText();
+                            String action = rawEvent.at("/payload/action").asText();
+                            JsonNode content = rawEvent.at("/payload/issue/body");
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> ");
+                            builder.append(action);
+                            builder.append(" an <link{issue}{");
+                            builder.append(issueUrl);
+                            builder.append("}> in repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}>.");
+                            builder.append("<quote{");
+                            builder.append(title);
+                            if (content.isTextual()) {
+                                builder.append("\n\n");
+                                builder.append(content.asText());
+                            }
+                            builder.append("}>");
+                            break;
+                        }
+                        case "PullRequestEvent": {
+                            JsonNode pullRequest = rawEvent.at("/payload/pull_request");
+                            String issueUrl = pullRequest.has("html_url")
+                                    ? pullRequest.at("/html_url").asText()
+                                    : apiToHtmlUrl(pullRequest.at("/url").asText());
+                            String action = rawEvent.at("/payload/action").asText();
+                            String title = pullRequest.at("/title").asText();
+                            JsonNode content = pullRequest.at("/body");
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> ");
+                            builder.append(action);
+                            builder.append(" a <link{pull request}{");
+                            builder.append(issueUrl);
+                            builder.append("}> in repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}>.");
+                            builder.append("<quote{");
+                            builder.append(title);
+                            if (content.isTextual()) {
+                                builder.append("\n\n");
+                                builder.append(content.asText());
+                            }
+                            builder.append("}>");
+                            break;
+                        }
+                        case "PullRequestReviewEvent": {
+                            JsonNode pullRequest = rawEvent.at("/payload/pull_request");
+                            JsonNode review = rawEvent.at("/payload/review");
+                            String reviewUrl = review.has("html_url")
+                                    ? review.at("/html_url").asText()
+                                    : pullRequest.has("html_url")
+                                            ? pullRequest.at("/html_url").asText()
+                                            : apiToHtmlUrl(pullRequest.at("/url").asText());
+                            String action = rawEvent.at("/payload/action").asText();
+                            JsonNode content = review.at("/body");
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> ");
+                            builder.append(action);
+                            builder.append(" a <link{pull request review}{");
+                            builder.append(reviewUrl);
+                            builder.append("}> in repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}>.");
+                            if (content.isTextual()) {
+                                builder.append("<quote{");
+                                builder.append(content.asText());
+                                builder.append("}>");
+                            }
+                            break;
+                        }
+                        case "ReleaseEvent": {
+                            String action = rawEvent.at("/payload/action").asText();
+                            JsonNode release = rawEvent.at("/payload/release");
+                            String releaseUrl = release.at("/html_url").asText();
+                            JsonNode content = release.at("/body");
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> ");
+                            builder.append(action);
+                            builder.append(" a <link{release}{");
+                            builder.append(releaseUrl);
+                            builder.append("}> for repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}>.");
+                            if (content.isTextual()) {
+                                builder.append("<quote{");
+                                builder.append(content.asText());
+                                builder.append("}>");
+                            }
+                            break;
+                        }
+                        case "MemberEvent": {
+                            String action = rawEvent.at("/payload/action").asText();
+                            JsonNode member = rawEvent.at("/payload/member");
+                            String memberName = rawEvent.at("/login").asText();
+                            String memberId = member.at("/id").asText();
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> ");
+                            builder.append(action);
+                            builder.append(" member <user{");
+                            builder.append(memberName);
+                            builder.append("}{");
+                            builder.append(memberId);
+                            builder.append("}> for repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}>.");
+                            break;
+                        }
+                        case "DiscussionEvent": {
+                            String action = rawEvent.at("/payload/action").asText();
+                            JsonNode discussion = rawEvent.at("/payload/discussion");
+                            String discussionUrl = discussion.at("/html_url").asText();
+                            JsonNode content = discussion.at("/body");
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> ");
+                            builder.append(action);
+                            builder.append(" a <link{discussion}{");
+                            builder.append(discussionUrl);
+                            builder.append("}> in repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}>.");
+                            if (content.isTextual()) {
+                                builder.append("<quote{");
+                                builder.append(content.asText());
+                                builder.append("}>");
+                            }
+                            break;
+                        }
+                        case "PublicEvent": {
+                            builder.append("<user{");
+                            builder.append(username);
+                            builder.append("}{");
+                            builder.append(userId);
+                            builder.append("}> ");
+                            builder.append(" made the repository <repo{");
+                            builder.append(reponame);
+                            builder.append("}{");
+                            builder.append(repoId);
+                            builder.append("}> public.");
+                            break;
+                        }
+                        default:
+                            builder.append("This is an unknown event type <code{");
+                            builder.append(rawEvent.at("/type").asText());
+                            builder.append("}>.");
+                            break;
+                    }
                     break;
             }
             details = builder.toString();

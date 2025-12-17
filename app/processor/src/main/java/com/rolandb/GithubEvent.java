@@ -28,11 +28,16 @@ public class GithubEvent extends SequencedRow {
     /**
      * Create a new event instance from the fields directly.
      * 
-     * @param eventType The event type.
-     * @param createdAt The creation timestamp.
-     * @param userId The user id.
-     * @param repoId The repository id.
-     * @param seqNum The sequence number for the event.
+     * @param eventType
+     *            The event type.
+     * @param createdAt
+     *            The creation timestamp.
+     * @param userId
+     *            The user id.
+     * @param repoId
+     *            The repository id.
+     * @param seqNum
+     *            The sequence number for the event.
      */
     public GithubEvent(GithubEventType eventType, Instant createdAt, long userId, long repoId, long seqNum) {
         this.seqNum = seqNum;
@@ -102,14 +107,10 @@ public class GithubEvent extends SequencedRow {
                 eventType = GithubEventType.WIKI;
                 break;
             case "IssueCommentEvent":
-                if (rawEvent.at("/payload/action").asText().equals("created")) {
-                    if (rawEvent.at("/payload/issue").has("pull_request")) {
-                        eventType = GithubEventType.PULL_COMMENT;
-                    } else {
-                        eventType = GithubEventType.ISSUE_COMMENT;
-                    }
+                if (rawEvent.at("/payload/issue").has("pull_request")) {
+                    eventType = GithubEventType.PULL_COMMENT;
                 } else {
-                    eventType = GithubEventType.OTHER;
+                    eventType = GithubEventType.ISSUE_COMMENT;
                 }
                 break;
             case "IssuesEvent":
@@ -133,6 +134,7 @@ public class GithubEvent extends SequencedRow {
                         eventType = GithubEventType.PULL_OPEN;
                         break;
                     case "closed":
+                    case "merged":
                         eventType = GithubEventType.PULL_CLOSE;
                         break;
                     default:
@@ -141,11 +143,7 @@ public class GithubEvent extends SequencedRow {
                 }
                 break;
             case "PullRequestReviewCommentEvent":
-                if (rawEvent.at("/payload/action").asText().equals("created")) {
-                    eventType = GithubEventType.PULL_COMMENT;
-                } else {
-                    eventType = GithubEventType.OTHER;
-                }
+                eventType = GithubEventType.PULL_COMMENT;
                 break;
             case "PushEvent":
                 eventType = GithubEventType.PUSH;
