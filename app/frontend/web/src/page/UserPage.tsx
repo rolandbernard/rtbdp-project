@@ -101,7 +101,7 @@ function UserRankingCounter(props: CounterProps) {
                             row
                                 ? row.rank > 10 && row.rank <= 20
                                     ? "th"
-                                    : ORDINAL[row.rank % 10] ?? "th"
+                                    : (ORDINAL[row.rank % 10] ?? "th")
                                 : ""
                         }
                         options={[...ORDINAL, ""]}
@@ -126,15 +126,20 @@ function UserRankingCounter(props: CounterProps) {
                 props.onNavigate(
                     `/?ur${props.windowSize}=${Math.max(
                         0,
-                        row?.row_number - 4
-                    )}&urwin=${props.windowSize}&ranking=user`
+                        row?.row_number - 4,
+                    )}&urwin=${props.windowSize}&ranking=user`,
                 )
             }
         >
             {inner}
         </div>
     ) : (
-        <div className="m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80">
+        <div
+            className={
+                "m-2 p-2 border border-border/50 rounded-box min-w-0 block bg-base-200/80 " +
+                (props.loaded ? "" : "loading")
+            }
+        >
             {inner}
         </div>
     );
@@ -147,7 +152,7 @@ interface RankingsProps {
 
 function UserRankings(props: RankingsProps) {
     const [loaded, activityRank] = useTable(
-        usersRanking.where("user_id", [props.id])
+        usersRanking.where("user_id", [props.id]),
     );
     return (
         <>
