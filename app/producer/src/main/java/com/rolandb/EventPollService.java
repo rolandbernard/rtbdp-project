@@ -69,7 +69,7 @@ public class EventPollService {
     public EventPollService(RestApiClient apiClient, int pollingIntervalMs, int pollingDepth) {
         int numPages = (pollingDepth + 99) / 100;
         int perPage = (pollingDepth + numPages - 1) / numPages;
-        long[] errorDelay = new long[] { 1 };
+        long[] errorDelay = new long[] { 0 };
         // Create the observable that will emit the events.
         Flowable<GithubEvent> coldObservable = Flowable.interval(pollingIntervalMs, TimeUnit.MILLISECONDS)
                 .startWithItem(0L)
@@ -108,13 +108,22 @@ public class EventPollService {
                         }
                         if (!errors.isEmpty()) {
                             if (lists.isEmpty()) {
-                                throw errors.get(0);
+                                if (errorDelay[0] == 0) {
+                                    // There are sometimes sporadic errors. For these we don't want to completely
+                                    // stop and restart the pipeline. If all three requests fail two times in a row
+                                    // than we will sleep and retry.
+                                    errorDelay[0] = 1;
+                                    LOGGER.warn("All requests errored, giving it another chance.", errors.get(0));
+                                    return List.<GithubEvent>of();
+                                } else {
+                                    throw errors.get(0);
+                                }
                             } else {
                                 LOGGER.warn("Continuing to process even with errors.", errors.get(0));
                             }
                         }
                         LOGGER.info("Successfully fetched data from {} pages", lists.size());
-                        errorDelay[0] = 1;
+                        errorDelay[0] = 0;
                         long index = 0;
                         List<GithubEvent> allEvents = new ArrayList<>();
                         Collections.reverse(lists);

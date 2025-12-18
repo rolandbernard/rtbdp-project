@@ -64,7 +64,11 @@ public class DummyServer {
      */
     private void handleDataRequest(HttpExchange exchange) throws IOException {
         try {
-            LOGGER.info("Handling data request from {}", exchange.getRemoteAddress());
+            LOGGER.info("Handling data request from {} with headers:\n{}",
+                    exchange.getRemoteAddress(),
+                    exchange.getRequestHeaders().entrySet().stream()
+                            .map(e -> e.getKey() + ": " + e.getValue())
+                            .collect(Collectors.joining("\n")));
             // Parse the query parameters.
             int page = 1;
             int perPage = 30;
