@@ -29,6 +29,9 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
       KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: "60000" # check whether to delete log segments every minute (default 5 minutes)
+      KAFKA_CONTROLLER_EVENT_TIMEOUT_MS: 120000
+      KAFKA_BROKER_SESSION_TIMEOUT_MS: 90000
+      KAFKA_BROKER_HEARTBEAT_INTERVAL_MS: 30000
       KAFKA_LOG4J_ROOT_LOGLEVEL: "WARN" # optional, with next option reduces verboseness
       KAFKA_LOG4J_LOGGERS: "\
         kafka=WARN,\
@@ -80,7 +83,7 @@ services:
     command: [
       "postgres",
       "-c", "shared_buffers=2GB",
-      "-c", "effective_cache_size=6GB",
+      "-c", "effective_cache_size=3GB",
       "-c", "maintenance_work_mem=512MB",
       "-c", "work_mem=32MB",
       "-c", "max_connections=200",
@@ -163,26 +166,6 @@ services:
       - flink-ha-metadata:/opt/flink/ha-metadata:z
     command: jobmanager
     environment:
-      FLINK_PROPERTIES: |
-        jobmanager.rpc.address: flink-jobmanager
-        jobmanager.scheduler: adaptive
-        taskmanager.network.memory.buffer-debloat.enabled: true
-        pekko.ask.timeout: 300000
-        # Fault Tolerance Config
-        state.backend: rocksdb
-        state.backend.incremental: true
-        execution.checkpointing.storage: filesystem
-        execution.checkpointing.dir: file:///opt/flink/checkpoints
-        execution.checkpointing.savepoint-dir: file:///opt/flink/savepoints
-        # Restart Strategy for the Jobs
-        restart-strategy.type: fixed-delay
-        restart-strategy.fixed-delay.attempts: 10
-        restart-strategy.fixed-delay.delay: 10s
-        # High Availability Configuration
-        high-availability.type: zookeeper
-        high-availability.storageDir: file:///opt/flink/ha-metadata
-        high-availability.zookeeper.quorum: zookeeper:2181
-        zookeeper.sasl.disable: true
       ROOT_LOG_LEVEL: WARN
     healthcheck:
       test: ["CMD", "curl", "-f", "localhost:8081/overview"]
@@ -209,25 +192,7 @@ services:
     command: taskmanager
     environment:
       FLINK_PROPERTIES: |
-        jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: ${FLINK_TASK_SLOTS:-4}
-        taskmanager.network.memory.buffer-debloat.enabled: true
-        pekko.ask.timeout: 300000
-        # Increase Memory a Bit
-        taskmanager.memory.process.size: 6144m
-        # Fault Tolerance Config
-        state.backend: rocksdb
-        state.backend.incremental: true
-        state.backend.rocksdb.localdir: /opt/flink/rocksdb-data
-        state.backend.rocksdb.predefined-options: FLASH_SSD_OPTIMIZED
-        execution.checkpointing.storage: filesystem
-        execution.checkpointing.dir: file:///opt/flink/checkpoints
-        execution.checkpointing.savepoint-dir: file:///opt/flink/savepoints
-        # High Availability Configuration
-        high-availability.type: zookeeper
-        high-availability.storageDir: file:///opt/flink/ha-metadata
-        high-availability.zookeeper.quorum: zookeeper:2181
-        zookeeper.sasl.disable: true
       ROOT_LOG_LEVEL: WARN
 
   # Project-developed Containers (API Dummy + Producer + Processor + Frontend)

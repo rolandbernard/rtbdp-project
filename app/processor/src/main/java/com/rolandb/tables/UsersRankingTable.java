@@ -91,7 +91,7 @@ public class UsersRankingTable extends AbstractRankingTable<UsersRankingTable.Us
                                     return event;
                                 },
                                 Long.class, Long.class))
-                .setParallelism(tableParallelism())
+                .setParallelism(tableParallelism() * 2)
                 .returns(UserCountsRank.class)
                 .uid("ranking-user-counts-01")
                 .name("Per User Count Rankings");

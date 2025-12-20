@@ -1,0 +1,72 @@
+blob:
+    server:
+        port: 6124
+rest:
+    flamegraph:
+        enabled: true
+    address: 0.0.0.0
+    profiling:
+        enabled: true
+high-availability:
+    type: zookeeper
+    storageDir: file:///opt/flink/ha-metadata
+    zookeeper:
+        quorum: zookeeper:2181
+jobmanager:
+    execution:
+        failover-strategy: region
+    rpc:
+        address: flink-jobmanager
+        port: 6123
+    bind-host: 0.0.0.0
+    memory:
+        process:
+            size: 1600m
+    scheduler: adaptive
+restart-strategy:
+    type: fixed-delay
+    fixed-delay:
+        attempts: 10
+        delay: 10s
+taskmanager:
+    network:
+        memory:
+            buffer-debloat:
+                enabled: true
+    numberOfTaskSlots: 1
+    memory:
+        process:
+            size: 6144m
+    bind-host: 0.0.0.0
+query:
+    server:
+        port: "6125"
+execution:
+    checkpointing:
+        storage: filesystem
+        dir: file:///opt/flink/checkpoints
+        savepoint-dir: file:///opt/flink/savepoints
+parallelism:
+    default: 1
+zookeeper:
+    sasl:
+        disable: true
+env:
+    java:
+        opts:
+            all: --add-exports=java.rmi/sun.rmi.registry=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-exports=java.security.jgss/sun.security.krb5=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED
+pekko:
+    ask:
+        timeout: 300000
+state:
+    backend:
+        type: rocksdb
+        incremental: true
+        rocksdb:
+            localdir: /opt/flink/rocksdb-data
+            predefined-options: FLASH_SSD_OPTIMIZED
+            thread.num: 8
+            use-bloom-filter: true
+            memory.partitioned-index-filters: true
+            block.cache-size: 1024m
+            compression.per.level: "NO_COMPRESSION;NO_COMPRESSION;LZ4_COMPRESSION"

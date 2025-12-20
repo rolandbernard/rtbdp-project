@@ -93,7 +93,7 @@ public class DbConnectionPool implements AutoCloseable {
             fullUrl.append("=");
             fullUrl.append(props.getProperty(name));
         }
-        return getGlobalInstance(fullUrl.toString(), 32);
+        return getGlobalInstance(fullUrl.toString(), 64);
     }
 
     /**

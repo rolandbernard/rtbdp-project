@@ -634,6 +634,9 @@ public abstract class AbstractTable<E extends SequencedRow> {
      */
     protected DataStream<E> sinkToPostgres(DataStream<E> stream) {
         int tableP = tableParallelism();
+        // Basically even if we have only few keys, they may still collide.
+        // Increasing the parallelism by a factor of two to try to avoid that.
+        int effTableP = tableP <= 1 ? 1 : 2 * tableP;
         KeySelector<E, ?> keySelector = tableOrderingKeySelector();
         SingleOutputStreamOperator<E> sequencedStream = stream
                 .keyBy(keySelector)
@@ -641,26 +644,29 @@ public abstract class AbstractTable<E extends SequencedRow> {
                 .uid("sequence-assigner-01-" + tableName)
                 .name("Sequence Assigner");
         if (tableP != -1) {
-            sequencedStream.setParallelism(tableP);
+            sequencedStream.setParallelism(effTableP);
         }
-        int parallelism = tableP == -1 ? env.getParallelism() : tableP;
+        int parallelism = tableP == -1 ? env.getParallelism() : effTableP;
         SingleOutputStreamOperator<List<E>> batchedStream = sequencedStream
                 .keyBy(tableP != -1 && tableP <= parallelism
                         ? (row -> keySelector.getKey(row).hashCode())
-                        : (row -> Math.abs(keySelector.getKey(row).hashCode() % parallelism)))
+                        : (row -> {
+                            int val = Math.abs(keySelector.getKey(row).hashCode() % parallelism);
+                            return val * 0x01010101;
+                        }))
                 .process(new CountAndTimeBatcher<>(1024, Duration.ofMillis(100), getOutputType()))
                 .uid("event-batcher-01-" + tableName)
                 .name("Event Batcher");
         if (tableP != -1) {
-            batchedStream.setParallelism(tableP);
+            batchedStream.setParallelism(effTableP);
         }
         SingleOutputStreamOperator<E> committedStream = AsyncDataStream.orderedWait(
-                batchedStream, buildJdbcSinkAndContinue(), 10, TimeUnit.MINUTES, 8)
+                batchedStream, buildJdbcSinkAndContinue(), 10, TimeUnit.MINUTES, 32)
                 .returns(getOutputType())
                 .uid("postgres-sink-01-" + tableName)
                 .name("PostgreSQL Sink");
         if (tableP != -1) {
-            committedStream.setParallelism(tableP);
+            committedStream.setParallelism(effTableP);
         }
         return committedStream;
     }

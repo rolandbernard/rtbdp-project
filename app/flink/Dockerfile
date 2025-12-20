@@ -6,5 +6,6 @@
 FROM flink:2.1.1-java21
 WORKDIR /opt/flink
 COPY log4j.properties ./conf/log4j-console.properties
+COPY config.yaml ./conf/config.yaml
 RUN mkdir ./checkpoints ./savepoints ./rocksdb-data ./ha-metadata
 RUN chown flink:flink ./checkpoints ./savepoints ./rocksdb-data ./ha-metadata

@@ -98,7 +98,7 @@ public abstract class AbstractRankingTable<E extends AbstractRankingTable.Rankin
                 .name("Kafka Sink");
         int tableP = tableParallelism();
         if (tableP != -1) {
-            sink.setParallelism(tableP);
+            sink.setParallelism(tableP <= 1 ? 1 : 2 * tableP);
         }
     }
 }

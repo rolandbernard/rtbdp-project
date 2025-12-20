@@ -3,6 +3,7 @@ package com.rolandb;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.MapState;
@@ -71,12 +72,18 @@ public class CountAndTimeBatcher<K, E extends SequencedRow> extends KeyedProcess
     }
 
     private void flushBuffer(Context ctx, Collector<List<E>> out) throws Exception {
+        List<List<Object>> keys = new ArrayList<>();
         List<E> batch = new ArrayList<>();
-        for (E event : buffer.values()) {
-            batch.add(event);
+        for (Entry<List<Object>, E> event : buffer.entries()) {
+            keys.add(event.getKey());
+            batch.add(event.getValue());
         }
         out.collect(batch);
-        buffer.clear();
+        // Removing them manually is faster than clear because the internal
+        // implementation of clear iterates them again.
+        for (List<Object> key : keys) {
+            buffer.remove(key);
+        }
         bufferSize.clear();
         Long timer = currentTimer.value();
         if (timer != null) {

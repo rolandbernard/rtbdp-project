@@ -84,7 +84,7 @@ public class ReposRankingTable extends AbstractRankingTable<ReposRankingTable.Re
                                     return event;
                                 },
                                 Long.class, Long.class))
-                .setParallelism(tableParallelism())
+                .setParallelism(tableParallelism() * 2)
                 .returns(RepoCountsRank.class)
                 .uid("ranking-repo-counts-01")
                 .name("Per Repo Count Rankings");
