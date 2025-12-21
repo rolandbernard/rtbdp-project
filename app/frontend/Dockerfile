@@ -21,4 +21,7 @@ COPY --from=build-java /app/target/frontend.jar ./frontend.jar
 COPY --from=build-web /app/web/dist ./web/dist
 EXPOSE 8888
 EXPOSE 8887
-ENTRYPOINT [ "java", "-cp", "frontend.jar", "com.rolandb.Frontend" ]
+ENTRYPOINT [ \
+    "java", \
+    "-XX:MaxRAMPercentage=75.0", "-XX:InitialRAMPercentage=50.0", "-XX:+UseContainerSupport", \
+    "-cp", "frontend.jar", "com.rolandb.Frontend" ]

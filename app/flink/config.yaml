@@ -21,7 +21,7 @@ jobmanager:
     bind-host: 0.0.0.0
     memory:
         process:
-            size: 1600m
+            size: 1024m
     scheduler: adaptive
 restart-strategy:
     type: fixed-delay
@@ -36,7 +36,7 @@ taskmanager:
     numberOfTaskSlots: 1
     memory:
         process:
-            size: 6144m
+            size: 4096m
     bind-host: 0.0.0.0
 query:
     server:

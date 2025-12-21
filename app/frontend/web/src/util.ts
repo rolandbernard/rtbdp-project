@@ -2,7 +2,7 @@ type Comparable = number | string | Date;
 
 export function sortedKey<T>(
     fn: ((a: T) => Comparable)[],
-    rev = false
+    rev = false,
 ): (a: T, b: T) => number {
     if (fn.length == 1) {
         const f = fn[0]!;
@@ -29,7 +29,7 @@ export function sortedKey<T>(
 export function toSorted<T>(
     array: T[],
     fn: ((a: T) => Comparable)[],
-    rev?: boolean
+    rev?: boolean,
 ): T[] {
     return array.toSorted(sortedKey<T>(fn, rev));
 }
@@ -37,7 +37,7 @@ export function toSorted<T>(
 export function sort<T>(
     array: T[],
     fn: ((a: T) => Comparable)[],
-    rev?: boolean
+    rev?: boolean,
 ): T[] {
     return array.sort(sortedKey<T>(fn, rev));
 }
@@ -48,7 +48,7 @@ export function groupKey<R>(row: R, keys: (keyof R)[]): string {
 
 export function groupBy<R>(table: R[], ...keys: (keyof R)[]): R[][] {
     return Object.values(
-        Object.groupBy(table, row => groupKey(row, keys))
+        Object.groupBy(table, row => groupKey(row, keys)),
     ) as R[][];
 }
 
@@ -78,7 +78,7 @@ const MONTHS = [
 export function formatDate(
     date: Date | undefined,
     window: number = 0,
-    dur = 24 * 60 * 60 * 1000
+    dur = 24 * 60 * 60 * 1000,
 ) {
     if (!date) {
         return "No date";
@@ -143,7 +143,7 @@ function findTicksWithDiff(data: { x: Date }[], r: (d: Date) => number) {
 export function findTicks(
     data: { x: Date }[],
     start: Date = new Date(),
-    stop: Date = new Date()
+    stop: Date = new Date(),
 ) {
     const duration = stop.getTime() - start.getTime();
     if (duration > 5 * 365 * 24 * 60 * 60 * 1000) {
@@ -153,29 +153,29 @@ export function findTicks(
     } else if (duration > 4 * 31 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
             data,
-            d => Math.trunc(d.getDate() / 16) * 12 + d.getMonth()
+            d => Math.trunc(d.getDate() / 16) * 12 + d.getMonth(),
         );
     } else if (duration > 31 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
             data,
-            d => Math.trunc(d.getDate() / 4) * 12 + d.getMonth()
+            d => Math.trunc(d.getDate() / 4) * 12 + d.getMonth(),
         );
     } else if (duration > 14 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
             data,
-            d => Math.trunc(d.getDate() / 2) * 12 + d.getMonth()
+            d => Math.trunc(d.getDate() / 2) * 12 + d.getMonth(),
         );
     } else if (duration > 7 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(data, d => d.getDate());
     } else if (duration > 4 * 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
             data,
-            d => Math.trunc(d.getHours() / 6) * 31 + d.getDate()
+            d => Math.trunc(d.getHours() / 6) * 31 + d.getDate(),
         );
     } else if (duration > 24 * 60 * 60 * 1000) {
         return findTicksWithDiff(
             data,
-            d => Math.trunc(d.getHours() / 3) * 31 + d.getDate()
+            d => Math.trunc(d.getHours() / 3) * 31 + d.getDate(),
         );
     } else {
         return findTicksWithDiff(data, d => d.getHours());
@@ -197,5 +197,40 @@ export function colorFor(val: string, opacity?: number) {
         return `oklch(60% 80% ${hue} / ${opacity})`;
     } else {
         return `oklch(60% 80% ${hue})`;
+    }
+}
+
+export class FifoCache<K, V> {
+    queue: (K | undefined)[];
+    idx: number;
+    map: Map<K, V>;
+
+    constructor(capacity: number) {
+        this.queue = Array(capacity);
+        this.idx = 0;
+        this.map = new Map();
+    }
+
+    get(key: K) {
+        return this.map.get(key);
+    }
+
+    set(key: K, value: V) {
+        if (!this.map.has(key)) {
+            if (this.queue[this.idx] !== undefined) {
+                this.map.delete(this.queue[this.idx]!);
+            }
+            this.queue[this.idx] = key;
+            this.idx = (this.idx + 1) % this.queue.length;
+        }
+        this.map.set(key, value);
+    }
+
+    delete(key: K) {
+        this.map.delete(key);
+    }
+
+    entries() {
+        return this.map.entries();
     }
 }

@@ -5,6 +5,14 @@ services:
     image: confluentinc/cp-kafka:7.9.0
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-broker"
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '1.0'
+          memory: 512M
     ports:
       - "${PORT_BROKER:-29092}:29092"
     profiles:
@@ -66,6 +74,14 @@ services:
     image: timescale/timescaledb:2.23.1-pg17
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-postgres"
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
     ports:
       - "${PORT_POSTGRES:-25432}:5432"
     profiles:
@@ -82,7 +98,7 @@ services:
       POSTGRES_PASSWORD: "${USERPWD:-user}"
     command: [
       "postgres",
-      "-c", "shared_buffers=2GB",
+      "-c", "shared_buffers=1GB",
       "-c", "effective_cache_size=3GB",
       "-c", "maintenance_work_mem=512MB",
       "-c", "work_mem=32MB",
@@ -138,6 +154,14 @@ services:
       - ghareplay
     volumes:
       - ./flink/logback.xml:/conf/logback.xml:z
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 128M
+        reservations:
+          cpus: '1.0'
+          memory: 64M
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: "ruok"
     healthcheck:
@@ -152,6 +176,14 @@ services:
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-flink:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-flink-jobmanager"
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -178,6 +210,14 @@ services:
     image: "${COMPOSE_PROJECT_NAME:-rtgh}-flink:latest"
     container_name: "${COMPOSE_PROJECT_NAME:-rtgh}-flink-taskmanager"
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 5G
+        reservations:
+          cpus: '4.0'
+          memory: 4G
     depends_on:
       flink-jobmanager:
         condition: service_healthy
@@ -222,6 +262,14 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '1.0'
+          memory: 256M
     profiles:
       - producer
     command: [
@@ -300,6 +348,14 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     ports:
       - "${PORT_FRONTEND:-8888}:${PORT_FRONTEND:-8888}"
       - "${PORT_FRONTEND_WS:-8887}:${PORT_FRONTEND_WS:-8887}"

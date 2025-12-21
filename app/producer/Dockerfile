@@ -10,4 +10,7 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/producer.jar ./producer.jar
-ENTRYPOINT [ "java", "-cp", "producer.jar", "com.rolandb.Producer" ]
+ENTRYPOINT [ \
+    "java", \
+    "-XX:MaxRAMPercentage=75.0", "-XX:InitialRAMPercentage=50.0", "-XX:+UseContainerSupport", \
+    "-cp", "producer.jar", "com.rolandb.Producer" ]

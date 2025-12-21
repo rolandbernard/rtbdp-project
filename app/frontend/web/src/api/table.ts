@@ -1,7 +1,7 @@
 import type { WebSocketSubject } from "rxjs/webSocket";
 import { auditTime, filter, from, map, Observable, retry } from "rxjs";
 
-import { groupKey, sort } from "../util";
+import { FifoCache, groupKey, sort } from "../util";
 import {
     acceptsRowWith,
     getSubscriptionId,
@@ -26,7 +26,7 @@ export abstract class Table<R, V> {
     abstract dependencies(): unknown[];
 }
 
-const GLOBAL_CACHE = new Map<string, Map<string, unknown>>();
+const GLOBAL_CACHE = new Map<string, FifoCache<string, unknown>>();
 
 export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
     name: string;
@@ -40,7 +40,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         keys: (keyof R)[],
         filters?: Filters<R>,
         limited?: number,
-        deps?: unknown[]
+        deps?: unknown[],
     ) {
         super();
         this.name = name;
@@ -56,24 +56,21 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
             this.keys,
             this.filters,
             this.limited,
-            this.deps
+            this.deps,
         ) as this;
     }
 
-    globalView(): Map<string, Row<R>> {
+    globalView(): FifoCache<string, Row<R>> {
         if (!GLOBAL_CACHE.has(this.name)) {
-            GLOBAL_CACHE.set(this.name, new Map());
+            GLOBAL_CACHE.set(this.name, new FifoCache(10_000));
         }
-        return GLOBAL_CACHE.get(this.name)! as Map<string, Row<R>>;
+        return GLOBAL_CACHE.get(this.name)! as FifoCache<string, Row<R>>;
     }
 
     viewSet(view: Map<string, Row<R>>, key: string, row: Row<R>) {
         view.set(key, row);
         const globalView = this.globalView();
         globalView.set(key, row);
-        if (globalView.size > 10_000) {
-            globalView.clear();
-        }
     }
 
     viewDelete(view: Map<string, Row<R>>, key: string) {
@@ -163,9 +160,9 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
                 this.keys.map(
                     k =>
                         ([_key, row]) =>
-                            row[k] as number | string
+                            row[k] as number | string,
                 ),
-                true
+                true,
             );
             for (const [key, _row] of sorted.splice(this.limited)) {
                 view.delete(key);
@@ -211,7 +208,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
                 message =>
                     "replayed" in message
                         ? message.replayed == subscriptionId
-                        : message.table === this.name
+                        : message.table === this.name,
             )
             .pipe(
                 retry({ delay: 1000 }),
@@ -235,7 +232,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
                                     Object.keys(message.rows!).map(k => [
                                         k,
                                         message.rows![k as keyof Row<R>][i],
-                                    ])
+                                    ]),
                                 ) as Row<R>;
                                 if (
                                     this.acceptsRow(row) &&
@@ -250,7 +247,7 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
                 }),
                 filter(e => e),
                 map(() => replayed),
-                auditTime(50)
+                auditTime(50),
             );
     }
 }
@@ -264,7 +261,7 @@ export class UpdateTable<K, R> extends NormalTable<K & UpdateRow<R>> {
             this.keys as (keyof K & UpdateRow<R>)[],
             this.filters,
             this.limited,
-            this.deps
+            this.deps,
         ) as this;
     }
 
