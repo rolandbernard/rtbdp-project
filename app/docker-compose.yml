@@ -9,10 +9,10 @@ services:
       resources:
         limits:
           cpus: '2.0'
-          memory: 1G
+          memory: 2G
         reservations:
           cpus: '1.0'
-          memory: 512M
+          memory: 1G
     ports:
       - "${PORT_BROKER:-29092}:29092"
     profiles:
@@ -78,10 +78,10 @@ services:
       resources:
         limits:
           cpus: '4.0'
-          memory: 2G
+          memory: 3G
         reservations:
           cpus: '1.0'
-          memory: 1G
+          memory: 2G
     ports:
       - "${PORT_POSTGRES:-25432}:5432"
     profiles:
@@ -158,10 +158,10 @@ services:
       resources:
         limits:
           cpus: '2.0'
-          memory: 128M
+          memory: 512M
         reservations:
           cpus: '1.0'
-          memory: 64M
+          memory: 256M
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: "ruok"
     healthcheck:
