@@ -37,9 +37,14 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
       KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: "1"
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: "60000" # check whether to delete log segments every minute (default 5 minutes)
-      KAFKA_CONTROLLER_EVENT_TIMEOUT_MS: 120000
-      KAFKA_BROKER_SESSION_TIMEOUT_MS: 90000
-      KAFKA_BROKER_HEARTBEAT_INTERVAL_MS: 30000
+      KAFKA_CONTROLLER_EVENT_TIMEOUT_MS: "120000"
+      KAFKA_BROKER_SESSION_TIMEOUT_MS: "90000"
+      KAFKA_BROKER_HEARTBEAT_INTERVAL_MS: "30000"
+      KAFKA_REGISTRATION_TIMEOUT_MS: "120000"
+      KAFKA_CONTROLLER_QUORUM_FETCH_TIMEOUT_MS: "60000"
+      KAFKA_QUORUM_REPLICATION_FACTOR: "1"
+      KAFKA_INITIAL_BROKER_REGISTRATION_TIMEOUT_MS: "300000"
+      KAFKA_CONFLUENT_BALANCER_ENABLE: "false"
       KAFKA_LOG4J_ROOT_LOGLEVEL: "WARN" # optional, with next option reduces verboseness
       KAFKA_LOG4J_LOGGERS: "\
         kafka=WARN,\
@@ -49,9 +54,9 @@ services:
         kafka.producer.async.DefaultEventHandler=WARN"
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "broker:9092"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 10s
+      retries: 15
 
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
@@ -120,9 +125,9 @@ services:
     stop_grace_period: 5m
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "${USERID:-user}", "-d", "db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 10s
+      retries: 15
 
   pgadmin:
     image: dpage/pgadmin4:9.3
@@ -166,9 +171,9 @@ services:
       ZOO_4LW_COMMANDS_WHITELIST: "ruok"
     healthcheck:
       test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep imok"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 10s
+      retries: 15
 
   # Flink Containers (Job Manager + Task Manager)
   flink-jobmanager:
@@ -201,9 +206,9 @@ services:
       ROOT_LOG_LEVEL: WARN
     healthcheck:
       test: ["CMD", "curl", "-f", "localhost:8081/overview"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 10s
+      retries: 15
 
   flink-taskmanager:
     build: flink
@@ -250,9 +255,9 @@ services:
     ]
     healthcheck:
       test: ["CMD", "curl", "-f", "localhost:${PORT_GHDUMMY:-8889}/ok"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 10s
+      retries: 15
 
   producer:
     build: producer
@@ -373,9 +378,9 @@ services:
     ]
     healthcheck:
       test: ["CMD", "curl", "-f", "localhost:${PORT_FRONTEND:-8888}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 10s
+      retries: 15
 
 volumes:
   broker-data:
