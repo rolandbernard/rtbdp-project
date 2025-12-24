@@ -110,16 +110,21 @@ services:
       "-c", "max_connections=200",
       "-c", "checkpoint_timeout=15min",
       "-c", "checkpoint_completion_target=0.9",
-      "-c", "max_wal_size=4GB",
-      "-c", "min_wal_size=1GB",
+      "-c", "max_wal_size=8GB",
+      "-c", "min_wal_size=2GB",
+      "-c", "max_wal_senders=0",
+      "-c", "wal_level=minimal",
       "-c", "wal_compression=lz4",
-      "-c", "wal_buffers=16MB",
+      "-c", "wal_buffers=64MB",
+      "-c", "wal_init_zero=on",
+      "-c", "wal_recycle=on",
       "-c", "synchronous_commit=off",
       "-c", "random_page_cost=1.1",
       "-c", "effective_io_concurrency=200",
       "-c", "idle_session_timeout=600000",
       "-c", "huge_pages=try",
       "-c", "max_parallel_workers_per_gather=4",
+      "-c", "autovacuum_max_workers=8",
       "-c", "default_toast_compression=lz4"
     ]
     stop_grace_period: 5m
@@ -219,7 +224,7 @@ services:
       resources:
         limits:
           cpus: '8.0'
-          memory: 5G
+          memory: 6G
         reservations:
           cpus: '4.0'
           memory: 4G
