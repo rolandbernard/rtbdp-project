@@ -21,7 +21,7 @@ jobmanager:
     bind-host: 0.0.0.0
     memory:
         process:
-            size: 1024m
+            size: 1600m
     scheduler: adaptive
 restart-strategy:
     type: fixed-delay

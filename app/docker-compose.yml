@@ -224,7 +224,7 @@ services:
       resources:
         limits:
           cpus: '8.0'
-          memory: 6G
+          memory: 5G
         reservations:
           cpus: '4.0'
           memory: 4G
