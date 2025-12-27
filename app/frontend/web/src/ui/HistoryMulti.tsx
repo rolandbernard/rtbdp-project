@@ -15,12 +15,14 @@ interface Props<R> {
 }
 
 export default function HistoryMulti<
-    R extends { ts_start: string; kind: EventKind; num_events: number }
+    R extends { ts_start: string; kind: EventKind; num_events: number },
 >(props: Props<R>) {
     const navigate = useNavigate();
     const historyTable = props.table;
     const [loaded, rawHistory] = useTable(
-        historyTable.limit(12 * 24 * 30 * (Object.keys(EVENT_KINDS).length - 1))
+        historyTable.limit(
+            12 * 24 * 30 * (Object.keys(EVENT_KINDS).length - 1),
+        ),
     );
     const lastTime = useHistoryTime(false);
     const [keys, cleanHistory] = useMemo(() => {
@@ -30,16 +32,17 @@ export default function HistoryMulti<
         } else {
             const diff = 300_000;
             const firstDate = new Date(
-                lastTime.getTime() - 12 * 24 * 30 * diff
+                lastTime.getTime() - 12 * 24 * 30 * diff,
             ).toISOString();
             const groups = groupBy(
                 rawHistory.filter(r => r.ts_start > firstDate),
-                "kind"
+                "kind",
             ).map(e => e.sort(sortedKey([r => r.ts_start])));
             if (groups.length === 0) {
                 return [[], []];
             }
             const starts = groups.map(e => new Date(e[0]!.ts_start));
+            const idx = starts.map(() => 0);
             const start = starts.reduce((a, b) => (a < b ? a : b));
             const end = groups
                 .map(e => new Date(e[e.length - 1]!.ts_start))
@@ -53,10 +56,20 @@ export default function HistoryMulti<
                     y: 0,
                 };
                 const time = cur.getTime();
+                const timeStr = cur.toISOString();
                 for (const i in groups) {
+                    while (
+                        idx[i]! < groups[i]!.length &&
+                        groups[i]![idx[i]!]!.ts_start < timeStr
+                    ) {
+                        idx[i]! += 1;
+                    }
                     const value =
-                        groups[i]![(time - starts[i]!.getTime()) / diff]
-                            ?.num_events ?? (loaded ? 0 : NaN);
+                        (time ===
+                        new Date(groups[i]![idx[i]!]?.ts_start ?? "").getTime()
+                            ? groups[i]![idx[i]!]
+                            : undefined
+                        )?.num_events ?? (loaded ? 0 : NaN);
                     row.y += value;
                     row[keys[i]!] = value;
                 }
@@ -88,9 +101,9 @@ export default function HistoryMulti<
                         (props.highlight && k === EVENT_KINDS[props.highlight]
                             ? "all"
                             : Object.entries(EVENT_KINDS).find(
-                                  ([_, n]) => n === k
+                                  ([_, n]) => n === k,
                               )![0]),
-                    { replace: true, viewTransition: true }
+                    { replace: true, viewTransition: true },
                 )
             }
             window={5 * 60}

@@ -7,7 +7,7 @@ import type { Row } from "./client";
 export function useTable<R, V>(
     table: Table<R, V>,
     suppress = false,
-    dedicated?: string
+    dedicated?: string,
 ): [boolean, Row<R>[]] {
     // The view keeps rows from the table between different connections.
     const view = useRef(table.createView());
@@ -57,7 +57,10 @@ const coarseView = new Map();
 const coarseTable = countsHistory.where("kind", ["all"]).limit(1);
 coarseTable.connect(coarseView).subscribe(() => {
     const row = coarseTable.extractFromView(coarseView)[0];
-    if (row) {
+    if (
+        row &&
+        latestCoarseHistoryTime.getTime() !== new Date(row.ts_start).getTime()
+    ) {
         latestCoarseHistoryTime = new Date(row.ts_start);
         for (const l of coarseListeners) {
             l();
@@ -83,7 +86,10 @@ const fineView = new Map();
 const fineTable = countsHistoryFine.where("kind", ["all"]).limit(1);
 fineTable.connect(fineView).subscribe(() => {
     const row = fineTable.extractFromView(fineView)[0];
-    if (row) {
+    if (
+        row &&
+        latestFineHistoryTime.getTime() !== new Date(row.ts_start).getTime()
+    ) {
         latestFineHistoryTime = new Date(row.ts_start);
         for (const l of fineListeners) {
             l();
@@ -106,6 +112,6 @@ function getFine() {
 export function useHistoryTime(fine: boolean) {
     return useSyncExternalStore(
         fine ? subscribeFine : subscribeCoarse,
-        fine ? getFine : getCoarse
+        fine ? getFine : getCoarse,
     );
 }
