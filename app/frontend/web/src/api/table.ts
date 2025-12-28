@@ -8,8 +8,6 @@ import {
     getConnection,
     type Filter,
     type Filters,
-    type InFilter,
-    type RangeFilter,
     type Row,
     type ServerMessage,
 } from "./client";
@@ -98,19 +96,13 @@ export class NormalTable<R> extends Table<R, Map<string, Row<R>>> {
         return acceptsRowWith(row, this.filters);
     }
 
-    where<C extends keyof R>(column: C, options: InFilter<R[C]>): this;
-    where<C extends keyof R>(column: C, range: RangeFilter<R[C]>): this;
     where<C extends keyof R>(column: C, filter: Filter<R[C]>) {
         const newFilters = [...(this.filters ?? [{}])];
         const last = newFilters?.splice(-1)![0];
         newFilters.push({ ...last, [column]: filter });
         let newDeps = this.deps;
-        if (Array.isArray(filter)) {
-            newDeps = [...newDeps, ...filter];
-        } else {
-            const { start, end, substr } = filter;
-            newDeps = [...newDeps, start, end, substr];
-        }
+        const { opt, start, end, substr } = filter;
+        newDeps = [...newDeps, start, end, substr, ...(opt ?? [])];
         const newTable = this.clone();
         newTable.filters = newFilters;
         newTable.deps = newDeps;

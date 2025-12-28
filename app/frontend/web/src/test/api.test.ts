@@ -37,9 +37,9 @@ describe("acceptsRowWithOne", () => {
             active: true,
         };
         const filters: RowFilter<TestRow> = {
-            name: ["Alice", "Bob"],
+            name: { opt: ["Alice", "Bob"] },
             age: { start: 20, end: 30 },
-            active: [true],
+            active: { opt: [true] },
         };
         expect(acceptsRowWithOne(row, filters)).toBe(true);
     });
@@ -52,9 +52,9 @@ describe("acceptsRowWithOne", () => {
             active: true,
         };
         const filters: RowFilter<TestRow> = {
-            name: ["Alice", "Bob"],
+            name: { opt: ["Alice", "Bob"] },
             age: { start: 20, end: 30 },
-            active: [true],
+            active: { opt: [true] },
         };
         expect(acceptsRowWithOne(row, filters)).toBe(false);
     });
@@ -66,10 +66,12 @@ describe("acceptsRowWithOne", () => {
             age: 25,
             active: true,
         };
-        expect(acceptsRowWithOne(row, { name: ["Alice", "Bob"] })).toBe(true);
-        expect(acceptsRowWithOne(row, { name: ["Bob", "Charlie"] })).toBe(
-            false
-        );
+        expect(
+            acceptsRowWithOne(row, { name: { opt: ["Alice", "Bob"] } }),
+        ).toBe(true);
+        expect(
+            acceptsRowWithOne(row, { name: { opt: ["Bob", "Charlie"] } }),
+        ).toBe(false);
     });
 
     it("handles RangeFilter with start and end", () => {
@@ -80,9 +82,9 @@ describe("acceptsRowWithOne", () => {
             active: true,
         };
         const filters: RowFilter<TestRow> = {
-            name: ["Alice", "Bob"],
+            name: { opt: ["Alice", "Bob"] },
             age: { start: 20, end: 30 },
-            active: [true],
+            active: { opt: [true] },
         };
         expect(acceptsRowWithOne(row, filters)).toBe(true);
     });
@@ -136,9 +138,9 @@ describe("acceptsRowWith", () => {
             active: true,
         };
         const filters: Filters<TestRow> = [
-            { name: ["Bob", "Charlie"] },
+            { name: { opt: ["Bob", "Charlie"] } },
             { age: { start: 20, end: 30 } },
-            { active: [false] },
+            { active: { opt: [false] } },
         ];
         expect(acceptsRowWith(row, filters)).toBe(true);
     });
@@ -151,11 +153,10 @@ describe("acceptsRowWith", () => {
             active: true,
         };
         const filters: Filters<TestRow> = [
-            { name: ["Bob", "Charlie"] },
+            { name: { opt: ["Bob", "Charlie"] } },
             { age: { start: 30, end: 40 } },
-            { active: [false] },
+            { active: { opt: [false] } },
         ];
-
         expect(acceptsRowWith(row, filters)).toBe(false);
     });
 });

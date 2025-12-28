@@ -29,12 +29,17 @@ interface OwnerProps {
 
 function OwnerCard(props: OwnerProps) {
     const table = props.id
-        ? users.where("id", [props.id])
-        : users.where("username", [props.name]);
+        ? users.where("id", { opt: [props.id] })
+        : users.where("username", {
+              opt: [props.name],
+              substr: props.name?.toLowerCase(),
+          });
     const [loaded, rows] = useTable(table);
-    const user = rows[0];
+    const user = rows.find(e =>
+        props.id ? e.id === props.id : e.username === props.name,
+    );
     const inTransition = useViewTransitionState(
-        "/user/" + (user?.id ?? props.id)
+        "/user/" + (user?.id ?? props.id),
     );
     return user ? (
         <div
@@ -107,7 +112,7 @@ function RepoDetails(props: DetailsProps) {
                     <span className="select-text">
                         {props.reponame ??
                             props.fullname?.substring(
-                                props.fullname.indexOf("/") + 1
+                                props.fullname.indexOf("/") + 1,
                             )}
                     </span>
                 </div>
@@ -119,7 +124,7 @@ function RepoDetails(props: DetailsProps) {
                         props.fullname
                             ? props.fullname.substring(
                                   0,
-                                  props.fullname.indexOf("/")
+                                  props.fullname.indexOf("/"),
                               )
                             : undefined
                     }
@@ -243,7 +248,7 @@ function RepoRankingCounter(props: CounterProps) {
                             row
                                 ? row.rank > 10 && row.rank <= 20
                                     ? "th"
-                                    : ORDINAL[row.rank % 10] ?? "th"
+                                    : (ORDINAL[row.rank % 10] ?? "th")
                                 : ""
                         }
                         options={[...ORDINAL, ""]}
@@ -274,7 +279,7 @@ function RepoRankingCounter(props: CounterProps) {
                         props.windowSize
                     }=${Math.max(0, row?.row_number - 4)}&rrwin=${
                         props.windowSize
-                    }`
+                    }`,
                 )
             }
         >
@@ -299,10 +304,10 @@ interface RankingsProps {
 
 function RepoRankings(props: RankingsProps) {
     const [activityLoaded, activityRank] = useTable(
-        reposRanking.where("repo_id", [props.id])
+        reposRanking.where("repo_id", { opt: [props.id] }),
     );
     const [startsLoaded, starsRank] = useTable(
-        starsRanking.where("repo_id", [props.id])
+        starsRanking.where("repo_id", { opt: [props.id] }),
     );
     return (
         <>
@@ -372,7 +377,7 @@ export default function RepoPage() {
     const location = useLocation();
     const params = useParams();
     const repoId = parseInt(params["repoId"]!);
-    const [loaded, repoData] = useTable(repos.where("id", [repoId]));
+    const [loaded, repoData] = useTable(repos.where("id", { opt: [repoId] }));
     const repo = repoData[0];
     if (loaded && !repo) {
         throw new Response("Invalid Repository", {
@@ -397,7 +402,9 @@ export default function RepoPage() {
                     }}
                 >
                     {repo || location.state?.name ? (
-                        repo?.fullname ?? repo?.reponame ?? location.state.name
+                        (repo?.fullname ??
+                        repo?.reponame ??
+                        location.state.name)
                     ) : (
                         <span className="text-content/80">Loading...</span>
                     )}
@@ -451,7 +458,9 @@ export default function RepoPage() {
                         <div className="text-xs">Activity History</div>
                         <div className="w-full h-full">
                             <HistoryLong
-                                table={reposHistory.where("repo_id", [repoId])}
+                                table={reposHistory.where("repo_id", {
+                                    opt: [repoId],
+                                })}
                             />
                         </div>
                     </div>
@@ -459,7 +468,9 @@ export default function RepoPage() {
                         <div className="text-xs">Stars History</div>
                         <div className="w-full h-full">
                             <HistoryLong
-                                table={starsHistory.where("repo_id", [repoId])}
+                                table={starsHistory.where("repo_id", {
+                                    opt: [repoId],
+                                })}
                                 chartColor="#78b120"
                             />
                         </div>

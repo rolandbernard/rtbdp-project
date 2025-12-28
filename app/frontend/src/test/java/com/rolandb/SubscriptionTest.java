@@ -7,8 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rolandb.TableValueFilter.InFilter;
-import com.rolandb.TableValueFilter.RangeFilter;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,12 +49,12 @@ public class SubscriptionTest {
     @Test
     public void testUsesOnlyKey() {
         TableRowFilter filter = new TableRowFilter();
-        filter.setKeyFilters("row_number", new RangeFilter<Long>(10L, 110L, null, false));
+        filter.setKeyFilters("row_number", new TableValueFilter<Long>(10L, 110L, null, false, null));
         Subscription subscription = new Subscription(1, "test", List.of(filter), null);
         assertFalse(subscription.usesOnlyKey(table));
 
         filter = new TableRowFilter();
-        filter.setKeyFilters("id", new RangeFilter<Long>(10L, 110L, null, false));
+        filter.setKeyFilters("id", new TableValueFilter<Long>(10L, 110L, null, false, null));
         subscription = new Subscription(1, "test", List.of(filter), null);
         assertTrue(subscription.usesOnlyKey(table));
 
@@ -67,12 +65,12 @@ public class SubscriptionTest {
     @Test
     public void testEstimateCardinality() {
         TableRowFilter filter = new TableRowFilter();
-        filter.setKeyFilters("row_number", new RangeFilter<Long>(10L, 110L, null, false));
+        filter.setKeyFilters("row_number", new TableValueFilter<Long>(10L, 110L, null, false, null));
         Subscription subscription = new Subscription(1, "test", List.of(filter), null);
         assertEquals(500, subscription.estimateCardinality(table));
 
         filter = new TableRowFilter();
-        filter.setKeyFilters("id", new InFilter<Long>(List.of(1L)));
+        filter.setKeyFilters("id", new TableValueFilter<Long>(null, null, null, false, List.of(1L)));
         subscription = new Subscription(1, "test", List.of(filter), null);
         assertEquals(100, subscription.estimateCardinality(table));
 
@@ -83,19 +81,19 @@ public class SubscriptionTest {
     @Test
     public void testApplicableTo() {
         TableRowFilter filter = new TableRowFilter();
-        filter.setKeyFilters("row_number", new RangeFilter<Long>(10L, 110L, null, false));
+        filter.setKeyFilters("row_number", new TableValueFilter<Long>(10L, 110L, null, false, null));
         Subscription subscription = new Subscription(1, "test", List.of(filter), null);
         assertTrue(subscription.applicableTo(table, true));
         assertTrue(subscription.applicableTo(table, false));
 
         filter = new TableRowFilter();
-        filter.setKeyFilters("id", new InFilter<String>(List.of("abc")));
+        filter.setKeyFilters("id", new TableValueFilter<String>(null, null, null, false, List.of("abc")));
         subscription = new Subscription(1, "test", List.of(filter), null);
         assertTrue(subscription.applicableTo(table, true));
         assertTrue(subscription.applicableTo(table, false));
 
         filter = new TableRowFilter();
-        filter.setKeyFilters("id", new InFilter<Long>(List.of(1L)));
+        filter.setKeyFilters("id", new TableValueFilter<Long>(null, null, null, false, List.of(1L)));
         subscription = new Subscription(1, "test", List.of(filter), null);
         assertFalse(subscription.applicableTo(table, true));
         assertFalse(subscription.applicableTo(table, false));
@@ -117,7 +115,7 @@ public class SubscriptionTest {
     @Test
     public void testAccept() {
         TableRowFilter filter = new TableRowFilter();
-        filter.setKeyFilters("row_number", new RangeFilter<Long>(10L, 110L, null, false));
+        filter.setKeyFilters("row_number", new TableValueFilter<Long>(10L, 110L, null, false, null));
         Subscription subscription = new Subscription(1, "test", List.of(filter), null);
         assertFalse(subscription.accept(Map.of("row_number", 5L)));
         assertTrue(subscription.accept(Map.of("row_number", 50L)));
@@ -127,23 +125,23 @@ public class SubscriptionTest {
     @Test
     public void testAsSqlQueryCondition() {
         TableRowFilter filter = new TableRowFilter();
-        filter.setKeyFilters("row_number", new RangeFilter<Long>(10L, 110L, null, false));
+        filter.setKeyFilters("row_number", new TableValueFilter<Long>(10L, 110L, null, false, null));
         Subscription subscription = new Subscription(1, "test", List.of(filter), null);
         assertEquals("(((row_number >= 10 AND row_number < 110)))", subscription.asSqlQueryCondition());
 
         filter = new TableRowFilter();
-        filter.setKeyFilters("id", new InFilter<String>(List.of("abc")));
+        filter.setKeyFilters("id", new TableValueFilter<String>(null, null, null, false, List.of("abc")));
         subscription = new Subscription(1, "test", List.of(filter), null);
-        assertEquals("(((id IN ('abc'))))", subscription.asSqlQueryCondition());
+        assertEquals("((((id IN ('abc')))))", subscription.asSqlQueryCondition());
 
         filter = new TableRowFilter();
-        filter.setKeyFilters("id", new InFilter<String>(List.of("abc")));
-        filter.setKeyFilters("row_number", new RangeFilter<Long>(10L, 110L, null, false));
+        filter.setKeyFilters("id", new TableValueFilter<String>(null, null, null, false, List.of("abc")));
+        filter.setKeyFilters("row_number", new TableValueFilter<Long>(10L, 110L, null, false, null));
         TableRowFilter filter2 = new TableRowFilter();
-        filter2.setKeyFilters("id", new InFilter<String>(List.of("cde")));
+        filter2.setKeyFilters("id", new TableValueFilter<String>(null, null, null, false, List.of("cde")));
         subscription = new Subscription(1, "test", List.of(filter, filter2), null);
         assertEquals(
-                "(((id IN ('abc')) AND (row_number >= 10 AND row_number < 110)) OR ((id IN ('cde'))))",
+                "((((id IN ('abc'))) AND (row_number >= 10 AND row_number < 110)) OR (((id IN ('cde')))))",
                 subscription.asSqlQueryCondition());
     }
 

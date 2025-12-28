@@ -152,7 +152,7 @@ interface RankingsProps {
 
 function UserRankings(props: RankingsProps) {
     const [loaded, activityRank] = useTable(
-        usersRanking.where("user_id", [props.id]),
+        usersRanking.where("user_id", { opt: [props.id] }),
     );
     return (
         <>
@@ -190,7 +190,7 @@ export default function UserPage() {
     const location = useLocation();
     const params = useParams();
     const userId = parseInt(params["userId"]!);
-    const [loaded, userData] = useTable(users.where("id", [userId]));
+    const [loaded, userData] = useTable(users.where("id", { opt: [userId] }));
     const user = userData[0];
     if (loaded && !user) {
         throw new Response("Invalid User", {
@@ -273,7 +273,7 @@ export default function UserPage() {
                 >
                     <div className="text-xs">Activity History</div>
                     <HistoryLong
-                        table={usersHistory.where("user_id", [userId])}
+                        table={usersHistory.where("user_id", { opt: [userId] })}
                     />
                 </div>
             </div>

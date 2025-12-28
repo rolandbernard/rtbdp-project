@@ -54,7 +54,7 @@ export function useTable<R, V>(
 let latestCoarseHistoryTime: Date = new Date();
 const coarseListeners = new Set<() => void>();
 const coarseView = new Map();
-const coarseTable = countsHistory.where("kind", ["all"]).limit(1);
+const coarseTable = countsHistory.where("kind", { opt: ["all"] }).limit(1);
 coarseTable.connect(coarseView).subscribe(() => {
     const row = coarseTable.extractFromView(coarseView)[0];
     if (
@@ -83,7 +83,7 @@ function getCoarse() {
 let latestFineHistoryTime: Date = new Date();
 const fineListeners = new Set<() => void>();
 const fineView = new Map();
-const fineTable = countsHistoryFine.where("kind", ["all"]).limit(1);
+const fineTable = countsHistoryFine.where("kind", { opt: ["all"] }).limit(1);
 fineTable.connect(fineView).subscribe(() => {
     const row = fineTable.extractFromView(fineView)[0];
     if (

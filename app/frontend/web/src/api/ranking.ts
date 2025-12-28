@@ -5,7 +5,7 @@ import {
     acceptsRowWith,
     getSubscriptionId,
     getConnection,
-    type RangeFilter,
+    type Filter,
     type Row,
     type RowFilter,
     type ServerMessage,
@@ -53,7 +53,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
             this.keys,
             this.filters,
             this.limited,
-            this.deps
+            this.deps,
         ) as this;
         table.range = this.range;
         table.rankingKeys = this.rankingKeys;
@@ -71,8 +71,8 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
         const newTable = this.where("row_number", {
             start: start - MARGIN,
             end: end + MARGIN,
-        } as RangeFilter<RankingRow<R>["row_number"]>).limit(
-            end + MARGIN - Math.max(0, start - MARGIN)
+        } as Filter<RankingRow<R>["row_number"]>).limit(
+            end + MARGIN - Math.max(0, start - MARGIN),
         );
         newTable.range = [start, end];
         return newTable;
@@ -108,7 +108,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                     .filter(
                         row =>
                             row.row_number >= this.range![0] &&
-                            row.row_number < this.range![1]
+                            row.row_number < this.range![1],
                     )
             );
         } else {
@@ -149,9 +149,9 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
         const subscriptionFilter = this.filters?.map(f =>
             Object.fromEntries(
                 Object.entries(f).filter(([name, _filter]) =>
-                    (this.rankingKeys as string[]).includes(name)
-                )
-            )
+                    (this.rankingKeys as string[]).includes(name),
+                ),
+            ),
         ) as RowFilter<Row<RankingUpdateRow<R>>>[] | undefined;
         const subscription = {
             id: subscriptionId,
@@ -171,7 +171,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
         // Applies the update from the ranking update stream to the given range.
         const applyUpdateToRange = (
             [a, b]: [number, number],
-            update: Row<RankingUpdateRow<R>>
+            update: Row<RankingUpdateRow<R>>,
         ): [number, number] => {
             if (update.old_row_number !== null) {
                 if (a > update.old_row_number) {
@@ -224,7 +224,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                         }
                         if (row.row_number == update.old_row_number) {
                             console.warn(
-                                "found row number that should have been removed"
+                                "found row number that should have been removed",
                             );
                             return false;
                         }
@@ -275,7 +275,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                     }
                     const newRange = applyUpdateToRange(
                         safeRanges.get(rankingKey)!,
-                        update
+                        update,
                     );
                     if (
                         newRange[0] > this.range![0] ||
@@ -301,14 +301,14 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
             }
         };
         const acceptsRowOrUpdate = (
-            row: Row<RankingUpdateRow<R>> | Row<RankingRow<R>>
+            row: Row<RankingUpdateRow<R>> | Row<RankingRow<R>>,
         ) => {
             return "old_row_number" in row
                 ? acceptsRowWith(row, subscriptionFilter)
                 : this.acceptsRow(row);
         };
         const handleRow = (
-            row: Row<RankingUpdateRow<R>> | Row<RankingRow<R>>
+            row: Row<RankingUpdateRow<R>> | Row<RankingRow<R>>,
         ) => {
             if ("old_row_number" in row) {
                 if (replaySeqNum) {
@@ -332,7 +332,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                 message =>
                     "replayed" in message
                         ? message.replayed == subscriptionId
-                        : message.table === this.name
+                        : message.table === this.name,
             )
             .pipe(
                 retry({ delay: 1000 }),
@@ -364,7 +364,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                                     Object.keys(message.rows!).map(k => [
                                         k,
                                         message.rows![k as keyof Row<R>][i],
-                                    ])
+                                    ]),
                                 ) as Row<RankingRow<R>>;
                                 if (acceptsRowOrUpdate(row) && handleRow(row)) {
                                     changed = true;
@@ -376,7 +376,7 @@ export class RankingTable<R> extends NormalTable<RankingRow<R>> {
                 }),
                 filter(e => e),
                 map(() => !!replaySeqNum),
-                auditTime(50)
+                auditTime(50),
             );
     }
 }

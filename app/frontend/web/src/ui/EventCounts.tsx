@@ -26,8 +26,8 @@ interface Props {
 function EventCounterOnly(props: Props) {
     const [loaded, rawTotal] = useTable(
         countsLive
-            .where("kind", [props.kind])
-            .where("window_size", [props.windowSize]),
+            .where("kind", { opt: [props.kind] })
+            .where("window_size", { opt: [props.windowSize] }),
     );
     const total = useLatched(rawTotal[0]?.num_events ?? 0, loaded);
     return (
@@ -44,11 +44,11 @@ function EventCounterOnly(props: Props) {
 function EventCounter(props: Props) {
     const inTransition = useViewTransitionState("/event/" + props.kind);
     const history = useMemo(
-        () => countsHistory.where("kind", [props.kind]),
+        () => countsHistory.where("kind", { opt: [props.kind] }),
         [props.kind],
     );
     const historyFine = useMemo(
-        () => countsHistoryFine.where("kind", [props.kind]),
+        () => countsHistoryFine.where("kind", { opt: [props.kind] }),
         [props.kind],
     );
     return (

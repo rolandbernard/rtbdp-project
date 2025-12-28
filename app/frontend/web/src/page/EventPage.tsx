@@ -22,14 +22,14 @@ export default function EventPage() {
             statusText: "Not Found",
         });
     }
-    const singleHistoryTable = countsHistory.where("kind", [kind]);
+    const singleHistoryTable = countsHistory.where("kind", { opt: [kind] });
     const allButAll = Object.keys(EVENT_KINDS).filter(
-        e => e !== "all"
+        e => e !== "all",
     ) as EventKind[];
-    const multiHistoryTable = countsHistory.where("kind", allButAll);
+    const multiHistoryTable = countsHistory.where("kind", { opt: allButAll });
     const proportionsTable = countsLive
-        .where("window_size", ["1h"])
-        .where("kind", allButAll);
+        .where("window_size", { opt: ["1h"] })
+        .where("kind", { opt: allButAll });
     return (
         <div
             className="flex flex-col grow p-3"

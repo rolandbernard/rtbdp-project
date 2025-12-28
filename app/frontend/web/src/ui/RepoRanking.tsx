@@ -28,7 +28,7 @@ interface RepoNameProps {
 }
 
 function RepoName(props: RepoNameProps) {
-    const [loaded, rows] = useTable(repos.where("id", [props.repoId]));
+    const [loaded, rows] = useTable(repos.where("id", { opt: [props.repoId] }));
     const repo = rows[0];
     return (
         <div
@@ -84,7 +84,7 @@ function RepoRankRow(props: RepoRowProps) {
                 (props.kind === "activity"
                     ? reposHistory
                     : starsHistory) as TableType
-            ).where("repo_id", [props.repoId]),
+            ).where("repo_id", { opt: [props.repoId] }),
         [props.repoId, props.kind],
     );
     const historyFine = useMemo(
@@ -93,7 +93,7 @@ function RepoRankRow(props: RepoRowProps) {
                 (props.kind === "activity"
                     ? reposHistoryFine
                     : starsHistoryFine) as TableType
-            ).where("repo_id", [props.repoId]),
+            ).where("repo_id", { opt: [props.repoId] }),
         [props.repoId, props.kind],
     );
     return (
@@ -167,8 +167,8 @@ export default function RepoRanking() {
         kind === "trending"
             ? trendingRanking
             : kind === "stars"
-              ? starsRanking.where("window_size", [windowSize])
-              : reposRanking.where("window_size", [windowSize])
+              ? starsRanking.where("window_size", { opt: [windowSize] })
+              : reposRanking.where("window_size", { opt: [windowSize] })
     ) as RankingTable<{
         repo_id: number;
         num_events?: number;

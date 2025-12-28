@@ -22,7 +22,7 @@ interface UserNameProps {
 }
 
 function UserName(props: UserNameProps) {
-    const [loaded, rows] = useTable(users.where("id", [props.userId]));
+    const [loaded, rows] = useTable(users.where("id", { opt: [props.userId] }));
     const user = rows[0];
     return (
         <div
@@ -63,11 +63,11 @@ interface UserRowProps {
 function UserRankRow(props: UserRowProps) {
     const inTransition = useViewTransitionState("/user/" + props.userId);
     const history = useMemo(
-        () => usersHistory.where("user_id", [props.userId]),
+        () => usersHistory.where("user_id", { opt: [props.userId] }),
         [props.userId],
     );
     const historyFine = useMemo(
-        () => usersHistoryFine.where("user_id", [props.userId]),
+        () => usersHistoryFine.where("user_id", { opt: [props.userId] }),
         [props.userId],
     );
     return (
@@ -114,7 +114,7 @@ function UserRankRow(props: UserRowProps) {
 
 export default function UserRanking() {
     const [windowSize, setWindowSize] = useParam<WindowSize>("urwin", "24h");
-    const table = usersRanking.where("window_size", [windowSize]);
+    const table = usersRanking.where("window_size", { opt: [windowSize] });
     return (
         <div className="flex flex-col h-full flex-1 min-h-0 mx-1 mt-2">
             <div className="flex flex-row justify-end xl:justify-start items-end gap-2">

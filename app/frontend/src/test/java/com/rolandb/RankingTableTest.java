@@ -3,8 +3,6 @@ package com.rolandb;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.rolandb.TableValueFilter.RangeFilter;
-
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,7 +43,7 @@ class RankingTableTest {
     @Test
     void testAsSqlQueryTableNameWithLargeCardinality() {
         TableRowFilter filter = new TableRowFilter();
-        filter.setKeyFilters("row_number", new RangeFilter<Long>(10L, 110L, null, false));
+        filter.setKeyFilters("row_number", new TableValueFilter<Long>(10L, 110L, null, false, null));
         List<TableRowFilter> filters = List.of(filter);
         Subscription subscription = new Subscription(1L, "test_table", filters, null);
         String result = table.asSqlQueryTableName(subscription);

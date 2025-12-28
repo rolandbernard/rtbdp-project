@@ -66,7 +66,7 @@ function getAndStartConnection() {
                     console.error(e);
                 }
             }),
-            retry({ delay: 1000 })
+            retry({ delay: 1000 }),
         )
         .subscribe(() => {
             // We need this to keep the connection constantly open, instead
@@ -107,40 +107,35 @@ export function getSubscriptionId() {
     return res;
 }
 
-export type InFilter<T> = T[];
-export type RangeFilter<T> = {
+export type Filter<T> = {
+    opt?: T[];
     start?: T;
     end?: T;
     substr?: T extends string ? T : undefined;
 };
-
-export type Filter<T> = InFilter<T> | RangeFilter<T>;
 export type RowFilter<R> = { [P in keyof R]?: Filter<R[P]> };
 export type Filters<R> = RowFilter<R>[];
 
 export function acceptsRowWithOne<R>(row: Row<R>, filters: RowFilter<R>) {
     for (const key in filters) {
         const filter = filters[key]!;
-        if (Array.isArray(filter)) {
-            if (!filter.includes(row[key])) {
-                return false;
-            }
-        } else {
-            if (filter.start && filter.start > row[key]) {
-                return false;
-            }
-            if (filter.end && filter.end <= row[key]) {
-                return false;
-            }
-            if (
-                filter.substr &&
-                !(
-                    row[key] &&
-                    (row[key] as string).toLowerCase().includes(filter.substr)
-                )
-            ) {
-                return false;
-            }
+        if (filter.opt && !filter.opt.includes(row[key])) {
+            return false;
+        }
+        if (filter.start && filter.start > row[key]) {
+            return false;
+        }
+        if (filter.end && filter.end <= row[key]) {
+            return false;
+        }
+        if (
+            filter.substr &&
+            !(
+                row[key] &&
+                (row[key] as string).toLowerCase().includes(filter.substr)
+            )
+        ) {
+            return false;
         }
     }
     return true;

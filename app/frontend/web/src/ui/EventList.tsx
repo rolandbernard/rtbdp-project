@@ -72,7 +72,7 @@ function Description(props: DescriptionProps) {
                     to={"/user/" + split[i + 3]}
                     text={"@" + split[i + 2]}
                     name={split[i + 2]!}
-                />
+                />,
             );
         }
         if (split[i + 4] && split[i + 5]) {
@@ -82,7 +82,7 @@ function Description(props: DescriptionProps) {
                     id={props.id}
                     to={"/repo/" + split[i + 5]}
                     name={split[i + 4]!}
-                />
+                />,
             );
         }
         if (split[i + 6]) {
@@ -92,7 +92,7 @@ function Description(props: DescriptionProps) {
                     className="font-mono bg-border/25 rounded-selector px-1"
                 >
                     {split[i + 6]}
-                </code>
+                </code>,
             );
         }
         if (split[i + 7]) {
@@ -105,7 +105,7 @@ function Description(props: DescriptionProps) {
                     {split[i + 7]!.length > 256
                         ? split[i + 7]!.substring(0, 256)
                         : split[i + 7]}
-                </blockquote>
+                </blockquote>,
             );
         }
         if (split[i + 8] && split[i + 9]) {
@@ -117,7 +117,7 @@ function Description(props: DescriptionProps) {
                     className="text-primary underline dark:hover:text-primary/90 hover:text-primary/75"
                 >
                     {split[i + 8]}
-                </a>
+                </a>,
             );
         }
     }
@@ -162,13 +162,13 @@ interface Props {
 function BasicEventList(props: Props) {
     let filtered = events.limit(20);
     if (props.kindIds.length !== 0) {
-        filtered = filtered.where("kind", props.kindIds);
+        filtered = filtered.where("kind", { opt: props.kindIds });
     }
     if (props.userIds.length !== 0) {
-        filtered = filtered.where("user_id", props.userIds);
+        filtered = filtered.where("user_id", { opt: props.userIds });
     }
     if (props.repoIds.length !== 0) {
-        filtered = filtered.where("repo_id", props.repoIds);
+        filtered = filtered.where("repo_id", { opt: props.repoIds });
     }
     const [loaded, rawResults] = useTable(filtered, false, "events");
     const results = useMemo(() => {
@@ -210,7 +210,7 @@ const eventKinds = new ConstantTable(
         .map(([key, name]) => ({
             key: key as EventKind,
             name,
-        }))
+        })),
 );
 
 const EMPTY: never[] = [];
@@ -243,13 +243,9 @@ export default function EventList() {
                 />
                 <SearchSelect
                     ident="user-filter"
-                    find={ids => users.where("id", ids)}
+                    find={ids => users.where("id", { opt: ids })}
                     search={query =>
-                        users
-                            .where("username", [query])
-                            .or()
-                            .where("username", { substr: query })
-                            .limit(10)
+                        users.where("username", { substr: query }).limit(10)
                     }
                     id={row => row.id}
                     name={row => row.username!}
@@ -262,7 +258,7 @@ export default function EventList() {
                         boldQuery(
                             row.username!,
                             query,
-                            "font-semibold underline"
+                            "font-semibold underline",
                         ),
                     ]}
                     className="block w-full"
@@ -271,13 +267,9 @@ export default function EventList() {
                 />
                 <SearchSelect
                     ident="repo-filter"
-                    find={ids => repos.where("id", ids)}
+                    find={ids => repos.where("id", { opt: ids })}
                     search={query =>
                         repos
-                            .where("reponame", [query])
-                            .or()
-                            .where("fullname", [query])
-                            .or()
                             .where("reponame", { substr: query })
                             .or()
                             .where("fullname", { substr: query })
@@ -291,7 +283,7 @@ export default function EventList() {
                         boldQuery(
                             (row.fullname ?? row.reponame)!,
                             query,
-                            "font-semibold underline"
+                            "font-semibold underline",
                         )
                     }
                     className="block w-full"
