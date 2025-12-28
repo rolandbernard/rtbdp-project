@@ -134,24 +134,16 @@ export default function GlobalSearch(props: Props) {
     useEffect(() => setQuery(""), [location]);
     const debounced = useDebounce(query.toLowerCase(), 250);
     const [userComplete, userResults] = useTable(
-        users
-            .where("username", [debounced])
-            .or()
-            .where("username", { substr: debounced })
-            .limit(10),
-        debounced.length === 0
+        users.where("username", { substr: debounced }).limit(10),
+        debounced.length === 0,
     );
     const [repoComplete, repoResults] = useTable(
         repos
-            .where("reponame", [debounced])
-            .or()
-            .where("fullname", [debounced])
-            .or()
             .where("reponame", { substr: debounced })
             .or()
             .where("fullname", { substr: debounced })
             .limit(10),
-        debounced.length === 0
+        debounced.length === 0,
     );
     const results = useMemo(() => {
         const combined = [];

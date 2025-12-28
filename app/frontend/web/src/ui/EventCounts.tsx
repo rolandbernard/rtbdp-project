@@ -27,14 +27,16 @@ function EventCounterOnly(props: Props) {
     const [loaded, rawTotal] = useTable(
         countsLive
             .where("kind", [props.kind])
-            .where("window_size", [props.windowSize])
+            .where("window_size", [props.windowSize]),
     );
     const total = useLatched(rawTotal[0]?.num_events ?? 0, loaded);
     return (
         <Counter
             value={total}
             className={"text-lg pb-2 " + (loaded ? "" : "loading")}
-            maxDigits={7}
+            maxDigits={
+                { "5m": 5, "1h": 6, "6h": 7, "24h": 7 }[props.windowSize]
+            }
         />
     );
 }
@@ -43,11 +45,11 @@ function EventCounter(props: Props) {
     const inTransition = useViewTransitionState("/event/" + props.kind);
     const history = useMemo(
         () => countsHistory.where("kind", [props.kind]),
-        [props.kind]
+        [props.kind],
     );
     const historyFine = useMemo(
         () => countsHistoryFine.where("kind", [props.kind]),
-        [props.kind]
+        [props.kind],
     );
     return (
         <Link

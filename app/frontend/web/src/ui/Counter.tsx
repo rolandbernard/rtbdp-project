@@ -87,7 +87,8 @@ interface Props {
 }
 
 export default function Counter(props: Props) {
-    const digits = props.maxDigits ?? numDigits(props.value ?? 0) + 1;
+    const minDigits = numDigits(props.value ?? 0);
+    const digits = Math.max(props.maxDigits ?? minDigits + 1, minDigits);
     return (
         <div
             className={

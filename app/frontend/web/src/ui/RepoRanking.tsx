@@ -43,7 +43,7 @@ function RepoName(props: RepoNameProps) {
                 viewTransition
                 to={"/repo/" + props.repoId}
                 className={
-                    repo?.fullname ?? repo?.reponame ? "" : "text-primary/50"
+                    (repo?.fullname ?? repo?.reponame) ? "" : "text-primary/50"
                 }
                 title={repo?.fullname ?? repo?.reponame}
                 state={{
@@ -85,7 +85,7 @@ function RepoRankRow(props: RepoRowProps) {
                     ? reposHistory
                     : starsHistory) as TableType
             ).where("repo_id", [props.repoId]),
-        [props.repoId, props.kind]
+        [props.repoId, props.kind],
     );
     const historyFine = useMemo(
         () =>
@@ -94,7 +94,7 @@ function RepoRankRow(props: RepoRowProps) {
                     ? reposHistoryFine
                     : starsHistoryFine) as TableType
             ).where("repo_id", [props.repoId]),
-        [props.repoId, props.kind]
+        [props.repoId, props.kind],
     );
     return (
         <div
@@ -114,7 +114,23 @@ function RepoRankRow(props: RepoRowProps) {
                     <Counter
                         value={props.value}
                         className="text-lg"
-                        maxDigits={5}
+                        maxDigits={
+                            {
+                                trending: {
+                                    "5m": 5,
+                                    "1h": 5,
+                                    "6h": 5,
+                                    "24h": 5,
+                                },
+                                stars: { "5m": 3, "1h": 4, "6h": 4, "24h": 5 },
+                                activity: {
+                                    "5m": 3,
+                                    "1h": 4,
+                                    "6h": 5,
+                                    "24h": 5,
+                                },
+                            }[props.kind][props.windowSize]
+                        }
                     />
                 </div>
                 <div
@@ -131,8 +147,8 @@ function RepoRankRow(props: RepoRowProps) {
                             props.kind === "stars"
                                 ? "#78b120"
                                 : props.kind === "trending"
-                                ? "#d12eab"
-                                : undefined
+                                  ? "#d12eab"
+                                  : undefined
                         }
                     />
                 </div>
@@ -144,15 +160,15 @@ function RepoRankRow(props: RepoRowProps) {
 export default function RepoRanking() {
     const [kind, setKind] = useParam<"trending" | "stars" | "activity">(
         "rrkind",
-        "trending"
+        "trending",
     );
     const [windowSize, setWindowSize] = useParam<WindowSize>("rrwin", "24h");
     const table = (
         kind === "trending"
             ? trendingRanking
             : kind === "stars"
-            ? starsRanking.where("window_size", [windowSize])
-            : reposRanking.where("window_size", [windowSize])
+              ? starsRanking.where("window_size", [windowSize])
+              : reposRanking.where("window_size", [windowSize])
     ) as RankingTable<{
         repo_id: number;
         num_events?: number;

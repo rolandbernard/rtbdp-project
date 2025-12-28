@@ -64,11 +64,11 @@ function UserRankRow(props: UserRowProps) {
     const inTransition = useViewTransitionState("/user/" + props.userId);
     const history = useMemo(
         () => usersHistory.where("user_id", [props.userId]),
-        [props.userId]
+        [props.userId],
     );
     const historyFine = useMemo(
         () => usersHistoryFine.where("user_id", [props.userId]),
-        [props.userId]
+        [props.userId],
     );
     return (
         <div
@@ -88,7 +88,11 @@ function UserRankRow(props: UserRowProps) {
                     <Counter
                         value={props.value}
                         className="text-lg"
-                        maxDigits={7}
+                        maxDigits={
+                            { "5m": 4, "1h": 5, "6h": 6, "24h": 7 }[
+                                props.windowSize
+                            ]
+                        }
                     />
                 </div>
                 <div
