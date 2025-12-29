@@ -7,6 +7,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -48,7 +49,9 @@ public class RestApiClient {
         this.accessToken = accessToken.split(",");
         httpClients = new HttpClient[this.accessToken.length];
         for (int i = 0; i < httpClients.length; i++) {
-            httpClients[i] = HttpClient.newHttpClient();
+            httpClients[i] = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .build();
         }
         retryAfter = new Instant[this.accessToken.length];
         objectMapper = new ObjectMapper();
@@ -88,6 +91,7 @@ public class RestApiClient {
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .header("Authorization", "token " + accessToken[index])
                 .header("User-Agent", "curl/7.68.0")
+                .timeout(Duration.ofSeconds(10))
                 .GET();
         if (lastEtags[page - 1] != null) {
             builder.header("If-None-Match", lastEtags[page - 1]);
