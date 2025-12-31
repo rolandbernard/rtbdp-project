@@ -17,16 +17,17 @@ This project provides a real-time dashboard for monitoring public activity on Gi
 
 The application captures and analyzes a continuous stream of public events from the [GitHub Events API](https://docs.github.com/en/rest/activity/events) to provide insights into ongoing open source development trends. The application offers a live dashboard that visualizes the data by processing it in real-time. In addition to the main dashboard, it also includes dedicated pages for specific event kinds, specific repositories, and specific users.
 
-Some more details about the architecture and the API used between the frontend server and client can be found here:
+Some more details about the architecture, running the application outside docker, and the API used between the frontend server and client can be found here:
 * [Architecture](docs/architecture.md)
+* [Development](docs/development.md)
 * [API](docs/api.md)
 
 ### Key Features
 
-* **Live Event Feed**: A filterable, real-time stream of events, allowing users to filter based on event type, username, or repository name. Events are lightly processed to provide a human-readable description.
-* **Real-Time Event Counters**: Dynamic counters displaying the volume of different event types (e.g., commits, issues opened, forks, etc.) over sliding time windows, such as the last 5 minute, hour, or day.
-* **Activity Leaderboards**: Continuously updated rankings of the most active repositories and users. This is calculated based on the number of events over multiple sliding time window, such as the last 5 minutes, hour, or day.
-* **Trending Repository Detection**: Identification of repositories that are rapidly gaining popularity. This is achieved by analyzing the rate of new stars over different sliding time windows. Flink calculates the rate of new stars over time, allowing the system to flag repositories experiencing a significant increase in interest.
+* **Live Event Feed:** A filterable, real-time stream of events, allowing users to filter based on event type, username, or repository name. Events are lightly processed to provide a human-readable description.
+* **Real-Time Event Counters:** Dynamic counters displaying the volume of different event types (e.g., commits, issues opened, forks, etc.) over sliding time windows, such as the last 5 minute, hour, or day.
+* **Activity Leaderboards:** Continuously updated rankings of the most active repositories and users. This is calculated based on the number of events over multiple sliding time window, such as the last 5 minutes, hour, or day.
+* **Trending Repository Detection:** Identification of repositories that are rapidly gaining popularity. This is achieved by analyzing the rate of new stars over different sliding time windows.
 
 ### Project Structure
 
@@ -66,7 +67,7 @@ git clone https://github.com/rolandbernard/rtbdp-project
 cd rtbdp-project
 ```
 
-You can run this project either outside Docker, or by using the provided Docker Compose configuration file. Using the Docker Compose configuration is most likely going to be easier. For some components, it will be easier for development to run them outside of docker.
+You can run this project either outside Docker, or by using the provided Docker Compose configuration file. Using the Docker Compose configuration is most likely going to be easier. However, for some components, it will be easier for development to run them outside of docker.
 
 *Note: The project has only been tested on Linux (Fedora 43) running on x86-64 hardware.*
 
@@ -80,38 +81,7 @@ Assuming you have Docker and Docker Compose installed on your machine, getting t
 
 ### Running Outside Docker
 
-#### Setup
-
-To set up and run this project outside of docker, you will need to run a couple of components yourself (our by using a subset of `COMPOSE_PROFILES` in the docker compose setup):
-* A Kafka cluster with at least one broker.
-* A PostgreSQL database with the TimescaleDB extension installed.
-* A Flink cluster with a job manager to submit jobs to (optional).
-
-You will also have to have the following dependencies installed:
-* Java 17
-* Maven
-* Node.js
-* npm
-
-#### Usage
-
-Here is a description of how to run all the components of the project in 
-
-##### Dummy GitHub Events API Server
-
-
-
-##### Producer
-
-
-
-##### Processor
-
-
-
-##### Frontend
-
-
+For information about running the application outside of docker, mainly useful for development, see [Development](docs/development.md).
 
 ## Screenshots of the User Interface
 
