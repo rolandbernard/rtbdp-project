@@ -116,5 +116,38 @@
         * For 5m tumbling windows allowed lateness is set to 50m. For 10s windows to 100s.
 * Functionalities
   * including screenshots for illustration
+    * Live Event Stream
+      * Displays latest events.
+      * Human-readable description of the events.
+      * Filters by: Kind, User, Repository.
+    * Sliding Window Counters
+      * Updated every second, aggregate over last 5m, 1h, 6h, and 24h.
+      * Counts for each kind of event.
+    * Historical Counts
+      * Shows a chart of event counts over time.
+    * Leaderboards
+      * Most active users.
+      * Most active repositories.
+      * Repositories with the highest number of new stars.
+      * Repositories with the highest trending score.
+    * Trending Detection
+      * Trending score based on linear combination of stars in the last 5m, 1h, 6h, and 24h.
+    * Repository Pages
+      * Per repository statistics: number of events and number of stars in sliding window.
+      * Ranking of the repository based on the above metrics.
+      * Historical charts of event counts and new stars.
+    * User Pages
+      * Per user statistics based on number of events.
+      * Ranking of the user based on the number of events.
+      * Historical charts of event counts.
 * Lessons learned
   * e.g., what have worked? what not? what would you improve?
+  * Getting the high frequency updates (1s) for long windows (24h) required implementing a custom KeyedProcessFunction, because regular Flink windowing was too inefficient.
+  * Getting the complete ranking update in real-time was challenging. Required cooperation from Flink, PostgreSQL, and the client.
+  * GitHub changed the API around October, leading to it including less information.
+  * Debugging the system, especially the Flink processor, was a significant challenge due to limited visibility into the state of a Flink operator.
+  * Improvements:
+    * More sophisticated tending detection. Current approach is very simplistic.
+    * More data sources, e.g., tracking mentions of repositories on social media to better understand trending behavior.
+    * Analysis of commit, issue, and pull request comment messages.
+    * More visualizations of the existing data.
