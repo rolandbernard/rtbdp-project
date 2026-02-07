@@ -34,8 +34,8 @@
     * Authentication via tokens.
   * Dummy API and GHArchive
     * Usage of dummy API for testing and offline development.
-    * Does not require an API token.
-    * Uses historical GHArchive data.
+    * Does not require a real GitHub API token.
+    * Uses historical data from GHArchive.
   * Data Characteristics
     * Volume and Velocity
       * Thousands of events per minute: Generally hovering around 70-120 events/second depending on the time of day.
@@ -44,7 +44,11 @@
       * Can be polled at different intervals. Project implementation defaults to 2.25 seconds, but live demo polling every 750ms.
     * Variety
       * Many different eventy types, e.g., for pushing commits, opening/closing/merging pull request, starring repositories, creating forks, opening/closing issues, etc.
+      * Varied nested JSON structures representing the various event types.
     * Delay
+      * The events retrieved from the API are about 5 minutes behind real-time.
+      * They are generally in order of created time with some exceptions.
+      * 95% of events are in-order.
       * 99.8% of events are less than 10 seconds out of order.
       * 99.9% of events are no more than 5 minutes out of order.
       * However, some events are significantly delayed, multiple days even.
@@ -106,7 +110,8 @@
       * Write to Kafka + DB.
   * Scalability and Reliability
     * Increased Kafka partitions and Flink parallelism.
-      * Some task, like ranking, are still inherently not parallelize.
+      * Some task, like ranking, are still inherently not parallelize well.
+    * Kafka message retention ensures restart of Flink job is possible without loosing events.
     * Flink setup for high availability with checkpoints and zookeeper.
     * Event-time processing is used in Flink.
       * Timestamps directly taken from the `created_at` field in the GitHub events.
@@ -114,24 +119,30 @@
       * Wherever appropriate, late events are still counted.
         * For live sliding window counts, they are counter if the window is still active.
         * For 5m tumbling windows allowed lateness is set to 50m. For 10s windows to 100s.
+    * If producer goes down, events will be lost. Could be solved by running multiple producers, since there is a deduplication step in the Flink processor.
 * Functionalities
   * including screenshots for illustration
-    * Live Event Stream
-      * Displays latest events.
-      * Human-readable description of the events.
-      * Filters by: Kind, User, Repository.
-    * Sliding Window Counters
-      * Updated every second, aggregate over last 5m, 1h, 6h, and 24h.
-      * Counts for each kind of event.
-    * Historical Counts
-      * Shows a chart of event counts over time.
-    * Leaderboards
-      * Most active users.
-      * Most active repositories.
-      * Repositories with the highest number of new stars.
-      * Repositories with the highest trending score.
-    * Trending Detection
-      * Trending score based on linear combination of stars in the last 5m, 1h, 6h, and 24h.
+    * Live Dashboard
+      * Live Event Stream
+        * Displays latest events.
+        * Human-readable description of the events.
+        * Filters by: Kind, User, Repository.
+      * Sliding Window Counters
+        * Updated every second, aggregate over last 5m, 1h, 6h, and 24h.
+        * Counts for each kind of event.
+      * Historical Counts
+        * Shows a chart of event counts over time.
+      * Leaderboards
+        * Most active users.
+        * Most active repositories.
+        * Repositories with the highest number of new stars.
+        * Repositories with the highest trending score.
+      * Trending Detection
+        * Trending score based on linear combination of stars in the last 5m, 1h, 6h, and 24h.
+    * Event Kind Pages
+      * Insights into specific event types.
+      * Shows historical counts for specific event type.
+      * Shows distribution of event types in the last hour (pie chart) and over time (stacked area chart).
     * Repository Pages
       * Per repository statistics: number of events and number of stars in sliding window.
       * Ranking of the repository based on the above metrics.
@@ -140,6 +151,9 @@
       * Per user statistics based on number of events.
       * Ranking of the user based on the number of events.
       * Historical charts of event counts.
+    * Search Bar
+      * Allows searching for specific users and repositories.
+      * Brings one to the dedicated repository or user page.
 * Lessons learned
   * e.g., what have worked? what not? what would you improve?
   * Getting the high frequency updates (1s) for long windows (24h) required implementing a custom KeyedProcessFunction, because regular Flink windowing was too inefficient.
