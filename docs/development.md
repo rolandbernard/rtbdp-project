@@ -10,7 +10,7 @@ To set up and run this project outside of docker, you will need to run a couple 
 * A Flink cluster with a job manager to submit jobs to (optional).
 
 You will also have to have the following dependencies installed:
-* Java 17
+* Java 21
 * Maven
 * Node.js
 * npm
