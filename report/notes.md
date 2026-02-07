@@ -31,11 +31,12 @@
     * Is the primary datasource.
     * `/events` HTTP endpoint.
     * Retrieving data using periodic polling.
+    * A maximum of 300 events is available at any one time. The producer polls all 300 by default.
     * Authentication via tokens.
   * Dummy API and GHArchive
-    * Usage of dummy API for testing and offline development.
-    * Does not require a real GitHub API token.
+    * Usage of dummy API for testing and offline development, avoiding rate limits and the need for a real GitHub API token.
     * Uses historical data from GHArchive.
+    * Offers a configurable initial delay between real-time and served events, and a configurable speed-up factor for testing.
   * Data Characteristics
     * Volume and Velocity
       * Thousands of events per minute: Generally hovering around 70-120 events/second depending on the time of day.
@@ -55,8 +56,8 @@
 * Technologies and overall architecture
   * technologies (languages, libraries/frameworks, ...; a few sentences each)
     * Backend components all implemented in Java. 
-      * Using RxJava for stream processing.
-      * Argument parsing using Argparse4j.
+      * Using RxJava for reactive stream processing and asynchronous operations. Is used both in the producer and the frontend server.
+      * Argument parsing using Argparse4j for command-line configuration of the producer and other components.
       * Using Jackson for JSON parsing.
       * Logging using SLF4J and Logback for logging.
       * Using JUnit for testing.
@@ -66,33 +67,54 @@
       * Using React, React Router, and Tailwind CSS for the UI.
       * Using Lucide icons and Recharts for the charts.
       * RxJS used mainly for the WebSocket client.
+      * Testing is done with Vitest.
+      * Linting is configured with ESLint.
     * Apache Kafka
     * Apache Flink
+      * Used as the core stream processing engine. It uses a RocksDB state backend for fault-tolerant and durable state management.
     * PostgreSQL with TimescaleDB
+      * Serves as the primary persistent storage layer for processed data. Flink connects to it via a custom JDBC connector.
     * Docker and Docker Compose
   * system architecture with required diagram
     * Ingestion
       * Java based custom Kafka Producer.
       * Polls the GitHub Events API.
       * Publishes events to a Kafka topic.
+      * The producer is responsible for setting up the Kafka topic.
     * Messaging
       * Kafka is used for real-time event streaming.
       * One topic for the raw events.
       * Multiple topics for the outputs of the processor.
     * Storage
-      * PostgreSQL + TimescaleDB used to store the results of the processor,
-      * Enables clients to get an initial snapshot for populating the dashboard.
-      * Allows for retrieving historical data.
+      * PostgreSQL + TimescaleDB used to store the results of the processor.
+      * Enables clients to get an initial snapshot for populating the dashboard and allows for retrieving historical data.
+      * Utilizes `timescaledb` extension for time-series data management, specifically partitioning and retention policies, and `pg_trgm` extension for efficient fuzzy string matching on user and repository names.
+      * Data Model Overview
+        * `events` table stores processed events (`created_at`, `id`, `kind`, `repo_id`, `user_id`, `details`, `seq_num`).
+        * `users` table aggregates user details (`id`, `username`, `avatar_url`, `html_url`, `user_type`) with `seq_num` for each field and a GIN index on `username` for search.
+        * `repos` table aggregates repository details (`id`, `reponame`, `fullname`, `owner_id`, `star_count`, etc.) with `seq_num` for each field and GIN indexes on `reponame` and `fullname`.
+        * Live aggregations (`counts_live`, `users_live`, `repos_live`, `stars_live`, `trending_live`)
+          * Store real-time windowed aggregates.
+          * Indexed to support efficient ranking calculations.
+        * Ranking views (`counts_ranking`, `users_ranking`, `repos_ranking`, `stars_ranking`, `trending_ranking`):
+          * Virtual views that compute `row_number` and `rank` based on live aggregate scores.
+          * Optimized `_ranking_point` views provide efficient querying for individual rankings, crucial for frontend performance.
+        * History aggregations (`counts_history`, `users_history`, `repos_history`, `stars_history`):
+          * Store historical windowed event and star counts.
+          * Implemented as TimescaleDB hypertables with partitioning intervals and retention policies.
     * Processing
       * Data processing is performed by a Flink job.
       * Implemented in Java.
       * Raw events are read from Kafka.
-      * Results are written both to Kafka topics and tables in the PostgreSQL database.
+      * Watermark strategy to tolerate up to 10 seconds of out-of-orderness, assigning timestamps based on the `created_at` field.
+      * The job is configured with a RocksDB state backend for incremental checkpoints and at-least-once processing semantics.
+      * Results are written both to Kafka topics (for real-time updates) and to PostgreSQL tables using a custom JDBC sink that leverages for efficiency.
     * Frontend
       * Server
+        * Implemented as a Java application.
         * Provides an HTTP server that serves static files.
-        * Provides an API over WebSockets.
-        * Reads snapshots from PostgreSQL.
+        * Provides an API over WebSockets on a separate port.
+        * Reads snapshots from PostgreSQL via a JDBC connection.
         * Reads real-time updates from Kafka.
       * Client
         * Implemented as a single page application.
