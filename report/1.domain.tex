@@ -3,12 +3,26 @@
 
 \subsection{Context and Motivation}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+Open-source software development has grown into a continuously evolving global ecosystem. GitHub represents the central hub for much of this activity, hosting millions of projects and developers collaborating on open-source projects. As such, the platform generates a large volume of data every second, some of which is publicly available though the GitHub API.
+
+While GitHub provides some native analytics, and various third-party dashboards exist, the majority focus on historical data analysis or static snapshots of specific repositories. There is a lack of tools that provide immediate and global insights into the ecosystem as it changes. Developers, researchers, and companies could benefit from monitoring trends in near real-time, detecting emerging projects as they start to gain traction, and observe global development activity distribution.
 
 \subsection{Use Cases}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+The system designed for this project is intended to support several key use cases for analyzing the landscape of open-source development on GitHub:
+
+\paragraph{Monitoring Project Popularity} By tracking new star events in real-time, the system allows users to gauge the immediate community reaction to new releases or announcements.
+
+\paragraph{Discovering Emerging Repositories} The system identifies repositories that are rapidly gaining traction, i.e., trending repositories, within short time windows, highlighting potential viral projects.
+
+\paragraph{Observing Development Activity} Users can observe the volume of commits, issues, and pull requests to identify active maintenance periods or crunch times in major projects.
+
+\paragraph{Tracking User Contributions} The dashboard enables the tracking of highly active users, providing a leaderboard of the most productive contributors across the platform.
 
 \subsection{Project Objectives}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+The goal of this project is to develop a real-time application able to solve these use cases. To this end, it aims to achieve specific functional and technical goals.
+
+The project will continuously acquire public GitHub events from the official API. These raw events will then be enriched with real-time statistics and human-readable descriptions generated by the system. Further, a continuously updated leaderboards for active users and repositories will be generated based on sliding time window statistics. The project further aims to provide a responsive and interactive web interface allowing users to visualize this information. The frontend should allow filtering events and drilling down into specific repository or user statistics.
+
+The project achieves these goals by implementing a fully distributed pipeline using technologies such as Apache Kafka for messaging, Apache Flink for stream processing, and PostgreSQL for storage. It is a focus of the project to ensure low-latency processing as much as possible to maintain the real-time nature of the dashboard. Further, fault tolerance guarantees and recovery capabilities to handle potential failures in the ingestion or processing layers are considered. Finally, the project provides a reproducible deployment environment using Docker and Docker Compose.
