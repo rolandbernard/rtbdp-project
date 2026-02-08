@@ -3,12 +3,53 @@
 
 \subsection{GitHub Events API}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+The primary source of data for this project is the official \href{https://docs.github.com/en/rest/activity/events}{GitHub Events API} \cite{events}, specifically the \inlinecode{api.github.com/events} HTTP endpoint. This endpoint provides the most recent events from public activity across the entire GitHub platform. The data can be retrieved via periodic polling of the HTTP endpoint to effectively get a high-volume stream of events. Each event is delivered as a JSON object containing detailed information about the action performed.
+
+However, this data source has some limitations relevant to the project. Firstly, the endpoint only offers the 300 most recent events. This means that it is not possible to get older events. Additionally, a maximum of 100 events can be retrieved with a single request, necessitating a mechanism to request three pages at once to obtain all 300 events. Further, the events are not updated continuously, instead testing suggests that all 300 events seem to be replaced every second. Finally, the API has strict rate limits associated with unauthenticated requests, requiring the system to use personal access tokens.
 
 \subsection{Dummy API and GHArchive}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+To facilitate offline development and testing without exhausting API rate limits, and without needing any real access token at all, a dummy API server was developed. This component serves historical data sourced from \href{https://www.gharchive.org/}{GHArchive} \cite{gharchive}. Note that while GHArchive does not require any access token, it is not suitable as the main data source because it is two to three hours delayed and does not include all events. For testing, the dummy API server allows for a configurable initial delay and speed-up factors, enabling the simulation of either high-velocity traffic patterns for stress-testing the Flink pipeline, or low-velocity traffic for easier debugging of potential issues, all without relying on the live GitHub API.
 
 \subsection{Data Characteristics}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+\begin{figure}[ht]
+    \centering
+\begin{verbatim}{
+  "id": "8251545586",
+  "type": "PushEvent",
+  "actor": {
+    "id": 121951544,
+    "login": "movieflixgr",
+    "display_login": "movieflixgr",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/[..]",
+    "avatar_url": "https://avatars.github[..]"
+  },
+  "repo": {
+    "id": 1126450259,
+    "name": "movieflixgr/Subtitles",
+    "url": "https://api.github.com/repos/[..]"
+  },
+  "payload": {
+    "repository_id": 1126450259,
+    "push_id": 30546526697,
+    "ref": "refs/heads/main",
+    "head": "d5e986993aa47729cb18a82ac9d1[..]",
+    "before": "6bf91f2d0600084cc7218c1934[..]"
+  },
+  "public": true,
+  "created_at": "2026-02-08T20:09:50Z"
+}\end{verbatim}
+    \caption{An example event extracted from the GitHub Events API. It shows the most common type of event, corresponding to the push of a commit to a repository. Some values have been truncated for brevity, indicated with \inlinecode{[..]}.}
+\end{figure}
+
+\paragraph{Variety}
+The data is highly heterogeneous. The API returns JSON objects representing a wide array of event types, including PushEvent, PullRequestEvent, IssuesEvent, WatchEvent (starring), and ForkEvent. Each event type possesses a unique nested JSON structure containing detailed information about the actor, the repository, and the specific action payload
+
+\paragraph{Volume and Velocity}
+
+
+\paragraph{Veracity and Delay}
+
+
