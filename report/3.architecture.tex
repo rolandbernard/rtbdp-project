@@ -14,13 +14,31 @@ Further, the project makes use of a number of different technologies for the sto
 
 \subsection{System Architecture}
 
+The project is build on a variation of the provided reference architecture. \Cref{fig:arch} shows and overview of the overall system architecture with all important components. The system follows a modular architecture, orchestrated via Docker Compose. The workflow is divided into four distinct stages, data ingestion, stream processing, data serving, and display of the results in the frontend.
+
 \input{tikzfigures/architecture.tex}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+\subsubsection{Data Ingestion}
+A custom Java-based Kafka Producer is responsible for interfacing with the GitHub Events API. It polls the GitHub Events API at a configurable interval and depth. The code is implemented to respect GitHub's rate limiting, automatically pausing if the limit is hit. After receiving the list of events from the GitHub API, this component will further handle de-duplication of events, as the API may return overlapping events in subsequent polls. For this task, the producer maintains a cache of the most recent event IDs. The producer then publishes the raw GitHub events as JSON serialized strings to a dedicated Kafka topic, called \inlinecode{raw_events} in this project.
 
-\subsection{Workflow}
+During real deployment of the application, it is intended that the producer polls from the official GitHub API. However, for testing and development proposes a dummy API server has been developed. It offers the same \inlinecode{/events} endpoint, but does not require a real access token and has configurable throughput. The producer interacts with it in the same way as the official API.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+\subsubsection{Stream Processing}
+The core processing on the events is performed in a custom Apache Flink job. It is used to process the stream of events to extract relevant information and compute various aggregations to derive meaningful analytics. It consumes raw events from the \inlinecode{raw_events} Kafka topic, performs several complex processing operations.
+
+
+
+
+\subsubsection{Data Serving}
+The processed data from Flink will be published to new Kafka topics. A Java-based server will consume these topics and expose the results via a WebSocket connection to the frontend.
+
+\subsubsection{Frontend}
+The user interface will be a custom single-page application using HTML and JavaScript, served by the frontend server. It will leverage the ECharts library to create an interactive dashboard with dynamic charts that update in real-time as new data arrives.
+
+\subsubsection{Storage and Data Model}
+
+\subsubsection{Messaging}
+
 
 \subsection{Scalability and Reliability}
 

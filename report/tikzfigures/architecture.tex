@@ -6,9 +6,9 @@
     \draw[flow] (github) -> (producer) node [midway, fill=white, above=0.1] {HTTP};
     \node[internal, above=of producer] (kafka) {Kafka Broker};
     \draw[flow] (producer) -> (kafka);
-    \node[internal, dashed, above=0.6 of kafka, xshift=33] (kafkaui) {Kafka UI};
+    \node[internal, dashed, above=0.6 of kafka, xshift=40] (kafkaui) {Kafka UI};
     \draw[dashed, thick] (kafka) -> (kafkaui);
-    \node[build, above=0.6 of kafka, xshift=115] (processor) {Flink Processor};
+    \node[build, above=0.6 of kafka, xshift=130] (processor) {Flink Processor};
     \node[internal, below=0.5 of processor] (jobmanager) {Job Manager};
     \draw[dashed, thick] (processor) -> (jobmanager);
     \node[internal, right=of jobmanager] (taskmanager) {Task Manager};
@@ -21,10 +21,10 @@
     \end{scope}
     \draw[flow] ($(kafka.east)-(0,0.25)$) -> ($(kafka -| flink.west)-(0,0.25)$);
     \draw[flow] ($(kafka -| flink.west)+(0,0.25)$) -> ($(kafka.east)+(0,0.25)$);
-    \node[build, dashed, right=0.75 of producer] (dummy) {Dummy API Server};
+    \node[build, dashed, right=1.5 of producer] (dummy) {Dummy API Server};
     \draw[flow, dashed] (dummy) -> (producer);
-    \node[build, above=2.575 of kafka] (frontend) {Java Frontend Server};
-    \draw[flow] (kafka) -> (frontend);
+    \node[build, above=2.575 of kafka, xshift=15] (frontend) {Java Frontend Server};
+    \draw[flow] (kafka) -> ($(kafka |- frontend.south)$);
     \node[internal, above=of processor] (postgres) {PostgreSQL};
     \node[internal, dashed, right=0.5 of postgres] (pgadmin) {pgAdmin};
     \draw[dashed, thick] (postgres) -- (pgadmin);
