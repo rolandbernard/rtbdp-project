@@ -5,9 +5,9 @@ The application is composed of several services, orchestrated by Docker Compose.
 ```mermaid
 flowchart LR
     api("GitHub Events API")
-    dummy("Events API Dummy")
     ui("HTML/JS web frontend running in the browser")
     subgraph app ["Docker Compose Application"]
+        dummy("Events API Dummy")
         producer("Custom Producer")
         frontend("Frontend Server")
         broker("Kafka Broker")
