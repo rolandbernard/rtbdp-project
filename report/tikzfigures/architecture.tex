@@ -2,7 +2,7 @@
   \centering
   \begin{tikzpicture}[scale=0.9, transform shape]
     \node[external] (github) {GitHub Events API};
-    \node[build, right=1.5 of github] (producer) {Java Producer};
+    \node[build, right=1.5 of github] (producer) {Kafka Producer};
     \draw[flow] (github) -> (producer) node [midway, fill=white, above=0.1] {HTTP};
     \node[internal, above=of producer] (kafka) {Kafka Broker};
     \draw[flow] (producer) -> (kafka);
@@ -23,7 +23,7 @@
     \draw[flow] ($(kafka -| flink.west)+(0,0.25)$) -> ($(kafka.east)+(0,0.25)$);
     \node[build, dashed, right=1.5 of producer] (dummy) {Dummy API Server};
     \draw[flow, dashed] (dummy) -> (producer);
-    \node[build, above=2.575 of kafka, xshift=15] (frontend) {Java Frontend Server};
+    \node[build, above=2.575 of kafka] (frontend) {Frontend Server};
     \draw[flow] (kafka) -> ($(kafka |- frontend.south)$);
     \node[internal, above=of processor] (postgres) {PostgreSQL};
     \node[internal, dashed, right=0.5 of postgres] (pgadmin) {pgAdmin};

@@ -12,10 +12,10 @@ The user interface is designed to be intuitive while displaying high-density inf
     \label{fig:dash}
 \end{figure}
 
-The home page serves as the main dashboard for the application. It shows a number of different components to provide an overarching view. An example screenshot depicting the user interface of the dashboard can be seen in \cref{fig:dash}.
+The home page serves as the main dashboard for the application. It shows a number of different components to provide an overarching view. An example screenshot depicting the user interface of the dashboard can be seen in \Cref{fig:dash}.
 
 \paragraph{Live Event Stream}
-A scrolling feed of the latest events is shown on the bottom right of the dashboard. Each event is parsed into a human-readable description in the Flink processor, and these descriptions are splayed here. Users can filter this stream by event kind, user, or repository, using the input fields right above the live feed.
+A scrolling feed of the latest events is shown on the bottom right of the dashboard. Each event is parsed into a human-readable description in the Flink processor, and these descriptions are displayed here. Users can filter this stream by event kind, user, or repository, using the input fields right above the live feed.
 
 \paragraph{Real-Time Event Counters}
 Dynamic counters display the total volume of specific event types, e.g., commits, opened or closed issues, or new forks, over sliding windows at the top of the dashboard. The duration of the sliding window is configurable to either 5 minutes, 1 hour, 6 hours, or one day. In all cases they are updated once a second. Next to the counters the UI also displays a chart showing the evolution of the volume over the selected time window.
@@ -29,13 +29,13 @@ Dynamic counters display the total volume of specific event types, e.g., commits
     \label{fig:board}
 \end{figure}
 
-Still on the main dashboard, the application also maintains continuously updated rankings over users and repositories as shown in \cref{fig:board}. User can be ranked by the number of events they generated. Repositories can also be ranked by the volume of activity, but they can additionally be ranked also by either the trending score or the raw number of stars. All rankings, except for the trending score that already combines all windows lengths, it is possible for the user to select the length of sliding window for which the ranking is to be shown. Like for the per-kind counter, also the ranking shows a chart to illustrate the evolution over the selected window.
+Still on the main dashboard, the application also maintains continuously updated rankings over users and repositories as shown in \Cref{fig:board}. Users can be ranked by the number of events they generated. Repositories can also be ranked by the volume of activity, but they can additionally be ranked also by either the trending score or the raw number of stars. All rankings, except for the trending score that already combines all windows lengths, it is possible for the user to select the length of sliding window for which the ranking is to be shown. Like for the per-kind counter, also the ranking shows a chart to illustrate the evolution over the selected window.
 
 The trending score highlights repositories rapidly gaining popularity. This is calculated using a linear combination of new stars over multiple time windows, allowing the system to detect viral trends faster than simple daily counts, while being less noisy than simply using the 5-minute counts.
 
 \subsection{Detailed Pages} \label{details}
 
-Beyond the main dashboard, specific views allow for deeper analysis. These can be navigated though from the main dashboard either through the search functionality, clicking the real-time event counter cards, or by using one of the links in the leaderboards or event stream.
+Beyond the main dashboard, specific views allow for deeper analysis. These can be navigated through from the main dashboard either through the search functionality, clicking the real-time event counter cards, or by using one of the links in the leaderboards or event stream.
 
 \begin{figure}[ht]
     \centering
@@ -45,17 +45,17 @@ Beyond the main dashboard, specific views allow for deeper analysis. These can b
 \end{figure}
 
 \paragraph{Events Page}
-Firstly, there is a page dedicated for each event kind. An example of such a page is shown in \cref{fig:events}. This page provides insights into specific types of events and the distribution among event types. At the top of the page, it includes an area chart showing how the volume for the selected event kind changed over time. The page further includes a pie chart showing the distribution of event types over the last hour and stacked area charts for historical trends at the bottom of the page. A user may click on one of the slices of the pie, or areas of the chart, to quickly switch to the dedicated view for that event type. This will affect the area chart shown at the top.
+Firstly, there is a page dedicated for each event kind. An example of such a page is shown in \Cref{fig:events}. This page provides insights into specific types of events and the distribution among event types. At the top of the page, it includes an area chart showing how the volume for the selected event kind changed over time. The page further includes a pie chart showing the distribution of event types over the last hour and stacked area charts for historical trends at the bottom of the page. A user may click on one of the slices of the pie, or areas of the chart, to quickly switch to the dedicated view for that event type. This will affect the area chart shown at the top.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=\linewidth]{figures/repo.png}
-    \caption{Example screenshot of the dedicated repository page. General repository information is show at the top. Below that the rankings by different time windows and metrics and at the very bottom the historical activity and new stars.}
+    \caption{Example screenshot of the dedicated repository page. General repository information is shown at the top. Below that the rankings by different time windows and metrics and at the very bottom the historical activity and new stars.}
     \label{fig:repo}
 \end{figure}
 
 \paragraph{Repository Page}
-A page dedicated to each individual repository is also provided as depicted in \cref{fig:repo}. The page includes, in addition to some general information about the repository such as a link to GitHub, a description, or a link to the owner, also per-repository statistics. It shows the rank of the repository in the global activity and new stars leaderboards for all available time windows. Further, included is also a historical chart of event counts and one of new stars.
+A page dedicated to each individual repository is also provided as depicted in \Cref{fig:repo}. The page includes, in addition to some general information about the repository such as a link to GitHub, a description, or a link to the owner, also per-repository statistics. It shows the rank of the repository in the global activity and new stars leaderboards for all available time windows. Further, included is also a historical chart of event counts and one of new stars.
 
 \begin{figure}[ht]
     \centering
@@ -76,4 +76,4 @@ Similar to the repository page, details for a specific user's activity history a
     \label{fig:search}
 \end{figure}
 
-A global search bar is provided at the top of all pages as shown in \cref{fig:search}. The search bar allows the user of the application to quickly search for specific users and repositories based on user or repository name. This enabled the application to be used also for analyzing individual user and repositories, which would otherwise be very hard to find if they are not at the top of the leaderboards. Clicking on one of the search results navigates the user directly to the relevant detail page described in \cref{details}.
+A global search bar is provided at the top of all pages as shown in \Cref{fig:search}. The search bar allows the user of the application to quickly search for specific users and repositories based on user or repository name. This enabled the application to be used also for analyzing individual user and repositories, which would otherwise be very hard to find if they are not at the top of the leaderboards. Clicking on one of the search results navigates the user directly to the relevant detail page described in \Cref{details}.
