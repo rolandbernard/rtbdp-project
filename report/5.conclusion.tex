@@ -1,14 +1,28 @@
 
 \section{Lessons Learned} \label{leasons}
 
+This section concludes the report by discussing what has worked well in the project, what were some of the main challenges, and what future improvements could be made to the system.
+
 \subsection{Successes}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+Overall, the architecture proved robust for the defined use case. The combination of Kafka and Flink handled the throughput of the GitHub API relatively well, even on somewhat older hardware. The use of Docker Compose significantly simplified the deployment process, by making the complex distributed system reproducible on different machines. The integration of TimescaleDB allowed for efficient storage and querying of historical time-series data without the operational overhead of managing a separate time-series database. The resulting dashboard provides a window into the development activity of the open-source world.
 
 \subsection{Challenges}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+Even with these successes, the project still faced some challenges.
 
-\subsection{Future Improvements}
+\paragraph{Real-Time Ranking}
+Generating a global leaderboard that updates in real-time was non-trivial. The main difficulty arises from the fact that a large number of ranks can change quickly. For example, if a repository jumps up in the ranking, all rows below may also be moved. Achieving this efficiently required tight coordination between the ranking process in Flink, the view based optimizations in the database, and the ability of the frontend to handle ranking updates in a specialized way.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat. Phasellus non malesuada libero. Suspendisse sit amet tempus orci, quis dictum tellus. Proin magna massa. 
+\paragraph{High-Frequency Updates for Long Windows}
+Standard Flink windowing proved inefficient for maintaining sliding windows that are very long, e.g., 24 hours, but are updated very frequently, e.g., every 1 second. This necessitated the implementation of a custom \inlinecode{KeyedProcessFunction} to optimize state management and triggering.
+
+\paragraph{API Changes}
+During the development lifecycle, specifically around October, GitHub modified their API payload, removing certain details. This caused the processing to crash, requiring refactoring of some parts of the parsing and transformation logic in the Flink processor.
+
+\paragraph{Debugging Flink}
+Gaining sufficient visibility into the internal state of Flink operators during streaming execution was difficult. This made it difficult to diagnose logic errors in the complex windowing functions and ranking logic. Further, there was a problem with state continually growing in size that was hard to debug due to Flink's limited facilities of inspecting state.
+
+\subsection{Potential Improvements}
+
+
