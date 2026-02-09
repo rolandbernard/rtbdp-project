@@ -198,78 +198,82 @@
 \begin{frame}
 \frametitle{System Architecture}
   \begin{items}
+    \begin{oitem}{\litem}
+      Technology Stack: \\
+      \sitem {\footnotesize Backend: Java + Maven; RxJava; Apache Kafka; Apache Flink; PostgreSQL + TimescaleDB} \\
+      \sitem {\footnotesize Frontend: React + TypeScript; Vite; Recharts; RxJS} \\
+      \sitem {\footnotesize Deployment: Docker and Docker Compose}
+    \end{oitem}
+    \begin{widepage}
+      \begin{center}
+        \input{tikzfigures/architecture.tex}
+      \end{center}
+    \end{widepage}
   \end{items}
-  \begin{widepage}
-    \begin{center}
-      \input{tikzfigures/architecture.tex}
-    \end{center}
-  \end{widepage}
 \end{frame}
 
 \begin{frame}
 \frametitle{System Architecture -- Data Ingestion}
   \begin{items}
-  \end{items}
-  \begin{widepage}
+    \begin{oitem}{\litem}
+      Kafka Producer: \\
+      \sitem {\footnotesize Polls GitHub API periodically, respecting rate limits.} \\
+      \sitem {\footnotesize Retrieves overlapping windows, then deduplicates events.} \\
+      \sitem {\footnotesize Publishes deduplicated events to Kafka topic.}
+    \end{oitem}
+    \begin{oitem}{\litem}
+      Testing Mode: \\
+      \sitem {\footnotesize Dummy API server to simulate real GitHub API with configurable throughput.}
+    \end{oitem}
     \begin{center}
       \input{tikzfigures/ingest.tex}
     \end{center}
-  \end{widepage}
+  \end{items}
 \end{frame}
 
 \begin{frame}
 \frametitle{System Architecture -- Messaging}
   \begin{items}
-  \end{items}
-  \begin{widepage}
     \begin{center}
       \input{tikzfigures/kafka.tex}
     \end{center}
-  \end{widepage}
+  \end{items}
 \end{frame}
 
 \begin{frame}
 \frametitle{System Architecture -- Stream Processing}
   \begin{items}
-  \end{items}
-  \begin{widepage}
     \begin{center}
       \input{tikzfigures/processing.tex}
     \end{center}
-  \end{widepage}
+  \end{items}
 \end{frame}
 
 \begin{frame}
 \frametitle{System Architecture -- Storage}
   \begin{items}
-  \end{items}
-  \begin{widepage}
     \begin{center}
       \input{tikzfigures/postgres.tex}
     \end{center}
-  \end{widepage}
+  \end{items}
 \end{frame}
 
 \begin{frame}
 \frametitle{System Architecture -- Data Serving}
   \begin{items}
-  \end{items}
-  \begin{widepage}
     \begin{center}
       \input{tikzfigures/frontend.tex}
     \end{center}
-  \end{widepage}
+  \end{items}
 \end{frame}
 
 \begin{frame}
 \frametitle{System Architecture -- Frontend}
   \begin{items}
-  \end{items}
-  \begin{widepage}
     \begin{center}
       \input{tikzfigures/browser.tex}
     \end{center}
-  \end{widepage}
+  \end{items}
 \end{frame}
 
 \begin{frame}

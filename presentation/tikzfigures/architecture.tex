@@ -1,6 +1,6 @@
 \begin{figure}
   \centering
-  \begin{tikzpicture}[scale=0.75, transform shape]
+  \begin{tikzpicture}[scale=0.7, transform shape]
     \node[external] (github) {GitHub Events API};
     \node[build, right=1.5 of github] (producer) {Kafka Producer};
     \draw[flow] (github) -> (producer) node [midway, fill=white, above=0.1] {HTTP};
