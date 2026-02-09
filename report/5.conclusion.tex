@@ -12,7 +12,7 @@ Overall, the architecture proved robust for the defined use case. The combinatio
 Even with these successes, the project still faced some challenges.
 
 \paragraph{Real-Time Ranking}
-Generating a global leaderboard that updates in real-time was non-trivial. The main difficulty arises from the fact that a large number of ranks can change quickly. For example, if a repository jumps up in the ranking, all rows below may also be moved. Achieving this efficiently required tight coordination between the ranking process in Flink, the view based optimizations in the database, and the ability of the frontend to handle ranking updates in a specialized way.
+Generating a global leaderboard that updates in real time was non-trivial. The main difficulty arises from the fact that a large number of ranks can change quickly. For example, if a repository jumps up in the ranking, all rows below may also be moved. Achieving this efficiently required tight coordination between the ranking process in Flink, the view based optimizations in the database, and the ability of the frontend to handle ranking updates in a specialized way.
 
 \paragraph{High-Frequency Updates for Long Windows}
 Standard Flink windowing proved inefficient for maintaining sliding windows that are very long, e.g., 24 hours, but are updated very frequently, e.g., every 1 second. This necessitated the implementation of a custom \inlinecode{KeyedProcessFunction} to optimize state management and triggering.
