@@ -25,4 +25,13 @@ Gaining sufficient visibility into the internal state of Flink operators during 
 
 \subsection{Potential Improvements}
 
+The project also features multiple potential avenues for future improvements. Aside from adding additional charts using the existing analysis results, the following may be promising additions.
 
+\paragraph{Enhanced Trending Algorithm}
+The current trending score is a linear combination of star counts and as such very simplistic. A more sophisticated model could incorporate the acceleration of stars or social signals such as created issues, pull requests, or comments. This could help to identify trending repositories earlier.
+
+\paragraph{Data Enrichment}
+Integrating additional data sources, such as tracking mentions of repositories on social media such as X or Reddit, would also provide a more comprehensive view of the trending status of repositories. This information could be useful both to identify which repositories are trending but also possibly give insights into why they are trending, something that is currently obscured in the system.
+
+\paragraph{Sentiment Analysis}
+Finally, analyzing the text content of some types of the events, such as commit messages, issue descriptions, and pull request comments could provide qualitative insights into the sentiment of different developer communities.
