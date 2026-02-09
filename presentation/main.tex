@@ -201,7 +201,7 @@
     \begin{oitem}{\litem}
       Technology Stack: \\
       \sitem {\footnotesize Backend: Java + Maven; RxJava; Apache Kafka; Apache Flink; PostgreSQL + TimescaleDB} \\
-      \sitem {\footnotesize Frontend: React + TypeScript; Vite; Recharts; RxJS} \\
+      \sitem {\footnotesize Frontend: Single Page Application with React + TypeScript; Vite; Recharts; RxJS} \\
       \sitem {\footnotesize Deployment: Docker and Docker Compose}
     \end{oitem}
     \begin{widepage}
@@ -234,6 +234,12 @@
 \begin{frame}
 \frametitle{System Architecture -- Messaging}
   \begin{items}
+    \begin{oitem}{\litem}
+      Apache Kafka: \\
+      \sitem {\footnotesize Decouples the ingestion from the processing.} \\
+      \sitem {\footnotesize Decouples the processing from the frontend.} \\
+      \sitem {\footnotesize Kafka message retention enables restarting Flink job without losing events.}
+    \end{oitem}
     \begin{center}
       \input{tikzfigures/kafka.tex}
     \end{center}
@@ -282,6 +288,13 @@
 \begin{frame}
 \frametitle{System Architecture -- Storage}
   \begin{items}
+    \begin{oitem}{\litem}
+      PostgreSQL + TimescaleDB: \\
+      \sitem {\footnotesize Persistent storage for results of Flink processor.} \\
+      \sitem {\footnotesize Handles queries for initial snapshot and historical data.} \\
+      \sitem {\footnotesize Makes use of TimescaleDB hypertables and retention policy.} \\
+      \sitem {\footnotesize Database commit before Kafka publish to ensure consistency.}
+    \end{oitem}
     \begin{center}
       \input{tikzfigures/postgres.tex}
     \end{center}
@@ -291,6 +304,13 @@
 \begin{frame}
 \frametitle{System Architecture -- Data Serving}
   \begin{items}
+    \begin{oitem}{\litem}
+      Frontend Server: \\
+      \sitem {\footnotesize HTTP server for serving static files of the client web application.} \\
+      \sitem {\footnotesize WebSocket server to serve API.} \\
+      \sitem {\footnotesize Combines database queries for snapshots and Kafka streams for real-time updates.} \\
+      \sitem {\footnotesize Manages client subscriptions to route events received from Kafka.}
+    \end{oitem}
     \begin{center}
       \input{tikzfigures/frontend.tex}
     \end{center}
@@ -300,6 +320,13 @@
 \begin{frame}
 \frametitle{System Architecture -- Frontend}
   \begin{items}
+    \begin{oitem}{\litem}
+      Web Application: \\
+      \sitem {\footnotesize A filterable live event stream.} \\
+      \sitem {\footnotesize WebSocket server to serve API.} \\
+      \sitem {\footnotesize Real-time counters for event volumes.} \\
+      \sitem {\footnotesize User and repository leaderboards.}
+    \end{oitem}
     \begin{center}
       \input{tikzfigures/browser.tex}
     \end{center}
@@ -332,6 +359,24 @@
 \begin{frame}
 \frametitle{Conclusion}
   \begin{items}
+    \begin{oitem}{\litem}
+      Successes: \\
+      \sitem {\footnotesize Robust architecture able to handle 70-120 events per second.} \\
+      \sitem {\footnotesize Docker and Docker Compose simplifies deployment.} \\
+      \sitem {\footnotesize Responsive UI with leaderboards and charts updated in real-time.}
+    \end{oitem}
+    \begin{oitem}{\litem}
+      Challenges: \\
+      \sitem {\footnotesize Real-time rankings and long sliding window efficiency.} \\
+      \sitem {\footnotesize API changes made by GitHub reduced information.} \\
+      \sitem {\footnotesize Debugging Flink operator logic and state management.}
+    \end{oitem}
+    \begin{oitem}{\litem}
+      Future Improvements: \\
+      \sitem {\footnotesize More advanced models to detect trending repositories.} \\
+      \sitem {\footnotesize Social media integration to see where repositories or users are mentioned.} \\
+      \sitem {\footnotesize Sentiment analysis on the text content of certain event types.}
+    \end{oitem}
   \end{items}
 \end{frame}
 
