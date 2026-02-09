@@ -1,12 +1,12 @@
 \begin{figure}
   \centering
-  \begin{tikzpicture}[scale=0.75, transform shape]
+  \begin{tikzpicture}[scale=0.5, transform shape, every path/.style={opacity=0.25}]
     \node[external] (github) {GitHub Events API};
     \node[build, right=1.5 of github] (producer) {Kafka Producer};
     \draw[flow] (github) -> (producer) node [midway, fill=white, above=0.1] {HTTP};
     \node[internal, above=of producer] (kafka) {Kafka Broker};
     \draw[flow] (producer) -> (kafka);
-    \node[internal, dashed, above=0.6 of kafka, xshift=37] (kafkaui) {Kafka UI};
+    \node[internal, dashed, above=0.6 of kafka, xshift=35] (kafkaui) {Kafka UI};
     \draw[dashed, thick] (kafka) -> (kafkaui);
     \node[build, above=0.6 of kafka, xshift=130] (processor) {Flink Processor};
     \node[internal, below=0.5 of processor] (jobmanager) {Job Manager};
@@ -30,9 +30,9 @@
     \draw[dashed, thick] (postgres) -- (pgadmin);
     \draw[flow] ($(postgres |- flink.north)$) -> ($(postgres.south)$);
     \draw[flow] ($(postgres.west)$) -> ($(postgres -| frontend.east)$);
-    \node[mixed, left=1.75 of frontend] (browser) {Browser Showing Web UI};
-    \draw[flow] ($(frontend.west)+(0,0.2)$) -> ($(browser.east)+(0,0.2)$) node [midway, fill=white, above=0.1] {HTTP};
-    \draw[biflow] ($(frontend.west)-(0,0.2)$) -> ($(browser.east)-(0,0.2)$) node [midway, fill=white, below=0.1] {WebSocket};
+    \node[mixednoopacity, left=1.75 of frontend, opacity=1] (browser) {Browser Showing Web UI};
+    \draw[flow, opacity=1] ($(frontend.west)+(0,0.2)$) -> ($(browser.east)+(0,0.2)$) node [midway, fill=white, above=0.1] {HTTP};
+    \draw[biflow, opacity=1] ($(frontend.west)-(0,0.2)$) -> ($(browser.east)-(0,0.2)$) node [midway, fill=white, below=0.1] {WebSocket};
     \begin{scope}[on background layer]
       \node[draw, dashed, fit=(flink)(flinklabel)(producer)(kafkaui)(frontend)(dummy)(postgres), inner sep=10] (docker) {};
       \node[below=0.1 of docker] (dockerlabel) {Docker Compose Application};

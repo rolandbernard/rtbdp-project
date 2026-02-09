@@ -1,12 +1,12 @@
 \begin{figure}
   \centering
-  \begin{tikzpicture}[scale=0.75, transform shape]
-    \node[external] (github) {GitHub Events API};
-    \node[build, right=1.5 of github] (producer) {Kafka Producer};
-    \draw[flow] (github) -> (producer) node [midway, fill=white, above=0.1] {HTTP};
+  \begin{tikzpicture}[scale=0.5, transform shape, every path/.style={opacity=0.25}]
+    \node[external, opacity=1] (github) {GitHub Events API};
+    \node[build, right=1.5 of github, opacity=1] (producer) {Kafka Producer};
+    \draw[flow, opacity=1] (github) -> (producer) node [midway, fill=white, above=0.1] {HTTP};
     \node[internal, above=of producer] (kafka) {Kafka Broker};
-    \draw[flow] (producer) -> (kafka);
-    \node[internal, dashed, above=0.6 of kafka, xshift=37] (kafkaui) {Kafka UI};
+    \draw[flow, opacity=1] (producer) -> (kafka);
+    \node[internal, dashed, above=0.6 of kafka, xshift=35] (kafkaui) {Kafka UI};
     \draw[dashed, thick] (kafka) -> (kafkaui);
     \node[build, above=0.6 of kafka, xshift=130] (processor) {Flink Processor};
     \node[internal, below=0.5 of processor] (jobmanager) {Job Manager};
@@ -21,8 +21,8 @@
     \end{scope}
     \draw[flow] ($(kafka.east)-(0,0.25)$) -> ($(kafka -| flink.west)-(0,0.25)$);
     \draw[flow] ($(kafka -| flink.west)+(0,0.25)$) -> ($(kafka.east)+(0,0.25)$);
-    \node[build, dashed, right=1.5 of producer] (dummy) {Dummy API Server};
-    \draw[flow, dashed] (dummy) -> (producer);
+    \node[build, dashed, right=1.5 of producer, opacity=1] (dummy) {Dummy API Server};
+    \draw[flow, dashed, opacity=1] (dummy) -> (producer);
     \node[build, above=2.575 of kafka] (frontend) {Frontend Server};
     \draw[flow] (kafka) -> ($(kafka |- frontend.south)$);
     \node[internal, above=of processor] (postgres) {PostgreSQL};

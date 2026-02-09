@@ -102,6 +102,19 @@
 \begin{frame}
 \frametitle{Application Domain}
   \begin{items}
+    \begin{oitem}{\litem}
+      Motivation and Context: \\
+      \sitem {\footnotesize GitHub hosts millions of developers and repositories.} \\
+      \sitem {\footnotesize Generates large volumes of public events.} \\
+      \sitem {\footnotesize Existing tools focus mainly on historical analysis.}
+    \end{oitem}
+    \begin{oitem}{\litem}
+      Project Objectives: \\
+      \sitem {\footnotesize Collect GitHub events continuously.} \\
+      \sitem {\footnotesize Process data in real time.} \\
+      \sitem {\footnotesize Provide interactive dashboard.} \\
+      \sitem {\footnotesize Ensure low latency and reliability.} \\
+    \end{oitem}
   \end{items}
 \end{frame}
 
@@ -123,7 +136,78 @@
 \end{frame}
 
 \begin{frame}
-\frametitle{Demo}
+\frametitle{System Architecture -- Data Ingestion}
+  \begin{items}
+  \end{items}
+  \begin{widepage}
+    \begin{center}
+      \input{tikzfigures/ingest.tex}
+    \end{center}
+  \end{widepage}
+\end{frame}
+
+\begin{frame}
+\frametitle{System Architecture -- Messaging}
+  \begin{items}
+  \end{items}
+  \begin{widepage}
+    \begin{center}
+      \input{tikzfigures/kafka.tex}
+    \end{center}
+  \end{widepage}
+\end{frame}
+
+\begin{frame}
+\frametitle{System Architecture -- Stream Processing}
+  \begin{items}
+  \end{items}
+  \begin{widepage}
+    \begin{center}
+      \input{tikzfigures/processing.tex}
+    \end{center}
+  \end{widepage}
+\end{frame}
+
+\begin{frame}
+\frametitle{System Architecture -- Storage}
+  \begin{items}
+  \end{items}
+  \begin{widepage}
+    \begin{center}
+      \input{tikzfigures/postgres.tex}
+    \end{center}
+  \end{widepage}
+\end{frame}
+
+\begin{frame}
+\frametitle{System Architecture -- Data Serving}
+  \begin{items}
+  \end{items}
+  \begin{widepage}
+    \begin{center}
+      \input{tikzfigures/frontend.tex}
+    \end{center}
+  \end{widepage}
+\end{frame}
+
+\begin{frame}
+\frametitle{System Architecture -- Frontend}
+  \begin{items}
+  \end{items}
+  \begin{widepage}
+    \begin{center}
+      \input{tikzfigures/browser.tex}
+    \end{center}
+  \end{widepage}
+\end{frame}
+
+\begin{frame}
+\frametitle{Functionalities and Demo}
+  \begin{items}
+    \begin{oitem}{\litem}
+      Live Demo: {\small \url{https://rtgh.rolandb.com}}
+    \end{oitem}
+  \end{items}
   \begin{widepage}
     \begin{center}
       \begin{tikzpicture}[node distance=5mm,>=Latex]

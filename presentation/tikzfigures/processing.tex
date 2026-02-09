@@ -1,26 +1,26 @@
 \begin{figure}
   \centering
-  \begin{tikzpicture}[scale=0.75, transform shape]
+  \begin{tikzpicture}[scale=0.5, transform shape, every path/.style={opacity=0.25}]
     \node[external] (github) {GitHub Events API};
     \node[build, right=1.5 of github] (producer) {Kafka Producer};
     \draw[flow] (github) -> (producer) node [midway, fill=white, above=0.1] {HTTP};
     \node[internal, above=of producer] (kafka) {Kafka Broker};
     \draw[flow] (producer) -> (kafka);
-    \node[internal, dashed, above=0.6 of kafka, xshift=37] (kafkaui) {Kafka UI};
+    \node[internal, dashed, above=0.6 of kafka, xshift=35] (kafkaui) {Kafka UI};
     \draw[dashed, thick] (kafka) -> (kafkaui);
-    \node[build, above=0.6 of kafka, xshift=130] (processor) {Flink Processor};
-    \node[internal, below=0.5 of processor] (jobmanager) {Job Manager};
-    \draw[dashed, thick] (processor) -> (jobmanager);
-    \node[internal, right=of jobmanager] (taskmanager) {Task Manager};
-    \draw[dashed, thick] (jobmanager) -> (taskmanager);
-    \node[internal, above=0.5 of taskmanager] (zookeeper) {ZooKeeper};
-    \draw[dashed, thick] (jobmanager) -> (zookeeper);
+    \node[build, above=0.6 of kafka, xshift=130, opacity=1] (processor) {Flink Processor};
+    \node[internal, below=0.5 of processor, opacity=1] (jobmanager) {Job Manager};
+    \draw[dashed, thick, opacity=1] (processor) -> (jobmanager);
+    \node[internal, right=of jobmanager, opacity=1] (taskmanager) {Task Manager};
+    \draw[dashed, thick, opacity=1] (jobmanager) -> (taskmanager);
+    \node[internal, above=0.5 of taskmanager, opacity=1] (zookeeper) {ZooKeeper};
+    \draw[dashed, thick, opacity=1] (jobmanager) -> (zookeeper);
     \begin{scope}[on background layer]
-      \node[draw, dashed, fit=(processor)(jobmanager)(taskmanager), inner sep=7] (flink) {};
-      \node[below=0.1 of flink] (flinklabel) {Flink Cluster};
+      \node[draw, dashed, fit=(processor)(jobmanager)(taskmanager), inner sep=7, opacity=1] (flink) {};
+      \node[below=0.1 of flink, opacity=1] (flinklabel) {Flink Cluster};
     \end{scope}
-    \draw[flow] ($(kafka.east)-(0,0.25)$) -> ($(kafka -| flink.west)-(0,0.25)$);
-    \draw[flow] ($(kafka -| flink.west)+(0,0.25)$) -> ($(kafka.east)+(0,0.25)$);
+    \draw[flow, opacity=1] ($(kafka.east)-(0,0.25)$) -> ($(kafka -| flink.west)-(0,0.25)$);
+    \draw[flow, opacity=1] ($(kafka -| flink.west)+(0,0.25)$) -> ($(kafka.east)+(0,0.25)$);
     \node[build, dashed, right=1.5 of producer] (dummy) {Dummy API Server};
     \draw[flow, dashed] (dummy) -> (producer);
     \node[build, above=2.575 of kafka] (frontend) {Frontend Server};
@@ -28,7 +28,7 @@
     \node[internal, above=of processor] (postgres) {PostgreSQL};
     \node[internal, dashed, right=0.5 of postgres] (pgadmin) {pgAdmin};
     \draw[dashed, thick] (postgres) -- (pgadmin);
-    \draw[flow] ($(postgres |- flink.north)$) -> ($(postgres.south)$);
+    \draw[flow, opacity=1] ($(postgres |- flink.north)$) -> ($(postgres.south)$);
     \draw[flow] ($(postgres.west)$) -> ($(postgres -| frontend.east)$);
     \node[mixed, left=1.75 of frontend] (browser) {Browser Showing Web UI};
     \draw[flow] ($(frontend.west)+(0,0.2)$) -> ($(browser.east)+(0,0.2)$) node [midway, fill=white, above=0.1] {HTTP};

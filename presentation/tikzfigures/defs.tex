@@ -20,5 +20,11 @@
     \fill[unibzblue!40] ($(path picture bounding box.north west)!.675!(path picture bounding box.north east)$)
       rectangle (path picture bounding box.south east);
   }},
+  mixednoopacity/.style={inner sep=8.7, draw=black, path picture={
+    \fill[brown!20, opacity=1] (path picture bounding box.south west)
+      rectangle ($(path picture bounding box.north west)!.675!(path picture bounding box.north east)$);
+    \fill[unibzblue!40, opacity=1] ($(path picture bounding box.north west)!.675!(path picture bounding box.north east)$)
+      rectangle (path picture bounding box.south east);
+  }},
   >=Latex, node distance=1, every node/.style={inner sep=0}
 }
