@@ -74,7 +74,7 @@
     \noindent{\large \@author\par}
     \vskip 1em
     \noindent{\small \@date\par}
-    \vskip 2em
+    \vskip 1.5em
     \noindent{
       \small
       \begin{tabular}{rl}
@@ -84,7 +84,7 @@
         Live Demo Link & \url{https://rtgh.rolandb.com/} \\
       \end{tabular}
     }
-    \vskip 1em
+    \vskip 0.5em
   \end{adjustwidth}
 \end{strip}
 }
@@ -107,9 +107,11 @@
 \maketitle
 
 \begin{abstract}
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Fusce tincidunt sapien eu dolor ullamcorper, quis dapibus lectus venenatis. Nunc a blandit massa. Fusce ac fringilla nibh, nec eleifend mauris. Sed maximus tempus nibh, porta cursus mi rutrum et. Nunc erat massa, commodo id ornare ut, scelerisque ac est. Cras elit metus, aliquet sit amet maximus in, gravida in mauris. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Ut enim tellus, ornare quis malesuada non, scelerisque a elit. Donec dictum velit eu dui hendrerit ultrices. Pellentesque posuere porta odio eu feugiat.
+The open-source software ecosystem generates large volumes of data. Much of this activity takes place on GitHub. While native and third-party analytics tools exist, they predominantly focus on historical data or static snapshots. This project addresses that gap by developing a real-time big data processing application for analyzing public GitHub activity.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nisi risus, suscipit sed mattis non, sagittis sed nisi. Sed a lobortis odio, quis dapibus nisl. Class aptent taciti sociosqu ad litora
+The implemented system utilizes a pipeline orchestrated via Docker Compose, leveraging Apache Kafka for messaging and data ingestion from the GitHub Events API. Processing is handled by Apache Flink, which performs complex stream processing tasks including data enrichment, windowed aggregations, and leaderboard generation.
+
+The final application features an interactive single-page application (SPA) frontend built with React and TypeScript, which visualizes data through live event feeds, dynamic charts, and real-time leaderboards. The system successfully processes a velocity of 70-120 events per second, handling challenges such as out-of-order event delivery and real-time ranking updates.
 \end{abstract}
 
 \input{1.domain.tex}
