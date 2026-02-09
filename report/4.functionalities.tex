@@ -29,7 +29,7 @@ Dynamic counters display the total volume of specific event types, e.g., commits
     \label{fig:board}
 \end{figure}
 
-Still on the main dashboard, the application also maintains continuously updated rankings over users and repositories as shown in \Cref{fig:board}. Users can be ranked by the number of events they generated. Repositories can also be ranked by the volume of activity, but they can additionally be ranked also by either the trending score or the raw number of stars. All rankings, except for the trending score that already combines all windows lengths, it is possible for the user to select the length of sliding window for which the ranking is to be shown. Like for the per-kind counter, also the ranking shows a chart to illustrate the evolution over the selected window.
+Still on the main dashboard, the application also maintains continuously updated rankings over users and repositories as shown in \Cref{fig:board}. Users can be ranked by the number of events they generated. Repositories can also be ranked by the volume of activity, but they can additionally be ranked also by either the trending score or the raw number of stars. All rankings, except for the trending score that already combines all window lengths, it is possible for the user to select the length of sliding window for which the ranking is to be shown. Like for the per-kind counter, also the ranking shows a chart to illustrate the evolution over the selected window.
 
 The trending score highlights repositories rapidly gaining popularity. This is calculated using a linear combination of new stars over multiple time windows, allowing the system to detect viral trends faster than simple daily counts, while being less noisy than simply using the 5-minute counts.
 
@@ -65,7 +65,7 @@ A page dedicated to each individual repository is also provided as depicted in \
 \end{figure}
 
 \paragraph{User Page}
-Similar to the repository page, details for a specific user's activity history and their global ranking based on contribution volume are shown in a dedicated page. \Cref{fig:user} shows an example screenshot of that page. Again, it includes in addition to the computed statistics also some general information about the user, such as the avatar or and whether the user is a bot or a regular user account.
+Similar to the repository page, details for a specific user's activity history and their global ranking based on contribution volume are shown in a dedicated page. \Cref{fig:user} shows an example screenshot of that page. Again, it includes in addition to the computed statistics also some general information about the user, such as the avatar and whether the user is a bot or a regular user account.
 
 \subsection{Search Functionality}
 
@@ -76,4 +76,4 @@ Similar to the repository page, details for a specific user's activity history a
     \label{fig:search}
 \end{figure}
 
-A global search bar is provided at the top of all pages as shown in \Cref{fig:search}. The search bar allows the user of the application to quickly search for specific users and repositories based on user or repository name. This enabled the application to be used also for analyzing individual user and repositories, which would otherwise be very hard to find if they are not at the top of the leaderboards. Clicking on one of the search results navigates the user directly to the relevant detail page described in \Cref{details}.
+A global search bar is provided at the top of all pages as shown in \Cref{fig:search}. The search bar allows the user of the application to quickly search for specific users and repositories based on user or repository name. This enables the application to be used also for analyzing individual user and repositories, which would otherwise be very hard to find if they are not at the top of the leaderboards. Clicking on one of the search results navigates the user directly to the relevant detail page described in \Cref{details}.

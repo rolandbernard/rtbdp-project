@@ -21,7 +21,7 @@ Standard Flink windowing proved inefficient for maintaining sliding windows that
 During the development lifecycle, specifically around October, GitHub modified their API payload, removing certain details. This caused the processing to crash, requiring refactoring of some parts of the parsing and transformation logic in the Flink processor.
 
 \paragraph{Debugging Flink}
-Gaining sufficient visibility into the internal state of Flink operators during streaming execution was difficult. This made it difficult to diagnose logic errors in the complex windowing functions and ranking logic. Further, there was a problem with state continually growing in size that was hard to debug due to Flink's limited facilities of inspecting state.
+Gaining sufficient visibility into the internal state of Flink operators during streaming execution was difficult. This made it difficult to diagnose logic errors in the complex windowing functions and ranking logic. Further, there was some difficulty managing state growth for certain Flink operators. This proved especially hard to debug due to Flink's limited facilities for inspecting state.
 
 \subsection{Potential Improvements}
 
@@ -34,4 +34,4 @@ The current trending score is a linear combination of star counts and as such ve
 Integrating additional data sources, such as tracking mentions of repositories on social media such as X or Reddit, would also provide a more comprehensive view of the trending status of repositories. This information could be useful both to identify which repositories are trending but also possibly give insights into why they are trending, something that is currently obscured in the system.
 
 \paragraph{Sentiment Analysis}
-Finally, analyzing the text content of some types of the events, such as commit messages, issue descriptions, and pull request comments could provide qualitative insights into the sentiment of different developer communities.
+Finally, analyzing the text content of certain event types, such as commit messages, issue descriptions, and pull request comments could provide qualitative insights into the sentiment of different developer communities.
