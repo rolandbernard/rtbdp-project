@@ -106,22 +106,93 @@
       Motivation and Context: \\
       \sitem {\footnotesize GitHub hosts millions of developers and repositories.} \\
       \sitem {\footnotesize Generates large volumes of public events.} \\
-      \sitem {\footnotesize Existing tools focus mainly on historical analysis.}
+      \sitem {\footnotesize Most existing tools focus mainly on historical analysis.}
     \end{oitem}
     \begin{oitem}{\litem}
       Project Objectives: \\
       \sitem {\footnotesize Collect GitHub events continuously.} \\
       \sitem {\footnotesize Process data in real time.} \\
       \sitem {\footnotesize Provide interactive dashboard.} \\
-      \sitem {\footnotesize Ensure low latency and reliability.} \\
+      \sitem {\footnotesize Ensure low latency and reliability.}
     \end{oitem}
+    \begin{center}
+      \begin{tikzpicture}[
+          node distance=10mm,>=Latex,
+          base_node/.style={minimum height=5mm,align=center,text width=3cm},
+          icon_node/.style={minimum size=7mm,align=center}
+      ]
+          \node (satellite) [icon_node] {\fontsize{40pt}{40pt}\selectfont\faGithub};
+          \node [base_node, right=of satellite, inner sep=-5mm, yshift=10, xshift=10, text=yellow] {\fontsize{20pt}{20pt}\selectfont\faStar};
+          \node (image_data) [base_node, right=of satellite, inner sep=-5mm, text=red] {\fontsize{20pt}{20pt}\selectfont\faCodeBranch};
+          \node [base_node, right=of satellite, inner sep=-5mm, yshift=-10, xshift=-10] {\fontsize{20pt}{20pt}\selectfont\faCode};
+          \node [below=6.25mm of image_data, font=\scriptsize] {Raw Events};
+          \node (machine_learning) [icon_node, right=of image_data] {\fontsize{40pt}{40pt}\selectfont\faServer};
+          \node [below=1mm of machine_learning, font=\scriptsize] {Real-time Processing};
+          \node [base_node, right=of machine_learning, inner sep=-5mm, yshift=4, xshift=4] {\includegraphics[width=20mm]{figures/repo.png}};
+          \node [base_node, right=of machine_learning, inner sep=-5mm, yshift=2, xshift=2, rounded corners] {\includegraphics[width=20mm]{figures/events.png}};
+          \node (pred) [base_node, right=of machine_learning, inner sep=-5mm] {\includegraphics[width=20mm]{figures/insights.png}};
+          \node [below=6.25mm of pred, font=\scriptsize] {Interactive UI};
+          \draw[->, thick] (satellite) -- (image_data);
+          \draw[->, thick] (image_data) -- (machine_learning);
+          \draw[->, thick] (machine_learning) -- (pred);
+      \end{tikzpicture}
+    \end{center}
   \end{items}
 \end{frame}
 
-\begin{frame}
+\begin{frame}[fragile]
 \frametitle{Description of the Data Sources}
-  \begin{items}
-  \end{items}
+  \begin{columns}
+    \column{0.67\linewidth}
+    \begin{items}
+      \begin{oitem}{\litem}
+        GitHub Events API: \\
+        \sitem {\footnotesize Endpoint: \url{https://api.github.com/events.}} \\
+        \sitem {\footnotesize Up to 300 most recent public events in JSON format.} \\
+        \sitem {\footnotesize Rate limited, i.e., access token required.}
+      \end{oitem}
+      \begin{oitem}{\litem}
+        Key Properties: \\
+        \sitem {\footnotesize Variety: many event types, e.g., push, issues, stars, etc.} \\
+        \sitem {\footnotesize Velocity: up to 120 events/sec, millions of events per day.} \\
+        \sitem {\footnotesize Veracity: out-of-order and delayed events.} \\
+        \sitem {\footnotesize Latency: API around 5 minutes behind real time.}
+      \end{oitem}
+    \end{items}
+    \column{0.33\linewidth}
+    \vspace{-13mm}
+    \begin{figure}
+      \scriptsize
+\begin{verbatim}
+{
+  "id": "8251545586",
+  "type": "PushEvent",
+  "actor": {
+    "id": 121951544,
+    "login": "movieflixgr",
+    "display_login": "movieflixgr",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/[..]",
+    "avatar_url": "https://avatars.github[..]"
+  },
+  "repo": {
+    "id": 1126450259,
+    "name": "movieflixgr/Subtitles",
+    "url": "https://api.github.com/repos/[..]"
+  },
+  "payload": {
+    "repository_id": 1126450259,
+    "push_id": 30546526697,
+    "ref": "refs/heads/main",
+    "head": "d5e986993aa47729cb18a82ac9d1[..]",
+    "before": "6bf91f2d0600084cc7218c1934[..]"
+  },
+  "public": true,
+  "created_at": "2026-02-08T20:09:50Z"
+}
+\end{verbatim}
+    \end{figure}
+  \end{columns}
 \end{frame}
 
 \begin{frame}

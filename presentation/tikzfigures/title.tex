@@ -35,6 +35,7 @@
   \draw[flow] ($(frontend.west)+(0,0.2)$) -> ($(browser.east)+(0,0.2)$) node [midway, fill=white, above=0.1] {HTTP};
   \draw[biflow] ($(frontend.west)-(0,0.2)$) -> ($(browser.east)-(0,0.2)$) node [midway, fill=white, below=0.1] {WebSocket};
   \begin{scope}[on background layer]
+    \node[external, opacity=0.05] {\includegraphics{figures/dashboard.png}};
     \node[draw, dashed, fit=(flink)(flinklabel)(producer)(kafkaui)(frontend)(dummy)(postgres), inner sep=10] (docker) {};
     \node[below=0.1 of docker] (dockerlabel) {Docker Compose Application};
   \end{scope}
