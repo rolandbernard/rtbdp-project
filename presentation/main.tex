@@ -243,6 +243,36 @@
 \begin{frame}
 \frametitle{System Architecture -- Stream Processing}
   \begin{items}
+    \begin{oitem}{\litem}
+      Core Processing Tasks: \\
+      \sitem {\footnotesize Retrieve raw events from Kafka an parse JSON.} \\
+      \sitem {\footnotesize Event-time processing using Watermarks with 10s maximum out-of-orderness.} \\
+      \sitem {\footnotesize Writes results to PostgreSQL and Kafka.}
+    \end{oitem}
+    \begin{oitem}{\litem}
+      Windowed Aggregations: \\
+      \sitem {\footnotesize Tumbling windows with 10s and 5min window sizes.} \\
+      \sitem {\footnotesize Custom sliding windows with 5min, 1h, 6h, and 24h length, updated every second.}
+    \end{oitem}
+    \begin{center}
+      \input{tikzfigures/processing.tex}
+    \end{center}
+  \end{items}
+\end{frame}
+
+\begin{frame}
+\frametitle{System Architecture -- Stream Processing}
+  \begin{items}
+    \begin{oitem}{\litem}
+      Leaderboards: \\
+      \sitem {\footnotesize User and repository activity ranking.} \\
+      \sitem {\footnotesize Based on latest values from sliding window aggregations.} \\
+      \sitem {\footnotesize Optimization: Emits only changed rows and frontend reconstructs ranking.}
+    \end{oitem}
+    \begin{oitem}{\litem}
+      Trending Score: \\
+      \sitem {\footnotesize Weighted sum of recent stars: \quad $t_\mathrm{score} = 10 s_{5\mathrm{m}} + 5 s_{5\mathrm{h}} + 2 s_{6\mathrm{h}} + s_{24\mathrm{h}}$.}
+    \end{oitem}
     \begin{center}
       \input{tikzfigures/processing.tex}
     \end{center}
