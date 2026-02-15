@@ -46,7 +46,7 @@ To generate the user and repository rankings, the process consumes the output of
 
 For the global lists of trending repositories, the number of new stars is used. A custom operator calculates a composite score by combining new star counters across different time horizons, allowing the system to flag repositories experiencing a sudden surge in interest. The trending score is computed as
 \begin{align*}
-    t_\mathrm{score} = 10 s_{5\mathrm{m}} + 5 s_{5\mathrm{h}} + 2 s_{6\mathrm{h}} + s_{24\mathrm{h}} ,
+    t_\mathrm{score} = 10 s_{5\mathrm{m}} + 5 s_{1\mathrm{h}} + 2 s_{6\mathrm{h}} + s_{24\mathrm{h}} ,
 \end{align*}
 where $s_t$ is the number of new stars the repository has received in the latest time window of length $t$. This is a relatively simplistic model, but works reasonably well to identify trending repositories. By assigning a higher weight to more recently obtained stars, repositories that are experiencing immediate popularity are weighted more highly, but long term popularity is still taken into account.
 
